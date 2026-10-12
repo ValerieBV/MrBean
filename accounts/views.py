@@ -66,28 +66,49 @@ def user_list_view(request):
             phone_number__icontains=query
         )
 
+    # Thống kê nhanh phục vụ Overview Cards
+    from courses.models import ClassRoom, ExemptionRequest, StudentExemptionQuota
+    total_students = CustomUser.objects.filter(role=CustomUser.ROLE_STUDENT).count()
+    active_classes = ClassRoom.objects.filter(is_active=True).count()
+    total_teachers = CustomUser.objects.filter(role=CustomUser.ROLE_TEACHER).count()
+    pending_exemptions = ExemptionRequest.objects.filter(status=ExemptionRequest.STATUS_PENDING).count()
+
+    # Danh sách kiểm soát hạn mức miễn BTVN nghe của học viên
+    student_quotas = StudentExemptionQuota.objects.select_related(
+        'enrollment__student', 'enrollment__classroom__course'
+    ).all().order_by('-updated_at')
+
+    # Prefetch lớp học cho từng user trong bảng
+    users = users.prefetch_related('class_enrollments__classroom', 'teaching_classes')
+
     context = {
         'users': users,
         'role_filter': role_filter,
         'query': query,
         'role_choices': CustomUser.ROLE_CHOICES,
+        'total_students': total_students,
+        'active_classes': active_classes,
+        'total_teachers': total_teachers,
+        'pending_exemptions': pending_exemptions,
+        'student_quotas': student_quotas,
     }
     return render(request, 'accounts/user_list.html', context)
 
 
-@admin_required
+@role_required(CustomUser.ROLE_ADMIN, CustomUser.ROLE_MANAGER)
 def user_create_view(request):
-    """Admin thêm người dùng mới và phân quyền"""
+    """Admin hoặc Quản lý thêm người dùng (Quản lý được tạo tài khoản cho học viên)"""
     if request.method == 'POST':
-        form = CustomUserCreationForm(request.POST)
+        form = CustomUserCreationForm(request.POST, current_user=request.user)
         if form.is_valid():
             user = form.save()
             messages.success(request, f"Đã tạo thành công tài khoản {user.username} với vai trò {user.get_role_display()}.")
             return redirect('accounts:user_list')
     else:
-        form = CustomUserCreationForm()
+        form = CustomUserCreationForm(current_user=request.user)
 
-    return render(request, 'accounts/user_form.html', {'form': form, 'title': 'Thêm người dùng mới'})
+    title = 'Thêm học viên mới' if request.user.role == CustomUser.ROLE_MANAGER else 'Thêm người dùng mới'
+    return render(request, 'accounts/user_form.html', {'form': form, 'title': title})
 
 
 @admin_required

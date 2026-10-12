@@ -1,40 +1,50 @@
 {% extends 'base.html' %}
 
-{% block title %}Đăng nhập{% endblock %}
+{% block title %}Đăng nhập - MR BEAN ENGLISH{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center my-5">
     <div class="col-md-5 col-lg-4">
-        <div class="card shadow-lg border-0 rounded-4">
+        <div class="card border-0 rounded-4 shadow-lg" style="background-color: var(--color-dark-brown); color: #ffffff;">
             <div class="card-body p-4 p-md-5">
                 <div class="text-center mb-4">
-                    <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-inline-flex p-3 mb-2">
-                        <i class="bi bi-shield-lock-fill fs-2"></i>
+                    <div style="width: 64px; height: 64px; border-radius: 50%; background-color: rgba(244, 174, 82, 0.15); display: inline-flex; align-items: center; justify-content: center; margin-bottom: 0.75rem;">
+                        <i class="bi bi-mortarboard-fill fs-2" style="color: var(--color-warm-orange);"></i>
                     </div>
-                    <h4 class="fw-bold text-dark">Đăng Nhập</h4>
-                    <p class="text-muted small">Hệ thống Quản lý BTVN & AI Chấm điểm Mr Bean</p>
+                    <h3 class="fw-bold mb-1" style="color: var(--color-warm-orange); text-transform: uppercase; letter-spacing: 0.5px;">MR BEAN ENGLISH</h3>
+                    <div class="small opacity-75">Hệ thống Quản trị BTVN & Chấm điểm AI</div>
                 </div>
 
                 <form method="post">
                     {% csrf_token %}
                     <div class="mb-3">
-                        <label class="form-label small fw-bold">Tên đăng nhập</label>
+                        <label class="form-label small fw-bold" style="color: #eddcd0;">Tên đăng nhập</label>
                         <div class="input-group">
-                            <span class="input-group-text"><i class="bi bi-person"></i></span>
-                            <input type="text" name="username" class="form-control" required autofocus placeholder="Nhập username...">
+                            <span class="input-group-text border-0" style="background-color: rgba(254, 243, 226, 0.15); color: var(--color-warm-orange);">
+                                <i class="bi bi-person-fill"></i>
+                            </span>
+                            <input type="text" name="username" class="form-control border-0" required autofocus placeholder="Nhập username..." style="background-color: #ffffff; color: var(--color-dark-brown);">
                         </div>
                     </div>
+
                     <div class="mb-4">
-                        <label class="form-label small fw-bold">Mật khẩu</label>
+                        <label class="form-label small fw-bold" style="color: #eddcd0;">Mật khẩu</label>
                         <div class="input-group">
-                            <span class="input-group-text"><i class="bi bi-key"></i></span>
-                            <input type="password" name="password" class="form-control" required placeholder="Nhập mật khẩu...">
+                            <span class="input-group-text border-0" style="background-color: rgba(254, 243, 226, 0.15); color: var(--color-warm-orange);">
+                                <i class="bi bi-key-fill"></i>
+                            </span>
+                            <input type="password" name="password" class="form-control border-0" required placeholder="Nhập mật khẩu..." style="background-color: #ffffff; color: var(--color-dark-brown);">
                         </div>
                     </div>
-                    <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold">
-                        <i class="bi bi-box-arrow-in-right me-1"></i>Đăng nhập
+
+                    <button type="submit" class="btn w-100 py-2 fw-bold" style="background-color: var(--color-burn-orange); color: #ffffff; border-radius: 30px; box-shadow: 0 4px 14px rgba(212, 98, 26, 0.35);">
+                        <i class="bi bi-box-arrow-in-right me-1"></i>Đăng nhập hệ thống
                     </button>
                 </form>
+
+                <div class="text-center mt-4 pt-2 border-top border-secondary border-opacity-25 small opacity-75">
+                    Hỗ trợ tài khoản: <strong style="color: var(--color-warm-orange);">admin@mrbean.edu.vn</strong>
+                </div>
             </div>
         </div>
     </div>

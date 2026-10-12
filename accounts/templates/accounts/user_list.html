@@ -1,114 +1,231 @@
 {% extends 'base.html' %}
 
-{% block title %}Quản lý Người dùng{% endblock %}
+{% block title %}Quản lý Tài khoản & Phân quyền{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <h3 class="fw-bold mb-1"><i class="bi bi-people-fill text-primary me-2"></i>Quản lý Người dùng & Phân quyền</h3>
-        <p class="text-muted small mb-0">Quản trị các tài khoản: Admin, Quản lý, Giáo viên và Học viên</p>
-    </div>
-    {% if user.is_superuser or user.role == 'admin' %}
-    <a href="{% url 'accounts:user_create' %}" class="btn btn-primary shadow-sm">
-        <i class="bi bi-person-plus-fill me-1"></i>Thêm người dùng mới
-    </a>
-    {% endif %}
+<!-- Tiêu đề trang (H1) -->
+<div class="mb-4">
+    <h1 class="page-title-h1">QUẢN TRỊ & VẬN HÀNH HỆ THỐNG</h1>
+    <div class="text-muted small" style="color: #6d5b4e !important;">Hệ thống phân quyền & giám sát Trung tâm Tiếng Anh Mr Bean</div>
 </div>
 
-<!-- Bộ lọc và tìm kiếm -->
-<div class="card shadow-sm border-0 mb-4">
-    <div class="card-body">
-        <form method="get" class="row g-3">
-            <div class="col-md-5">
-                <div class="input-group">
-                    <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
-                    <input type="text" name="q" class="form-control" placeholder="Tìm theo username, tên, email, SĐT..." value="{{ query }}">
-                </div>
-            </div>
-            <div class="col-md-4">
-                <select name="role" class="form-select">
-                    <option value="">-- Tất cả các vai trò --</option>
+<!-- C. Khu vực Thống kê nhanh (Overview Cards) -->
+<div class="overview-cards-row">
+    <!-- Card 1: Tổng số học viên -->
+    <div class="overview-card">
+        <div class="overview-icon-wrapper">
+            <i class="bi bi-people-fill"></i>
+        </div>
+        <div class="overview-info">
+            <span class="overview-label">Tổng số học viên</span>
+            <span class="overview-number">{{ total_students|default:"0" }}</span>
+        </div>
+    </div>
+
+    <!-- Card 2: Lớp học hoạt động -->
+    <div class="overview-card">
+        <div class="overview-icon-wrapper">
+            <i class="bi bi-collection-fill"></i>
+        </div>
+        <div class="overview-info">
+            <span class="overview-label">Lớp học hoạt động</span>
+            <span class="overview-number">{{ active_classes|default:"0" }}</span>
+        </div>
+    </div>
+
+    <!-- Card 3: Giáo viên -->
+    <div class="overview-card">
+        <div class="overview-icon-wrapper">
+            <i class="bi bi-person-workspace"></i>
+        </div>
+        <div class="overview-info">
+            <span class="overview-label">Giáo viên</span>
+            <span class="overview-number">{{ total_teachers|default:"0" }}</span>
+        </div>
+    </div>
+
+    <!-- Card 4: Yêu cầu miễn giảm mới -->
+    <div class="overview-card">
+        <div class="overview-icon-wrapper">
+            <i class="bi bi-hourglass-split"></i>
+        </div>
+        <div class="overview-info">
+            <span class="overview-label">Miễn giảm chờ duyệt</span>
+            <span class="overview-number">{{ pending_exemptions|default:"0" }}</span>
+        </div>
+    </div>
+</div>
+
+<!-- D. Bảng Quản lý Tài khoản & Phân quyền (Data Table) -->
+<div class="data-card-wrapper">
+    <!-- Tiêu đề mục (H2) -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="section-title-h2 mb-0">QUẢN LÝ TÀI KHOẢN & PHÂN QUYỀN</h2>
+        <span class="badge" style="background-color: var(--color-warm-orange); color: var(--color-dark-brown); font-weight: 700;">
+            {{ users.count }} tài khoản
+        </span>
+    </div>
+
+    <!-- Thanh công cụ phía trên bảng -->
+    <div class="table-toolbar">
+        <!-- Bên trái: Nút + Thêm người dùng -->
+        <div class="table-toolbar-left">
+            {% if user.is_superuser or user.role == 'admin' or user.role == 'manager' %}
+            <a href="{% url 'accounts:user_create' %}" class="btn-cta-orange">
+                <i class="bi bi-person-plus-fill"></i>
+                <span>{% if user.role == 'manager' %}+ Thêm học viên{% else %}+ Thêm người dùng{% endif %}</span>
+            </a>
+            {% endif %}
+
+            <!-- Lọc vai trò nhanh -->
+            <form method="get" id="roleFilterForm" class="d-inline-flex align-items-center">
+                <select name="role" class="form-select form-select-sm" style="background-color: var(--color-light-cream); border-color: rgba(42, 26, 14, 0.2); border-radius: 20px; font-weight: 600; color: var(--color-dark-brown);" onchange="document.getElementById('roleFilterForm').submit();">
+                    <option value="">-- Tất cả vai trò --</option>
                     {% for r_code, r_name in role_choices %}
                         <option value="{{ r_code }}" {% if role_filter == r_code %}selected{% endif %}>{{ r_name }}</option>
                     {% endfor %}
                 </select>
-            </div>
-            <div class="col-md-3 d-flex gap-2">
-                <button type="submit" class="btn btn-secondary w-100">Lọc dữ liệu</button>
-                {% if query or role_filter %}
-                    <a href="{% url 'accounts:user_list' %}" class="btn btn-outline-secondary">Xóa lọc</a>
+                {% if query %}
+                    <input type="hidden" name="q" value="{{ query }}">
                 {% endif %}
-            </div>
-        </form>
-    </div>
-</div>
+            </form>
+        </div>
 
-<!-- Bảng danh sách người dùng -->
-<div class="card shadow-sm border-0">
+        <!-- Bên phải: Nút Xuất file excel & Ô tìm kiếm -->
+        <div class="table-toolbar-right">
+            <button type="button" class="btn-export-excel" onclick="exportTableToCSV('danh-sach-tai-khoan.csv')">
+                <i class="bi bi-file-earmark-excel-fill"></i>
+                <span>Xuất file Excel</span>
+            </button>
+
+            <form method="get" class="d-inline-flex position-relative">
+                <input type="text" name="q" class="search-box-rounded" placeholder="Tìm kiếm..." value="{{ query }}">
+                {% if role_filter %}
+                    <input type="hidden" name="role" value="{{ role_filter }}">
+                {% endif %}
+                <button type="submit" class="btn position-absolute end-0 top-0 bottom-0 border-0 bg-transparent text-secondary pe-3">
+                    <i class="bi bi-search"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Cấu trúc Bảng -->
     <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
-            <thead class="table-light">
+        <table class="custom-data-table" id="usersDataTable">
+            <thead>
                 <tr>
-                    <th scope="col" class="ps-3">Người dùng</th>
-                    <th scope="col">Vai trò</th>
-                    <th scope="col">Email & SĐT</th>
-                    <th scope="col">Trạng thái</th>
-                    <th scope="col">Ngày tham gia</th>
-                    <th scope="col" class="text-end pe-3">Thao tác</th>
+                    <th>Họ và tên</th>
+                    <th>Email</th>
+                    <th>Vai trò</th>
+                    <th>Lớp học</th>
+                    <th>Trạng thái hoạt động</th>
+                    <th class="text-end pe-3">Hành động</th>
                 </tr>
             </thead>
             <tbody>
                 {% for u in users %}
                 <tr>
-                    <td class="ps-3">
-                        <div class="d-flex align-items-center">
-                            <div class="bg-primary bg-opacity-10 text-primary rounded-circle p-2 me-2">
-                                <i class="bi bi-person-fill"></i>
+                    <!-- Họ và tên -->
+                    <td>
+                        <div class="d-flex align-items-center gap-2">
+                            <div style="width: 32px; height: 32px; border-radius: 50%; background-color: rgba(42, 26, 14, 0.1); display: flex; align-items: center; justify-content: center; font-weight: 700; color: var(--color-dark-brown);">
+                                {{ u.username|slice:":1"|upper }}
                             </div>
                             <div>
-                                <div class="fw-bold text-dark">{{ u.get_full_name|default:u.username }}</div>
-                                <div class="text-muted small">@{{ u.username }}</div>
+                                <div class="fw-bold">{{ u.get_full_name|default:u.username }}</div>
+                                <div class="small opacity-75">@{{ u.username }}</div>
                             </div>
                         </div>
                     </td>
+
+                    <!-- Email -->
                     <td>
-                        <span class="badge role-badge-{{ u.role }} px-2 py-1">
-                            {{ u.get_role_display }}
-                        </span>
+                        {{ u.email|default:"Chưa cập nhật" }}
                     </td>
+
+                    <!-- Vai trò (Role Tag) -->
                     <td>
-                        <div><i class="bi bi-envelope me-1 text-muted"></i>{{ u.email|default:"Chưa có" }}</div>
-                        <div class="small text-muted"><i class="bi bi-telephone me-1"></i>{{ u.phone_number|default:"Chưa có" }}</div>
+                        {% if u.role == 'admin' %}
+                            <span class="role-tag role-tag-admin">Admin</span>
+                        {% elif u.role == 'manager' %}
+                            <span class="role-tag role-tag-manager">Quản lý</span>
+                        {% elif u.role == 'teacher' %}
+                            <span class="role-tag role-tag-teacher">Giáo viên</span>
+                        {% else %}
+                            <span class="role-tag role-tag-student">Học viên</span>
+                        {% endif %}
                     </td>
+
+                    <!-- Lớp học -->
+                    <td>
+                        {% if u.role == 'teacher' %}
+                            {% with teaching=u.teaching_classes.all %}
+                                {% if teaching %}
+                                    {% for tc in teaching %}
+                                        <span class="badge" style="background-color: var(--color-light-cream); color: var(--color-burn-orange); border: 1px solid var(--color-warm-orange);">
+                                            {{ tc.class_code }}
+                                        </span>
+                                    {% endfor %}
+                                {% else %}
+                                    <span class="text-muted small">Chưa gán lớp</span>
+                                {% endif %}
+                            {% endwith %}
+                        {% elif u.role == 'student' %}
+                            {% with enrolled=u.class_enrollments.all %}
+                                {% if enrolled %}
+                                    {% for en in enrolled %}
+                                        <span class="badge" style="background-color: var(--color-light-cream); color: var(--color-dark-brown); border: 1px solid rgba(42, 26, 14, 0.2);">
+                                            {{ en.classroom.class_code }}
+                                        </span>
+                                    {% endfor %}
+                                {% else %}
+                                    <span class="text-muted small">Chưa vào lớp</span>
+                                {% endif %}
+                            {% endwith %}
+                        {% else %}
+                            <span class="text-muted small">Toàn hệ thống</span>
+                        {% endif %}
+                    </td>
+
+                    <!-- Trạng thái hoạt động -->
                     <td>
                         {% if u.is_active %}
-                            <span class="badge bg-success-subtle text-success">Hoạt động</span>
+                            <span class="badge" style="background-color: #e6f6ec; color: #15803d; font-weight: 700; border-radius: 20px; padding: 0.35rem 0.75rem;">
+                                <i class="bi bi-check-circle-fill me-1"></i>Đang hoạt động
+                            </span>
                         {% else %}
-                            <span class="badge bg-danger-subtle text-danger">Bị khóa</span>
+                            <span class="badge" style="background-color: #fee2e2; color: #b91c1c; font-weight: 700; border-radius: 20px; padding: 0.35rem 0.75rem;">
+                                <i class="bi bi-x-circle-fill me-1"></i>Tạm khóa
+                            </span>
                         {% endif %}
                     </td>
-                    <td class="small text-muted">
-                        {{ u.date_joined|date:"d/m/Y" }}
-                    </td>
+
+                    <!-- Hành động: Sửa (Nâu) & Xóa (Cam) -->
                     <td class="text-end pe-3">
-                        {% if user.is_superuser or user.role == 'admin' %}
-                        <a href="{% url 'accounts:user_update' u.id %}" class="btn btn-sm btn-outline-primary me-1" title="Chỉnh sửa">
-                            <i class="bi bi-pencil-square"></i> Sửa
-                        </a>
-                        {% if u != user %}
-                        <a href="{% url 'accounts:user_delete' u.id %}" class="btn btn-sm btn-outline-danger" title="Xóa">
-                            <i class="bi bi-trash"></i>
-                        </a>
-                        {% endif %}
-                        {% else %}
-                        <span class="text-muted small">Chỉ xem</span>
-                        {% endif %}
+                        <div class="d-inline-flex gap-1">
+                            {% if user.is_superuser or user.role == 'admin' %}
+                            <a href="{% url 'accounts:user_update' u.id %}" class="btn-action-edit" title="Chỉnh sửa">
+                                <i class="bi bi-pencil-square"></i>
+                                <span>Sửa</span>
+                            </a>
+                            {% if u != user %}
+                            <a href="{% url 'accounts:user_delete' u.id %}" class="btn-action-delete" title="Xóa tài khoản">
+                                <i class="bi bi-trash-fill"></i>
+                                <span>Xóa</span>
+                            </a>
+                            {% endif %}
+                            {% else %}
+                            <span class="text-muted small">Chỉ xem</span>
+                            {% endif %}
+                        </div>
                     </td>
                 </tr>
                 {% empty %}
                 <tr>
                     <td colspan="6" class="text-center py-4 text-muted">
-                        <i class="bi bi-inbox fs-2 d-block mb-2"></i>Không tìm thấy người dùng phù hợp.
+                        <i class="bi bi-inbox fs-2 d-block mb-1" style="color: var(--color-warm-orange);"></i>
+                        Không tìm thấy người dùng nào phù hợp.
                     </td>
                 </tr>
                 {% endfor %}
@@ -116,4 +233,90 @@
         </table>
     </div>
 </div>
+
+<!-- E. Khu vực Kiểm soát Miễn BTVN (Progress Tracker) -->
+<div class="tracker-card-wrapper">
+    <div class="tracker-header">
+        <div>
+            <!-- Tiêu đề mục (H2) -->
+            <h2 class="section-title-h2 mb-1" style="color: var(--color-burn-orange) !important;">
+                <i class="bi bi-headphones me-2"></i>KIỂM SOÁT MIỄN BTVN (CHỈ MIỄN LISTENING)
+            </h2>
+            <div class="text-muted small" style="color: #6d5b4e !important;">
+                Định mức tối đa: <strong>08 buổi</strong> (Khóa TOEIC / VSTEP) &bull; <strong>05 buổi</strong> (Khóa B1). Không áp dụng cho bài tập Từ vựng và Nói.
+            </div>
+        </div>
+        <a href="{% url 'courses:exemption_list' %}" class="btn-cta-orange py-2 px-3" style="font-size: 0.82rem;">
+            <span>Xem chi tiết tất cả đơn</span>
+            <i class="bi bi-arrow-right"></i>
+        </a>
+    </div>
+
+    <!-- Danh sách hiển thị từng học viên -->
+    <div class="tracker-list">
+        {% for q in student_quotas %}
+        <div class="tracker-item-row">
+            <!-- Tên học viên bên trái -->
+            <div>
+                <div class="tracker-student-name">
+                    <i class="bi bi-person-circle me-1" style="color: var(--color-burn-orange);"></i>
+                    Học viên {{ q.enrollment.student.get_full_name|default:q.enrollment.student.username }}
+                </div>
+                <div class="tracker-student-class">
+                    Lớp: {{ q.enrollment.classroom.class_code }} ({{ q.enrollment.classroom.course.code }} - {{ q.enrollment.classroom.course.get_course_type_display }})
+                </div>
+            </div>
+
+            <!-- Thanh tiến trình (Progress Bar) -->
+            <div>
+                <div class="custom-progress-track" title="Đã dùng {{ q.used_quota }} / {{ q.max_quota }} buổi">
+                    {% widthratio q.used_quota q.max_quota 100 as pct_used %}
+                    <div class="custom-progress-fill" style="width: {{ pct_used }}%;"></div>
+                </div>
+                <div class="d-flex justify-content-between mt-1" style="font-size: 0.72rem; color: #846d5c;">
+                    <span>Đã miễn: <strong style="color: var(--color-burn-orange);">{{ q.used_quota }}</strong> buổi</span>
+                    <span>Còn lại: <strong style="color: var(--color-dark-brown);">{{ q.remaining_quota }}</strong> buổi</span>
+                </div>
+            </div>
+
+            <!-- Tỉ lệ dạng phân số bên phải -->
+            <div class="tracker-fraction-text">
+                <span>{{ q.used_quota }}</span>/{{ q.max_quota }} buổi
+            </div>
+        </div>
+        {% empty %}
+        <div class="text-center py-4 text-muted">
+            <i class="bi bi-check2-circle fs-3 d-block mb-1" style="color: var(--color-warm-orange);"></i>
+            Chưa có hồ sơ học viên được cấp hạn mức miễn BTVN nghe.
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Hàm xuất CSV nhẹ nhàng cho nút 'Xuất file excel'
+    function exportTableToCSV(filename) {
+        let csv = [];
+        let rows = document.querySelectorAll("#usersDataTable tr");
+        for (let i = 0; i < rows.length; i++) {
+            let row = [], cols = rows[i].querySelectorAll("td, th");
+            for (let j = 0; j < cols.length - 1; j++) { // Bỏ qua cột Hành động
+                let text = cols[j].innerText.replace(/(\r\n|\n|\r)/gm, " ").trim();
+                text = text.replace(/"/g, '""');
+                row.push('"' + text + '"');
+            }
+            csv.push(row.join(","));
+        }
+        let csvFile = new Blob(["\uFEFF" + csv.join("\n")], {type: "text/csv;charset=utf-8;"});
+        let downloadLink = document.createElement("a");
+        downloadLink.download = filename;
+        downloadLink.href = window.URL.createObjectURL(csvFile);
+        downloadLink.style.display = "none";
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+        document.body.removeChild(downloadLink);
+    }
+</script>
 {% endblock %}

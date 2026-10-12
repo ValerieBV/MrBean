@@ -1,75 +1,79 @@
 {% extends 'base.html' %}
 
-{% block title %}Danh sách Lớp học{% endblock %}
+{% block title %}
+    {% if user.role == 'student' %}Khóa học của tôi{% else %}Quản lý Lớp học{% endif %} - MR BEAN ENGLISH
+{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <h3 class="fw-bold mb-1"><i class="bi bi-collection-fill text-primary me-2"></i>Danh sách Lớp học</h3>
-        <p class="text-muted small mb-0">
-            {% if user.role == 'admin' or user.role == 'manager' %}
-                Toàn quyền quản trị danh sách lớp, phân công giáo viên và thêm học viên.
-            {% elif user.role == 'teacher' %}
-                Danh sách lớp học bạn được phân công phụ trách giảng dạy và chấm điểm.
-            {% else %}
-                Các lớp học bạn đang tham gia học tập.
-            {% endif %}
-        </p>
+{% if user.role == 'student' %}
+<!-- ============================================================== -->
+<!-- GIAO DIỆN DÀNH RIÊNG CHO HỌC VIÊN: KHÓA HỌC & BÀI TẬP CỦA TÔI -->
+<!-- ============================================================== -->
+
+<div class="mb-4">
+    <h1 class="page-title-h1">KHÓA HỌC CỦA TÔI</h1>
+    <div class="text-muted small" style="color: #6d5b4e !important;">
+        Chào mừng <strong>{{ user.get_full_name|default:user.username }}</strong>! Dưới đây là các khóa học bạn đang theo học, các bài tập cần làm và hạn mức số buổi miễn làm bài tập nghe.
     </div>
-    {% if user.is_superuser or user.role == 'admin' or user.role == 'manager' %}
-    <a href="{% url 'courses:class_create' %}" class="btn btn-primary shadow-sm">
-        <i class="bi bi-plus-circle-fill me-1"></i>Tạo lớp học mới
-    </a>
-    {% endif %}
 </div>
 
-<div class="row g-4">
-    {% for c in classes %}
-    <div class="col-md-6 col-lg-4">
-        <div class="card h-100 shadow-sm border-0 rounded-3">
-            <div class="card-body p-4 d-flex flex-column">
-                <div class="d-flex justify-content-between align-items-start mb-2">
-                    <span class="badge bg-primary-subtle text-primary fw-bold px-2 py-1">{{ c.course.code }}</span>
-                    {% if c.is_active %}
-                        <span class="badge bg-success-subtle text-success">Đang hoạt động</span>
-                    {% else %}
-                        <span class="badge bg-secondary-subtle text-secondary">Đã kết thúc</span>
+<!-- 1. KHU VỰC THỐNG KÊ HẠN MỨC MIỄN BTVN NGHE (LISTENING ONLY) -->
+<div class="row g-3 mb-4">
+    {% for enrollment in student_enrollments %}
+    <div class="col-md-6 col-lg-6">
+        <div class="card border-0 rounded-4 shadow-sm h-100" style="background-color: var(--color-dark-brown); color: #ffffff;">
+            <div class="card-body p-4 d-flex flex-column justify-content-between">
+                <div>
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <span class="badge" style="background-color: var(--color-warm-orange); color: var(--color-dark-brown); font-weight: 800;">
+                            {{ enrollment.classroom.class_code }}
+                        </span>
+                        <span class="badge" style="background-color: rgba(254, 243, 226, 0.15); color: #ecd9c6;">
+                            {{ enrollment.classroom.course.get_course_type_display }}
+                        </span>
+                    </div>
+
+                    <h5 class="fw-bold mb-1" style="color: var(--color-warm-orange);">{{ enrollment.classroom.name }}</h5>
+                    <div class="small opacity-75 mb-3">
+                        <i class="bi bi-person-workspace me-1"></i>Giáo viên: <strong>{{ enrollment.classroom.teacher.get_full_name|default:enrollment.classroom.teacher.username|default:"Chưa phân công" }}</strong>
+                    </div>
+
+                    <!-- Thông số Quota -->
+                    {% if enrollment.exemption_quota %}
+                    <div class="p-3 rounded-3 mb-3" style="background-color: rgba(254, 243, 226, 0.08); border: 1px solid rgba(244, 174, 82, 0.2);">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="small" style="color: #ecd9c6;"><i class="bi bi-headphones me-1" style="color: var(--color-warm-orange);"></i>Hạn mức miễn BTVN nghe:</span>
+                            <span class="fw-bold" style="color: var(--color-warm-orange); font-size: 1.1rem;">
+                                Còn lại: {{ enrollment.exemption_quota.remaining_quota }} / {{ enrollment.exemption_quota.max_quota }} buổi
+                            </span>
+                        </div>
+
+                        <!-- Thanh tiến trình bo tròn 2 màu -->
+                        <div class="custom-progress-track" style="height: 12px;" title="Đã dùng {{ enrollment.exemption_quota.used_quota }} / {{ enrollment.exemption_quota.max_quota }} buổi">
+                            {% widthratio enrollment.exemption_quota.used_quota enrollment.exemption_quota.max_quota 100 as pct_u %}
+                            <div class="custom-progress-fill" style="width: {{ pct_u }}%;"></div>
+                        </div>
+
+                        <div class="d-flex justify-content-between mt-2 small" style="color: #eddcd0; font-size: 0.76rem;">
+                            <span>Đã sử dụng: <strong style="color: var(--color-burn-orange);">{{ enrollment.exemption_quota.used_quota }} buổi</strong></span>
+                            <span>Định mức tối đa: <strong>{{ enrollment.exemption_quota.max_quota }} buổi</strong></span>
+                        </div>
+                    </div>
                     {% endif %}
                 </div>
-                <h5 class="card-title fw-bold text-dark mb-1">{{ c.name }}</h5>
-                <div class="text-muted small mb-3">Mã lớp: <code>{{ c.class_code }}</code></div>
 
-                <div class="bg-light rounded-3 p-3 mb-3 small">
-                    <div class="mb-2">
-                        <i class="bi bi-mortarboard text-secondary me-2"></i>Chương trình:
-                        <strong>{{ c.course.name }}</strong>
-                    </div>
-                    <div class="mb-2">
-                        <i class="bi bi-person-workspace text-secondary me-2"></i>Giáo viên chấm bài:
-                        {% if c.teacher %}
-                            <strong class="text-primary">{{ c.teacher.get_full_name|default:c.teacher.username }}</strong>
-                        {% else %}
-                            <span class="text-danger">Chưa phân công</span>
-                        {% endif %}
-                    </div>
-                    <div class="mb-2">
-                        <i class="bi bi-people text-secondary me-2"></i>Sĩ số:
-                        <strong>{{ c.total_students }} học viên</strong>
-                    </div>
-                    <div>
-                        <i class="bi bi-shield-check text-secondary me-2"></i>Định mức miễn nghe:
-                        <span class="badge bg-info-subtle text-info fw-bold">{{ c.course.default_listening_exemption_quota }} buổi</span>
-                    </div>
-                </div>
-
-                <div class="mt-auto pt-2 d-flex gap-2">
-                    <a href="{% url 'courses:class_detail' c.id %}" class="btn btn-outline-primary w-100">
-                        <i class="bi bi-eye me-1"></i>Chi tiết lớp
+                <div class="d-flex gap-2 mt-2">
+                    <a href="{% url 'courses:class_detail' enrollment.classroom.id %}" class="btn w-50 py-2 fw-bold" style="background-color: var(--color-light-cream); color: var(--color-dark-brown); border-radius: 30px; font-size: 0.85rem;">
+                        <i class="bi bi-door-open-fill me-1"></i>Vào lớp học
                     </a>
-                    {% if user.role == 'student' %}
-                    <a href="{% url 'courses:request_exemption' c.id %}" class="btn btn-warning text-dark" title="Xin miễn BTVN nghe">
-                        <i class="bi bi-file-earmark-plus"></i> Xin miễn
+                    {% if enrollment.exemption_quota and enrollment.exemption_quota.remaining_quota > 0 %}
+                    <a href="{% url 'courses:request_exemption' enrollment.classroom.id %}" class="btn-cta-orange w-50 py-2 justify-content-center" style="font-size: 0.85rem;">
+                        <i class="bi bi-file-earmark-plus"></i> Xin miễn nghe
                     </a>
+                    {% else %}
+                    <button class="btn btn-secondary w-50 py-2" disabled style="border-radius: 30px; font-size: 0.85rem; opacity: 0.5;">
+                        Đã hết lượt miễn
+                    </button>
                     {% endif %}
                 </div>
             </div>
@@ -77,9 +81,240 @@
     </div>
     {% empty %}
     <div class="col-12 text-center py-5">
-        <i class="bi bi-folder-x fs-1 text-muted d-block mb-2"></i>
-        <h5 class="text-secondary">Chưa có lớp học nào phù hợp với tài khoản của bạn.</h5>
+        <i class="bi bi-journal-x fs-1 d-block mb-2" style="color: var(--color-warm-orange);"></i>
+        <h5 class="text-secondary">Bạn hiện chưa được ghi danh vào khóa học nào.</h5>
     </div>
     {% endfor %}
 </div>
+
+<!-- 2. CÁC BÀI TẬP CẦN LÀM & QUY ĐỊNH HỆ THỐNG -->
+<div class="data-card-wrapper mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="section-title-h2 mb-0" style="color: var(--color-burn-orange);">
+            <i class="bi bi-list-task me-2"></i>CÁC BÀI TẬP VỀ NHÀ CẦN HOÀN THÀNH
+        </h2>
+    </div>
+
+    <div class="row g-3">
+        <!-- Loại 1: Bài tập Listening -->
+        <div class="col-md-4">
+            <div class="p-3 rounded-4 h-100" style="background-color: var(--color-light-cream); border: 2px solid var(--color-warm-orange);">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <div style="width: 36px; height: 36px; border-radius: 50%; background-color: var(--color-dark-brown); color: var(--color-warm-orange); display: flex; align-items: center; justify-content: center;">
+                        <i class="bi bi-headphones"></i>
+                    </div>
+                    <div>
+                        <h6 class="fw-bold mb-0 text-dark">1. Bài tập Nghe (Listening)</h6>
+                        <span class="badge" style="background-color: #e6f6ec; color: #15803d; font-weight: 700;">ĐƯỢC ÁP DỤNG MIỄN</span>
+                    </div>
+                </div>
+                <p class="small text-secondary mb-3">
+                    Luyện nghe theo format đề thi.
+                    <strong>Chỉ loại bài tập này mới được gửi đơn xin miễn.</strong>
+                </p>
+                <div class="alert alert-warning py-1 px-2 small mb-0" style="font-size: 0.75rem;">
+                    <i class="bi bi-info-circle me-1"></i>08 buổi (TOEIC/VSTEP) &bull; 05 buổi (B1)
+                </div>
+            </div>
+        </div>
+
+        <!-- Loại 2: Bài tập Vocabulary -->
+        <div class="col-md-4">
+            <div class="p-3 rounded-4 h-100" style="background-color: var(--color-light-cream); border: 1px solid rgba(42, 26, 14, 0.15);">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <div style="width: 36px; height: 36px; border-radius: 50%; background-color: var(--color-dark-brown); color: var(--color-light-cream); display: flex; align-items: center; justify-content: center;">
+                        <i class="bi bi-book-half"></i>
+                    </div>
+                    <div>
+                        <h6 class="fw-bold mb-0 text-dark">2. Bài tập Từ vựng (Vocabulary)</h6>
+                        <span class="badge" style="background-color: #fee2e2; color: #b91c1c; font-weight: 700;">BẮT BUỘC - KHÔNG MIỄN</span>
+                    </div>
+                </div>
+                <p class="small text-secondary mb-3">
+                    Flashcard & trắc nghiệm ngữ nghĩa.
+                </p>
+                <div class="text-muted small" style="font-size: 0.75rem;">
+                    * Bắt buộc hoàn thành 100% để đủ điều kiện thi đầu ra.
+                </div>
+            </div>
+        </div>
+
+        <!-- Loại 3: Bài tập Speaking -->
+        <div class="col-md-4">
+            <div class="p-3 rounded-4 h-100" style="background-color: var(--color-light-cream); border: 1px solid rgba(42, 26, 14, 0.15);">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <div style="width: 36px; height: 36px; border-radius: 50%; background-color: var(--color-burn-orange); color: #ffffff; display: flex; align-items: center; justify-content: center;">
+                        <i class="bi bi-mic-fill"></i>
+                    </div>
+                    <div>
+                        <h6 class="fw-bold mb-0 text-dark">3. Bài tập Nói (Speaking)</h6>
+                        <span class="badge" style="background-color: #fee2e2; color: #b91c1c; font-weight: 700;">BẮT BUỘC - KHÔNG MIỄN</span>
+                    </div>
+                </div>
+                <p class="small text-secondary mb-3">
+                    Học viên ghi âm trực tiếp câu trả lời.
+                </p>
+                <div class="text-muted small" style="font-size: 0.75rem;">
+                    * Bắt buộc hoàn thành 100%.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 3. LỊCH SỬ CÁC ĐƠN XIN MIỄN BTVN NGHE ĐÃ GỬI -->
+<div class="data-card-wrapper">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="section-title-h2 mb-0">LỊCH SỬ ĐƠN XIN MIỄN BTVN NGHE CỦA TÔI</h2>
+    </div>
+
+    <div class="table-responsive">
+        <table class="custom-data-table">
+            <thead>
+                <tr>
+                    <th>Lớp học</th>
+                    <th>Buổi / Bài tập xin miễn</th>
+                    <th>Lý do xin miễn</th>
+                    <th>Trạng thái xét duyệt</th>
+                    <th>Giáo viên phản hồi</th>
+                    <th>Thời gian gửi</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for req in student_exemptions %}
+                <tr>
+                    <td>
+                        <span class="badge" style="background-color: var(--color-dark-brown); color: var(--color-warm-orange); font-weight: 700;">
+                            {{ req.enrollment.classroom.class_code }}
+                        </span>
+                    </td>
+                    <td>
+                        <strong>{{ req.session_title }}</strong>
+                        <div class="small text-success"><i class="bi bi-headphones me-1"></i>Listening</div>
+                    </td>
+                    <td class="small text-secondary" style="max-width: 250px;">{{ req.reason }}</td>
+                    <td>
+                        {% if req.status == 'approved' %}
+                            <span class="badge" style="background-color: #e6f6ec; color: #15803d; font-weight: 700; border-radius: 20px; padding: 0.35rem 0.75rem;"> Đã chấp thuận</span>
+                        {% elif req.status == 'rejected' %}
+                            <span class="badge" style="background-color: #fee2e2; color: #b91c1c; font-weight: 700; border-radius: 20px; padding: 0.35rem 0.75rem;"> Bị từ chối</span>
+                        {% else %}
+                            <span class="badge" style="background-color: #fff7ed; color: var(--color-burn-orange); border: 1px solid var(--color-warm-orange); font-weight: 700; border-radius: 20px; padding: 0.35rem 0.75rem;"> Đang chờ duyệt</span>
+                        {% endif %}
+                    </td>
+                    <td class="small">
+                        {% if req.reviewed_by %}
+                            <div class="fw-bold" style="color: var(--color-dark-brown);">{{ req.reviewed_by.get_full_name|default:req.reviewed_by.username }}</div>
+                            {% if req.review_note %}
+                                <div class="text-muted fst-italic">"{{ req.review_note }}"</div>
+                            {% endif %}
+                        {% else %}
+                            <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td class="small text-muted">{{ req.created_at|date:"d/m/Y H:i" }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center py-4 text-muted">
+                        <i class="bi bi-shield-check fs-2 d-block mb-1" style="color: var(--color-warm-orange);"></i>
+                        Bạn chưa nộp đơn xin miễn bài tập nghe nào.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% else %}
+<!-- ============================================================== -->
+<!-- GIAO DIỆN QUẢN TRỊ DÀNH CHO ADMIN, QUẢN LÝ VÀ GIÁO VIÊN -->
+<!-- ============================================================== -->
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="page-title-h1">
+            {% if user.role == 'teacher' %}LỚP HỌC ĐANG PHỤ TRÁCH GIẢNG DẠY{% else %}QUẢN LÝ LỚP HỌC{% endif %}
+        </h1>
+        <div class="text-muted small" style="color: #6d5b4e !important;">
+            {% if user.role == 'teacher' %}
+                Danh sách các lớp bạn được phân công giảng dạy, chấm bài và duyệt miễn BTVN nghe
+            {% else %}
+                Quản trị danh sách lớp, phân công giáo viên chấm bài và ghi danh học viên
+            {% endif %}
+        </div>
+    </div>
+    {% if user.is_superuser or user.role == 'admin' or user.role == 'manager' %}
+    <a href="{% url 'courses:class_create' %}" class="btn-cta-orange">
+        <i class="bi bi-plus-circle-fill"></i>
+        <span>+ Tạo lớp học mới</span>
+    </a>
+    {% endif %}
+</div>
+
+<div class="row g-4">
+    {% for c in classes %}
+    <div class="col-md-6 col-lg-4">
+        <div class="card h-100 border-0 rounded-4 shadow-sm" style="background: #ffffff; border: 1px solid rgba(212, 98, 26, 0.25) !important;">
+            <div class="card-body p-4 d-flex flex-column">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <span class="badge" style="background-color: var(--color-warm-orange); color: var(--color-dark-brown); font-weight: 800; font-size: 0.8rem; border-radius: 8px;">
+                        {{ c.course.code }}
+                    </span>
+                    {% if c.is_active %}
+                        <span class="badge" style="background-color: #e6f6ec; color: #15803d; font-weight: 700; border-radius: 20px;">
+                            Đang mở
+                        </span>
+                    {% else %}
+                        <span class="badge" style="background-color: #f3f4f6; color: #6b7280; font-weight: 700; border-radius: 20px;">
+                            Đã kết thúc
+                        </span>
+                    {% endif %}
+                </div>
+
+                <h5 class="fw-bold mb-1" style="color: var(--color-dark-brown);">{{ c.name }}</h5>
+                <div class="small mb-3" style="color: var(--color-burn-orange); font-weight: 600;">Mã lớp: <code>{{ c.class_code }}</code></div>
+
+                <div class="rounded-3 p-3 mb-3 small" style="background-color: var(--color-light-cream); border: 1px dashed rgba(212, 98, 26, 0.25);">
+                    <div class="mb-2">
+                        <i class="bi bi-mortarboard-fill me-2" style="color: var(--color-burn-orange);"></i>Chương trình:
+                        <strong>{{ c.course.name }}</strong>
+                    </div>
+                    <div class="mb-2">
+                        <i class="bi bi-person-check-fill me-2" style="color: var(--color-dark-brown);"></i>Giáo viên chấm bài:
+                        {% if c.teacher %}
+                            <strong style="color: var(--color-burn-orange);">{{ c.teacher.get_full_name|default:c.teacher.username }}</strong>
+                        {% else %}
+                            <span class="text-danger fw-bold">Chưa phân công</span>
+                        {% endif %}
+                    </div>
+                    <div class="mb-2">
+                        <i class="bi bi-people-fill me-2" style="color: var(--color-dark-brown);"></i>Sĩ số:
+                        <strong>{{ c.total_students }} học viên</strong>
+                    </div>
+                    <div>
+                        <i class="bi bi-headphones me-2" style="color: var(--color-burn-orange);"></i>Định mức miễn nghe:
+                        <span class="badge" style="background-color: var(--color-dark-brown); color: var(--color-warm-orange); font-weight: 700;">
+                            {{ c.course.default_listening_exemption_quota }} buổi
+                        </span>
+                    </div>
+                </div>
+
+                <div class="mt-auto pt-2">
+                    <a href="{% url 'courses:class_detail' c.id %}" class="btn w-100 fw-bold" style="background-color: var(--color-dark-brown); color: #ffffff; border-radius: 30px; font-size: 0.88rem;">
+                        <i class="bi bi-eye me-1"></i>Chi tiết lớp học
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12 text-center py-5">
+        <i class="bi bi-folder-x fs-1 d-block mb-2" style="color: var(--color-warm-orange);"></i>
+        <h5 class="text-secondary">Chưa có lớp học nào trong hệ thống.</h5>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
 {% endblock %}

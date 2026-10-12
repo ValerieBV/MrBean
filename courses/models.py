@@ -300,11 +300,18 @@ class ExemptionRequest(models.Model):
 
         # 2. Kiểm tra hạn mức còn lại khi tạo đơn mới
         if not self.pk or self.status == self.STATUS_PENDING:
-            quota = getattr(self.enrollment, 'exemption_quota', None)
-            if quota and quota.remaining_quota <= 0:
-                raise ValidationError(
-                    f"Học viên đã sử dụng hết số buổi miễn BTVN ({quota.used_quota}/{quota.max_quota} buổi) của khóa học này."
-                )
+            from django.core.exceptions import ObjectDoesNotExist
+            try:
+                enrollment = self.enrollment
+            except ObjectDoesNotExist:
+                enrollment = None
+
+            if enrollment:
+                quota = getattr(enrollment, 'exemption_quota', None)
+                if quota and quota.remaining_quota <= 0:
+                    raise ValidationError(
+                        f"Học viên đã sử dụng hết số buổi miễn BTVN ({quota.used_quota}/{quota.max_quota} buổi) của khóa học này."
+                    )
 
     def approve(self, teacher_user, note=""):
         """

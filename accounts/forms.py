@@ -25,6 +25,15 @@ class CustomUserCreationForm(forms.ModelForm):
             'phone_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Số điện thoại'}),
         }
 
+    def __init__(self, *args, current_user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if current_user and current_user.role == CustomUser.ROLE_MANAGER:
+            # Quản lý được phân quyền tạo tài khoản cho Học viên
+            self.fields['role'].choices = [
+                (CustomUser.ROLE_STUDENT, 'Học viên'),
+            ]
+            self.fields['role'].initial = CustomUser.ROLE_STUDENT
+
     def clean(self):
         cleaned_data = super().clean()
         password = cleaned_data.get("password")

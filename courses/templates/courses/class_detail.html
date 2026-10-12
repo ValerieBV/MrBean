@@ -1,66 +1,73 @@
 {% extends 'base.html' %}
 
-{% block title %}Chi tiết Lớp: {{ classroom.class_code }}{% endblock %}
+{% block title %}Chi tiết Lớp: {{ classroom.class_code }} - MR BEAN ENGLISH{% endblock %}
 
 {% block content %}
 <!-- Header Lớp -->
-<div class="card shadow-sm border-0 mb-4 rounded-3">
+<div class="card border-0 rounded-4 shadow-sm mb-4" style="background: #ffffff; border: 1px solid rgba(212, 98, 26, 0.25) !important;">
     <div class="card-body p-4">
         <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
             <div>
-                <div class="d-flex align-items-center gap-2 mb-1">
-                    <span class="badge bg-primary px-3 py-1 fs-6">{{ classroom.class_code }}</span>
-                    <span class="badge bg-info-subtle text-info">{{ classroom.course.get_course_type_display }}</span>
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <span class="badge" style="background-color: var(--color-dark-brown); color: var(--color-warm-orange); font-size: 0.95rem; font-weight: 800; border-radius: 8px;">
+                        {{ classroom.class_code }}
+                    </span>
+                    <span class="badge" style="background-color: var(--color-warm-orange); color: var(--color-dark-brown); font-weight: 700; border-radius: 8px;">
+                        {{ classroom.course.get_course_type_display }}
+                    </span>
                     {% if classroom.is_active %}
-                        <span class="badge bg-success">Đang hoạt động</span>
+                        <span class="badge" style="background-color: #e6f6ec; color: #15803d; font-weight: 700; border-radius: 20px;">
+                            Đang hoạt động
+                        </span>
                     {% else %}
-                        <span class="badge bg-secondary">Tạm dừng</span>
+                        <span class="badge" style="background-color: #f3f4f6; color: #6b7280; font-weight: 700; border-radius: 20px;">
+                            Tạm dừng
+                        </span>
                     {% endif %}
                 </div>
-                <h2 class="fw-bold text-dark mb-1">{{ classroom.name }}</h2>
-                <p class="text-muted mb-0"><i class="bi bi-mortarboard me-1"></i>Khóa học: {{ classroom.course.name }}</p>
+                <h1 class="page-title-h1 mb-1">{{ classroom.name }}</h1>
+                <div class="small" style="color: #6d5b4e;"><i class="bi bi-mortarboard-fill me-1" style="color: var(--color-burn-orange);"></i>Chương trình: <strong>{{ classroom.course.name }}</strong></div>
             </div>
             
             <div class="d-flex flex-wrap gap-2">
                 {% if can_manage %}
-                <a href="{% url 'courses:assign_teacher' classroom.id %}" class="btn btn-outline-primary">
+                <a href="{% url 'courses:assign_teacher' classroom.id %}" class="btn" style="background-color: var(--color-warm-orange); color: var(--color-dark-brown); font-weight: 700; border-radius: 30px; font-size: 0.88rem;">
                     <i class="bi bi-person-badge me-1"></i>Phân công Giáo viên
                 </a>
-                <a href="{% url 'courses:enroll_student' classroom.id %}" class="btn btn-primary">
+                <a href="{% url 'courses:enroll_student' classroom.id %}" class="btn-cta-orange">
                     <i class="bi bi-person-plus me-1"></i>Thêm Học viên
                 </a>
-                <a href="{% url 'courses:class_update' classroom.id %}" class="btn btn-outline-secondary">
-                    <i class="bi bi-pencil"></i>
+                <a href="{% url 'courses:class_update' classroom.id %}" class="btn-action-edit" style="border-radius: 20px; padding: 0.55rem 0.9rem;">
+                    <i class="bi bi-pencil"></i> Sửa lớp
                 </a>
                 {% endif %}
                 {% if user.role == 'student' %}
-                <a href="{% url 'courses:request_exemption' classroom.id %}" class="btn btn-warning text-dark fw-semibold">
+                <a href="{% url 'courses:request_exemption' classroom.id %}" class="btn-cta-orange">
                     <i class="bi bi-file-earmark-plus me-1"></i>Nộp đơn xin miễn BTVN Nghe
                 </a>
                 {% endif %}
             </div>
         </div>
 
-        <hr class="my-3">
+        <hr class="my-3" style="border-color: rgba(212, 98, 26, 0.2);">
 
         <!-- Thông tin giáo viên và định mức -->
         <div class="row g-3 small">
             <div class="col-md-4">
-                <span class="text-muted d-block">Giáo viên phụ trách chấm bài:</span>
+                <span class="d-block" style="color: #846d5c;">Giáo viên phụ trách chấm bài:</span>
                 {% if classroom.teacher %}
-                    <strong class="text-primary fs-6"><i class="bi bi-person-check-fill me-1"></i>{{ classroom.teacher.get_full_name|default:classroom.teacher.username }}</strong>
-                    <span class="text-muted">({{ classroom.teacher.email|default:"Không có email" }})</span>
+                    <strong class="fs-6" style="color: var(--color-burn-orange);"><i class="bi bi-person-check-fill me-1"></i>{{ classroom.teacher.get_full_name|default:classroom.teacher.username }}</strong>
                 {% else %}
                     <span class="text-danger fw-bold"><i class="bi bi-exclamation-triangle-fill me-1"></i>Chưa phân công giáo viên!</span>
                 {% endif %}
             </div>
             <div class="col-md-4">
-                <span class="text-muted d-block">Chính sách miễn BTVN Nghe:</span>
-                <strong class="text-success fs-6"><i class="bi bi-headphones me-1"></i>{{ classroom.course.default_listening_exemption_quota }} buổi miễn</strong>
-                <span class="text-muted">(Chỉ áp dụng bài tập Nghe)</span>
+                <span class="d-block" style="color: #846d5c;">Chính sách miễn BTVN Nghe:</span>
+                <strong class="fs-6" style="color: var(--color-dark-brown);"><i class="bi bi-headphones me-1" style="color: var(--color-burn-orange);"></i>{{ classroom.course.default_listening_exemption_quota }} buổi miễn</strong>
+                <span style="color: var(--color-burn-orange); font-weight: 600;">(Chỉ miễn Listening)</span>
             </div>
             <div class="col-md-4">
-                <span class="text-muted d-block">Thời gian:</span>
+                <span class="d-block" style="color: #846d5c;">Thời gian:</span>
                 <span>Từ: {{ classroom.start_date|date:"d/m/Y"|default:"Chưa rõ" }} - Đến: {{ classroom.end_date|date:"d/m/Y"|default:"Chưa rõ" }}</span>
             </div>
         </div>
@@ -69,17 +76,19 @@
 
 <!-- Banner Quota cho học viên nếu người xem là học viên -->
 {% if student_quota %}
-<div class="alert alert-info shadow-sm border-0 d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <h5 class="alert-heading fw-bold mb-1"><i class="bi bi-headphones me-2"></i>Hạn mức miễn BTVN Nghe của bạn trong lớp này</h5>
-        <p class="mb-0 small">
-            Bạn đã sử dụng <strong>{{ student_quota.used_quota }}</strong> trên tổng số <strong>{{ student_quota.max_quota }}</strong> buổi được miễn.
-        </p>
-    </div>
-    <div class="text-end">
-        <span class="fs-4 fw-bold {% if student_quota.remaining_quota > 0 %}text-success{% else %}text-danger{% endif %}">
-            Còn lại: {{ student_quota.remaining_quota }} buổi
-        </span>
+<div class="rounded-4 p-4 mb-4 shadow-sm" style="background-color: var(--color-dark-brown); color: #ffffff;">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+        <div>
+            <h5 class="fw-bold mb-1" style="color: var(--color-warm-orange);"><i class="bi bi-headphones me-2"></i>HẠN MỨC MIỄN BTVN NGHE CỦA BẠN TRONG LỚP NÀY</h5>
+            <div class="small opacity-75">
+                Bạn đã sử dụng <strong style="color: var(--color-warm-orange);">{{ student_quota.used_quota }}</strong> trên tổng số <strong>{{ student_quota.max_quota }}</strong> buổi được miễn.
+            </div>
+        </div>
+        <div class="text-end">
+            <span class="fs-3 fw-bold" style="color: var(--color-warm-orange);">
+                Còn lại: {{ student_quota.remaining_quota }} / {{ student_quota.max_quota }} buổi
+            </span>
+        </div>
     </div>
 </div>
 {% endif %}
@@ -87,20 +96,20 @@
 <!-- Đơn xin miễn đang chờ duyệt (Hiển thị cho Giáo viên phụ trách hoặc Quản lý) -->
 {% if is_teacher_of_class or can_manage %}
 {% if pending_exemptions %}
-<div class="card shadow-sm border-0 mb-4 border-warning border-start border-4">
-    <div class="card-header bg-warning bg-opacity-10 py-3">
-        <h5 class="fw-bold mb-0 text-dark">
-            <i class="bi bi-hourglass-split me-2 text-warning"></i>Đơn xin miễn BTVN Nghe đang chờ duyệt ({{ pending_exemptions.count }})
-        </h5>
+<div class="card border-0 rounded-4 shadow-sm mb-4" style="background: #ffffff; border: 2px solid var(--color-warm-orange) !important;">
+    <div class="card-header py-3 bg-transparent border-0">
+        <h2 class="section-title-h2 mb-0" style="color: var(--color-burn-orange);">
+            <i class="bi bi-hourglass-split me-2"></i>ĐƠN XIN MIỄN BTVN NGHE ĐANG CHỜ DUYỆT ({{ pending_exemptions.count }})
+        </h2>
     </div>
     <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
-            <thead class="table-light">
+        <table class="custom-data-table">
+            <thead>
                 <tr>
-                    <th class="ps-3">Học viên</th>
+                    <th>Học viên</th>
                     <th>Buổi / Bài tập</th>
                     <th>Lý do</th>
-                    <th>Hạn mức còn</th>
+                    <th>Hạn mức còn lại</th>
                     <th>Thời gian gửi</th>
                     <th class="text-end pe-3">Thao tác</th>
                 </tr>
@@ -108,15 +117,21 @@
             <tbody>
                 {% for req in pending_exemptions %}
                 <tr>
-                    <td class="ps-3 fw-bold">{{ req.enrollment.student.get_full_name|default:req.enrollment.student.username }}</td>
-                    <td><span class="badge bg-secondary">{{ req.session_title }}</span></td>
-                    <td class="small text-muted">{{ req.reason }}</td>
+                    <td class="fw-bold">{{ req.enrollment.student.get_full_name|default:req.enrollment.student.username }}</td>
                     <td>
-                        <span class="badge bg-info">{{ req.enrollment.exemption_quota.remaining_quota }}/{{ req.enrollment.exemption_quota.max_quota }} buổi</span>
+                        <span class="badge" style="background-color: var(--color-light-cream); color: var(--color-dark-brown); border: 1px solid var(--color-warm-orange);">
+                            {{ req.session_title }}
+                        </span>
+                    </td>
+                    <td class="small text-secondary">{{ req.reason }}</td>
+                    <td>
+                        <span class="fw-bold" style="color: var(--color-burn-orange);">
+                            {{ req.enrollment.exemption_quota.remaining_quota }}/{{ req.enrollment.exemption_quota.max_quota }} buổi
+                        </span>
                     </td>
                     <td class="small text-muted">{{ req.created_at|date:"d/m/Y H:i" }}</td>
                     <td class="text-end pe-3">
-                        <a href="{% url 'courses:exemption_review' req.id %}" class="btn btn-sm btn-primary">
+                        <a href="{% url 'courses:exemption_review' req.id %}" class="btn-cta-orange py-1 px-3" style="font-size: 0.8rem;">
                             <i class="bi bi-check-circle me-1"></i>Xét duyệt
                         </a>
                     </td>
@@ -130,53 +145,58 @@
 {% endif %}
 
 <!-- Danh sách Học viên trong lớp -->
-<div class="card shadow-sm border-0 rounded-3">
-    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-        <h5 class="fw-bold mb-0 text-dark">
-            <i class="bi bi-people-fill text-primary me-2"></i>Danh sách Học viên ({{ enrollments.count }})
-        </h5>
+<div class="data-card-wrapper">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="section-title-h2 mb-0">DANH SÁCH HỌC VIÊN ({{ enrollments.count }})</h2>
     </div>
+
     <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
-            <thead class="table-light">
+        <table class="custom-data-table">
+            <thead>
                 <tr>
-                    <th scope="col" class="ps-3">Học viên</th>
-                    <th scope="col">Email & SĐT</th>
-                    <th scope="col">Trạng thái</th>
-                    <th scope="col">Số buổi miễn BTVN Nghe</th>
-                    <th scope="col">Ngày vào lớp</th>
+                    <th>Học viên</th>
+                    <th>Email & SĐT</th>
+                    <th>Trạng thái</th>
+                    <th>Tiến trình miễn BTVN nghe</th>
+                    <th>Ngày vào lớp</th>
                     {% if can_manage %}
-                    <th scope="col" class="text-end pe-3">Thao tác</th>
+                    <th class="text-end pe-3">Hành động</th>
                     {% endif %}
                 </tr>
             </thead>
             <tbody>
                 {% for e in enrollments %}
                 <tr>
-                    <td class="ps-3">
-                        <div class="fw-bold">{{ e.student.get_full_name|default:e.student.username }}</div>
-                        <div class="text-muted small">@{{ e.student.username }}</div>
-                    </td>
                     <td>
-                        <div><i class="bi bi-envelope text-muted me-1"></i>{{ e.student.email|default:"-" }}</div>
-                        <div class="small text-muted"><i class="bi bi-telephone text-muted me-1"></i>{{ e.student.phone_number|default:"-" }}</div>
+                        <div class="fw-bold">{{ e.student.get_full_name|default:e.student.username }}</div>
+                        <div class="small opacity-75">@{{ e.student.username }}</div>
+                    </td>
+                    <td class="small">
+                        <div>{{ e.student.email|default:"-" }}</div>
+                        <div class="text-muted">{{ e.student.phone_number|default:"-" }}</div>
                     </td>
                     <td>
                         {% if e.status == 'active' %}
-                            <span class="badge bg-success-subtle text-success">Đang học</span>
+                            <span class="badge" style="background-color: #e6f6ec; color: #15803d; font-weight: 700; border-radius: 20px;">Đang học</span>
                         {% elif e.status == 'completed' %}
-                            <span class="badge bg-info-subtle text-info">Hoàn thành</span>
+                            <span class="badge" style="background-color: var(--color-light-cream); color: var(--color-dark-brown); font-weight: 700; border-radius: 20px;">Hoàn thành</span>
                         {% else %}
-                            <span class="badge bg-secondary-subtle text-secondary">Nghỉ/Bảo lưu</span>
+                            <span class="badge" style="background-color: #f3f4f6; color: #6b7280; font-weight: 700; border-radius: 20px;">Nghỉ/Bảo lưu</span>
                         {% endif %}
                     </td>
-                    <td>
+                    <td style="min-width: 200px;">
                         {% if e.exemption_quota %}
-                            <div class="d-flex align-items-center gap-2">
-                                <span class="badge {% if e.exemption_quota.remaining_quota > 0 %}bg-success{% else %}bg-danger{% endif %}">
-                                    Còn {{ e.exemption_quota.remaining_quota }}/{{ e.exemption_quota.max_quota }} buổi
+                            <div class="d-flex align-items-center gap-2 mb-1">
+                                <div class="custom-progress-track flex-grow-1" style="height: 10px;">
+                                    {% widthratio e.exemption_quota.used_quota e.exemption_quota.max_quota 100 as p_used %}
+                                    <div class="custom-progress-fill" style="width: {{ p_used }}%;"></div>
+                                </div>
+                                <span class="fw-bold small" style="color: var(--color-dark-brown);">
+                                    <strong style="color: var(--color-burn-orange);">{{ e.exemption_quota.used_quota }}</strong>/{{ e.exemption_quota.max_quota }}
                                 </span>
-                                <small class="text-muted">(Đã dùng: {{ e.exemption_quota.used_quota }})</small>
+                            </div>
+                            <div class="small" style="font-size: 0.72rem; color: #846d5c;">
+                                Còn lại: <strong>{{ e.exemption_quota.remaining_quota }}</strong> buổi
                             </div>
                         {% else %}
                             <span class="text-muted small">Chưa thiết lập</span>
@@ -185,7 +205,7 @@
                     <td class="small text-muted">{{ e.enrolled_at|date:"d/m/Y" }}</td>
                     {% if can_manage %}
                     <td class="text-end pe-3">
-                        <a href="{% url 'courses:remove_student' classroom.id e.student.id %}" class="btn btn-sm btn-outline-danger" title="Xóa khỏi lớp">
+                        <a href="{% url 'courses:remove_student' classroom.id e.student.id %}" class="btn-action-delete" title="Xóa khỏi lớp">
                             <i class="bi bi-person-dash"></i> Xóa
                         </a>
                     </td>
@@ -194,7 +214,8 @@
                 {% empty %}
                 <tr>
                     <td colspan="6" class="text-center py-4 text-muted">
-                        <i class="bi bi-person-x fs-2 d-block mb-2"></i>Lớp học hiện chưa có học viên nào.
+                        <i class="bi bi-person-x fs-2 d-block mb-1" style="color: var(--color-warm-orange);"></i>
+                        Lớp học hiện chưa có học viên nào.
                     </td>
                 </tr>
                 {% endfor %}

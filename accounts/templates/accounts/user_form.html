@@ -1,36 +1,38 @@
 {% extends 'base.html' %}
 
-{% block title %}{{ title }}{% endblock %}
+{% block title %}{{ title }} - MR BEAN ENGLISH{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
     <div class="col-md-8 col-lg-6">
-        <div class="card shadow-sm border-0 rounded-3">
-            <div class="card-header bg-white py-3 border-0">
-                <h4 class="fw-bold mb-0 text-primary"><i class="bi bi-person-gear me-2"></i>{{ title }}</h4>
+        <div class="card border-0 rounded-4 shadow-sm" style="background: #ffffff; border: 1px solid rgba(212, 98, 26, 0.25) !important;">
+            <div class="card-header py-3 border-0 bg-transparent">
+                <h2 class="section-title-h2 mb-0" style="color: var(--color-burn-orange);">
+                    <i class="bi bi-person-gear me-2"></i>{{ title }}
+                </h2>
             </div>
-            <div class="card-body p-4">
+            <div class="card-body p-4 pt-1">
                 <form method="post">
                     {% csrf_token %}
                     
                     {% for field in form %}
                         <div class="mb-3">
-                            <label class="form-label fw-semibold small">{{ field.label }}</label>
+                            <label class="form-label fw-bold small" style="color: var(--color-dark-brown);">{{ field.label }}</label>
                             {{ field }}
                             {% if field.help_text %}
-                                <div class="form-text small">{{ field.help_text }}</div>
+                                <div class="form-text small" style="color: #846d5c;">{{ field.help_text }}</div>
                             {% endif %}
                             {% for error in field.errors %}
-                                <div class="text-danger small mt-1"><i class="bi bi-exclamation-circle me-1"></i>{{ error }}</div>
+                                <div class="small mt-1 fw-bold" style="color: var(--color-burn-orange);"><i class="bi bi-exclamation-circle me-1"></i>{{ error }}</div>
                             {% endfor %}
                         </div>
                     {% endfor %}
 
-                    <div class="d-flex justify-content-between mt-4">
-                        <a href="{% url 'accounts:user_list' %}" class="btn btn-outline-secondary">
+                    <div class="d-flex justify-content-between mt-4 pt-2 border-top">
+                        <a href="{% url 'accounts:user_list' %}" class="btn" style="background-color: var(--color-light-cream); color: var(--color-dark-brown); border: 1px solid rgba(42, 26, 14, 0.2); border-radius: 30px; font-weight: 600;">
                             <i class="bi bi-arrow-left me-1"></i>Quay lại
                         </a>
-                        <button type="submit" class="btn btn-primary px-4">
+                        <button type="submit" class="btn btn-cta-orange px-4">
                             <i class="bi bi-check-circle-fill me-1"></i>Lưu thông tin
                         </button>
                     </div>

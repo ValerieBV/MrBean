@@ -184,3 +184,56 @@ class CourseAndExemptionTests(TestCase):
                 reason='Xin miễn tiếp'
             )
         self.assertIn("hết số buổi miễn", str(ctx.exception))
+
+    def test_student_submit_exemption_view_post(self):
+        """Kiểm tra học viên gửi đơn qua Web View không gặp lỗi RelatedObjectDoesNotExist"""
+        ClassManagementService.enroll_student_to_class(self.class_toeic, self.student_toeic)
+        self.client.force_login(self.student_toeic)
+
+        response = self.client.post(f"/courses/classes/{self.class_toeic.id}/request-exemption/", {
+            'homework_type': ExemptionRequest.HOMEWORK_TYPE_LISTENING,
+            'session_title': 'Buổi 1 - Listening Practice',
+            'reason': 'Em bị ốm'
+        }, follow=True)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(
+            ExemptionRequest.objects.filter(
+                enrollment__student=self.student_toeic,
+                session_title='Buổi 1 - Listening Practice'
+            ).exists()
+        )
+
+    def test_manager_can_create_student_account(self):
+        """Kiểm tra Quản lý có quyền tạo tài khoản cho học viên"""
+        self.client.force_login(self.manager)
+
+        response = self.client.post("/accounts/users/create/", {
+            'username': 'new_student_99',
+            'email': 'new_student@mrbean.edu.vn',
+            'first_name': 'Nguyen',
+            'last_name': 'Hoc Vien',
+            'role': CustomUser.ROLE_STUDENT,
+            'password': 'password123',
+            'confirm_password': 'password123',
+        }, follow=True)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(CustomUser.objects.filter(username='new_student_99', role=CustomUser.ROLE_STUDENT).exists())
+
+    def test_student_and_teacher_sidebar_view_restrictions(self):
+        """Học viên và giáo viên khi truy cập không nhìn thấy menu QUẢN LÝ TÀI KHOẢN"""
+        # 1. Học viên đăng nhập
+        self.client.force_login(self.student_toeic)
+        response_student = self.client.get("/courses/")
+        self.assertEqual(response_student.status_code, 200)
+        self.assertNotContains(response_student, ">QUẢN LÝ TÀI KHOẢN<")
+        self.assertContains(response_student, "KHÓA HỌC CỦA TÔI")
+
+        # 2. Giáo viên đăng nhập
+        self.client.force_login(self.teacher_toeic)
+        response_teacher = self.client.get("/courses/")
+        self.assertEqual(response_teacher.status_code, 200)
+        self.assertNotContains(response_teacher, ">QUẢN LÝ TÀI KHOẢN<")
+        self.assertContains(response_teacher, "LỚP HỌC ĐANG DẠY")
+

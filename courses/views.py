@@ -20,6 +20,9 @@ def class_list_view(request):
     """
     user = request.user
 
+    student_enrollments = None
+    student_exemptions = None
+
     if user.is_superuser or user.role in [CustomUser.ROLE_ADMIN, CustomUser.ROLE_MANAGER]:
         classes = ClassRoom.objects.all().select_related('course', 'teacher')
     elif user.role == CustomUser.ROLE_TEACHER:
@@ -30,9 +33,21 @@ def class_list_view(request):
             enrollments__status=Enrollment.STATUS_ACTIVE
         ).select_related('course', 'teacher')
 
+        # Lấy dữ liệu lớp học, hạn mức miễn nghe và lịch sử đơn của học viên
+        student_enrollments = Enrollment.objects.filter(
+            student=user,
+            status=Enrollment.STATUS_ACTIVE
+        ).select_related('classroom__course', 'classroom__teacher', 'exemption_quota')
+
+        student_exemptions = ExemptionRequest.objects.filter(
+            enrollment__student=user
+        ).select_related('enrollment__classroom__course', 'reviewed_by').order_by('-created_at')
+
     return render(request, 'courses/class_list.html', {
         'classes': classes,
-        'user_role': user.role
+        'user_role': user.role,
+        'student_enrollments': student_enrollments,
+        'student_exemptions': student_exemptions,
     })
 
 
@@ -212,6 +227,7 @@ def request_exemption_view(request, class_id):
 
     if request.method == 'POST':
         form = ExemptionRequestForm(request.POST)
+        form.instance.enrollment = enrollment
         if form.is_valid():
             try:
                 exemption = ExemptionControlService.submit_listening_exemption(

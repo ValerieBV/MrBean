@@ -3,139 +3,754 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Mr Bean English Center{% endblock %} - Hệ thống Quản trị & Vận hành</title>
+    <title>{% block title %}Quản trị & Vận hành{% endblock %} - MR BEAN ENGLISH</title>
+    <!-- Google Fonts: Be Vietnam Pro -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    
     <style>
         :root {
-            --primary-color: #1a56db;
-            --sidebar-bg: #1e293b;
+            /* 4 mã màu quy định */
+            --color-dark-brown: #2A1A0E;  /* Nâu đen đậm */
+            --color-light-cream: #FEF3E2; /* Màu kem sáng */
+            --color-burn-orange: #D4621A; /* Cam cháy / Đỏ cam */
+            --color-warm-orange: #F4AE52; /* Vàng cam ấm */
         }
+
+        * {
+            box-sizing: border-box;
+        }
+
         body {
-            background-color: #f8fafc;
-            font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            font-family: 'Be Vietnam Pro', sans-serif;
+            background-color: var(--color-light-cream);
+            color: var(--color-dark-brown);
+            margin: 0;
+            padding: 0;
             min-height: 100vh;
+        }
+
+        /* Typography */
+        h1, .page-title-h1 {
+            font-size: 1.65rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            color: var(--color-dark-brown);
+            letter-spacing: 0.5px;
+            margin-bottom: 0.25rem;
+        }
+
+        h2, .section-title-h2 {
+            font-size: 1.15rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--color-dark-brown);
+            letter-spacing: 0.4px;
+        }
+
+        /* Layout Structure */
+        .app-layout {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* A. Sidebar Navigation */
+        .app-sidebar {
+            width: 270px;
+            background-color: var(--color-dark-brown);
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            overflow-y: auto;
+            z-index: 1020;
+            box-shadow: 4px 0 16px rgba(42, 26, 14, 0.15);
+        }
+
+        .sidebar-brand {
+            padding: 1.75rem 1.5rem 1.25rem;
+            border-bottom: 1px solid rgba(254, 243, 226, 0.12);
+        }
+
+        .sidebar-brand-text {
+            font-size: 1.25rem;
+            font-weight: 800;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            color: var(--color-warm-orange);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+
+        .sidebar-brand-text i {
+            color: var(--color-burn-orange);
+            font-size: 1.5rem;
+        }
+
+        .sidebar-menu {
+            padding: 1.5rem 1rem;
+            list-style: none;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 0.45rem;
+        }
+
+        .sidebar-menu-item a {
+            display: flex;
+            align-items: center;
+            gap: 0.85rem;
+            padding: 0.8rem 1rem;
+            color: #ecd9c6;
+            text-decoration: none;
+            font-size: 0.92rem;
+            font-weight: 600;
+            border-radius: 10px;
+            transition: all 0.2s ease-in-out;
+        }
+
+        .sidebar-menu-item a i {
+            font-size: 1.15rem;
+            color: var(--color-warm-orange);
+        }
+
+        .sidebar-menu-item a:hover {
+            background-color: rgba(244, 174, 82, 0.15);
+            color: #ffffff;
+        }
+
+        /* Menu item Active / Highlighted */
+        .sidebar-menu-item.active a {
+            background-color: var(--color-warm-orange);
+            color: var(--color-dark-brown) !important;
+            font-weight: 700;
+            box-shadow: 0 4px 12px rgba(244, 174, 82, 0.35);
+        }
+
+        .sidebar-menu-item.active a i {
+            color: var(--color-dark-brown) !important;
+        }
+
+        .sidebar-footer {
+            margin-top: auto;
+            padding: 1rem 1.25rem;
+            border-top: 1px solid rgba(254, 243, 226, 0.1);
+            font-size: 0.75rem;
+            color: rgba(254, 243, 226, 0.6);
+            text-align: center;
+        }
+
+        /* App Main Wrapper */
+        .app-main {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            background-color: var(--color-light-cream);
+        }
+
+        /* B. Topbar Header */
+        .app-topbar {
+            background-color: var(--color-light-cream);
+            padding: 1.1rem 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid rgba(42, 26, 14, 0.08);
+            position: sticky;
+            top: 0;
+            z-index: 1010;
+        }
+
+        .topbar-left {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .topbar-right {
+            display: flex;
+            align-items: center;
+            gap: 1.25rem;
+        }
+
+        .btn-notification {
+            position: relative;
+            background: rgba(42, 26, 14, 0.05);
+            border: 1px solid rgba(42, 26, 14, 0.12);
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--color-dark-brown);
+            text-decoration: none;
+            transition: all 0.2s ease;
+        }
+
+        .btn-notification:hover {
+            background: var(--color-warm-orange);
+            color: var(--color-dark-brown);
+        }
+
+        .btn-notification .badge-dot {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            width: 10px;
+            height: 10px;
+            background-color: var(--color-burn-orange);
+            border: 2px solid var(--color-light-cream);
+            border-radius: 50%;
+        }
+
+        .user-dropdown-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            background: #ffffff;
+            border: 1px solid rgba(42, 26, 14, 0.12);
+            padding: 0.4rem 0.85rem 0.4rem 0.5rem;
+            border-radius: 30px;
+            text-decoration: none;
+            color: var(--color-dark-brown);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .user-dropdown-btn:hover {
+            background: #fff8ef;
+            border-color: var(--color-warm-orange);
+        }
+
+        .user-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background-color: var(--color-burn-orange);
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.95rem;
+        }
+
+        .user-info-text {
+            text-align: left;
+            line-height: 1.2;
+        }
+
+        .user-name-title {
+            font-weight: 700;
+            font-size: 0.88rem;
+            color: var(--color-dark-brown);
+        }
+
+        .user-role-sub {
+            font-size: 0.72rem;
+            color: var(--color-burn-orange);
+            font-weight: 600;
+        }
+
+        /* Content Body */
+        .content-container {
+            padding: 1.75rem 2rem 3rem;
+            flex-grow: 1;
+        }
+
+        /* C. Overview Cards (4 ô chữ nhật nằm ngang) */
+        .overview-cards-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1.25rem;
+            margin-bottom: 2rem;
+        }
+
+        .overview-card {
+            background-color: var(--color-dark-brown);
+            border-radius: 16px;
+            padding: 1.4rem 1.35rem;
+            display: flex;
+            align-items: center;
+            gap: 1.15rem;
+            box-shadow: 0 6px 18px rgba(42, 26, 14, 0.12);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .overview-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 24px rgba(42, 26, 14, 0.18);
+        }
+
+        .overview-icon-wrapper {
+            width: 52px;
+            height: 52px;
+            border-radius: 12px;
+            background-color: rgba(244, 174, 82, 0.15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--color-warm-orange);
+            font-size: 1.6rem;
+            flex-shrink: 0;
+        }
+
+        .overview-info {
             display: flex;
             flex-direction: column;
         }
-        .navbar-brand {
-            font-weight: 700;
-            color: #ff9800 !important;
-            letter-spacing: 0.5px;
+
+        .overview-label {
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: #eddcd0;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            margin-bottom: 0.25rem;
         }
-        .role-badge-admin { background-color: #dc2626; color: white; }
-        .role-badge-manager { background-color: #7c3aed; color: white; }
-        .role-badge-teacher { background-color: #0284c7; color: white; }
-        .role-badge-student { background-color: #16a34a; color: white; }
-        .quota-card {
-            border-left: 4px solid var(--primary-color);
+
+        .overview-number {
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--color-burn-orange);
+            line-height: 1;
         }
-        footer {
-            margin-top: auto;
+
+        /* D. Data Table Container */
+        .data-card-wrapper {
             background: #ffffff;
-            border-top: 1px solid #e2e8f0;
+            border: 1px solid rgba(212, 98, 26, 0.25);
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 16px rgba(42, 26, 14, 0.05);
+            margin-bottom: 2rem;
+        }
+
+        .table-toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .table-toolbar-left, .table-toolbar-right {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        /* Buttons styling */
+        .btn-cta-orange {
+            background-color: var(--color-burn-orange);
+            color: #ffffff !important;
+            font-weight: 600;
+            font-size: 0.9rem;
+            padding: 0.6rem 1.25rem;
+            border-radius: 30px;
+            border: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-decoration: none;
+            box-shadow: 0 4px 12px rgba(212, 98, 26, 0.28);
+            transition: all 0.2s ease;
+        }
+
+        .btn-cta-orange:hover {
+            background-color: #b74f11;
+            transform: translateY(-1px);
+        }
+
+        .btn-export-excel {
+            background-color: var(--color-warm-orange);
+            color: var(--color-dark-brown) !important;
+            font-weight: 700;
+            font-size: 0.9rem;
+            padding: 0.6rem 1.2rem;
+            border-radius: 30px;
+            border: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-decoration: none;
+            transition: all 0.2s ease;
+        }
+
+        .btn-export-excel:hover {
+            background-color: #e59d3e;
+            transform: translateY(-1px);
+        }
+
+        .search-box-rounded {
+            background-color: var(--color-light-cream);
+            border: 1px solid rgba(42, 26, 14, 0.2);
+            border-radius: 30px;
+            padding: 0.55rem 1.15rem;
+            font-size: 0.9rem;
+            color: var(--color-dark-brown);
+            width: 250px;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+
+        .search-box-rounded:focus {
+            border-color: var(--color-burn-orange);
+            background-color: #ffffff;
+            box-shadow: 0 0 0 3px rgba(212, 98, 26, 0.15);
+        }
+
+        /* Data Table Styling */
+        .custom-data-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+
+        .custom-data-table thead th {
+            background-color: #fbf4ea;
+            color: var(--color-dark-brown);
+            font-weight: 700;
+            font-size: 0.88rem;
+            padding: 0.95rem 1rem;
+            border-bottom: 2px solid rgba(212, 98, 26, 0.2);
+            text-align: left;
+        }
+
+        .custom-data-table tbody td {
+            padding: 0.95rem 1rem;
+            vertical-align: middle;
+            border-bottom: 1px solid rgba(42, 26, 14, 0.08);
+            font-size: 0.9rem;
+            color: var(--color-dark-brown);
+        }
+
+        .custom-data-table tbody tr:hover {
+            background-color: #fdf9f2;
+        }
+
+        /* Role Badges */
+        .role-tag {
+            display: inline-block;
+            font-size: 0.78rem;
+            font-weight: 700;
+            padding: 0.35rem 0.85rem;
+            border-radius: 20px;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        .role-tag-admin {
+            background-color: var(--color-warm-orange);
+            color: var(--color-dark-brown);
+        }
+
+        .role-tag-manager {
+            background-color: var(--color-warm-orange);
+            color: var(--color-dark-brown);
+        }
+
+        .role-tag-teacher {
+            background-color: var(--color-burn-orange);
+            color: #ffffff;
+        }
+
+        .role-tag-student {
+            background-color: rgba(42, 26, 14, 0.12);
+            color: var(--color-dark-brown);
+        }
+
+        /* Action Buttons */
+        .btn-action-edit {
+            background-color: var(--color-dark-brown);
+            color: #ffffff !important;
+            font-size: 0.78rem;
+            font-weight: 600;
+            padding: 0.38rem 0.75rem;
+            border-radius: 8px;
+            border: none;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            transition: all 0.15s ease;
+        }
+
+        .btn-action-edit:hover {
+            background-color: #452b17;
+        }
+
+        .btn-action-delete {
+            background-color: var(--color-burn-orange);
+            color: #ffffff !important;
+            font-size: 0.78rem;
+            font-weight: 600;
+            padding: 0.38rem 0.75rem;
+            border-radius: 8px;
+            border: none;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            transition: all 0.15s ease;
+        }
+
+        .btn-action-delete:hover {
+            background-color: #ba4f0e;
+        }
+
+        /* E. Progress Tracker for Listening Exemption */
+        .tracker-card-wrapper {
+            background: #ffffff;
+            border: 1px solid rgba(212, 98, 26, 0.25);
+            border-radius: 16px;
+            padding: 1.75rem;
+            box-shadow: 0 4px 16px rgba(42, 26, 14, 0.05);
+        }
+
+        .tracker-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px dashed rgba(212, 98, 26, 0.2);
+            padding-bottom: 0.85rem;
+        }
+
+        .tracker-item-row {
+            display: grid;
+            grid-template-columns: 240px 1fr 140px;
+            align-items: center;
+            gap: 1.5rem;
+            padding: 0.85rem 0;
+            border-bottom: 1px solid rgba(42, 26, 14, 0.06);
+        }
+
+        .tracker-item-row:last-child {
+            border-bottom: none;
+        }
+
+        .tracker-student-name {
+            font-weight: 700;
+            font-size: 0.92rem;
+            color: var(--color-dark-brown);
+        }
+
+        .tracker-student-class {
+            font-size: 0.78rem;
+            color: var(--color-burn-orange);
+            font-weight: 600;
+        }
+
+        .custom-progress-track {
+            height: 14px;
+            background-color: var(--color-warm-orange); /* Phần còn lại / chưa dùng */
+            border-radius: 30px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .custom-progress-fill {
+            height: 100%;
+            background-color: var(--color-burn-orange); /* Phần đã sử dụng */
+            border-radius: 30px 0 0 30px;
+            transition: width 0.4s ease;
+        }
+
+        .tracker-fraction-text {
+            font-weight: 800;
+            font-size: 0.95rem;
+            color: var(--color-dark-brown);
+            text-align: right;
+        }
+
+        .tracker-fraction-text span {
+            color: var(--color-burn-orange);
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 991px) {
+            .app-sidebar {
+                position: fixed;
+                left: -280px;
+                transition: left 0.3s ease;
+            }
+            .app-sidebar.show {
+                left: 0;
+            }
+            .tracker-item-row {
+                grid-template-columns: 1fr;
+                gap: 0.5rem;
+            }
+            .tracker-fraction-text {
+                text-align: left;
+            }
         }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
 <body>
-    <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top shadow-sm">
-        <div class="container">
-            <a class="navbar-brand" href="{% url 'courses:class_list' %}">
-                <i class="bi bi-mortarboard-fill me-2"></i>MR BEAN ENGLISH
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                {% if user.is_authenticated %}
-                <ul class="navbar-nav me-auto">
-                    <li class="nav-item">
-                        <a class="nav-link active" href="{% url 'courses:class_list' %}">
-                            <i class="bi bi-collection-fill me-1"></i>Lớp học
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'courses:exemption_list' %}">
-                            <i class="bi bi-file-earmark-check-fill me-1"></i>Đơn miễn BTVN
-                        </a>
-                    </li>
-                    {% if user.is_superuser or user.role == 'admin' or user.role == 'manager' %}
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'accounts:user_list' %}">
-                            <i class="bi bi-people-fill me-1"></i>Quản lý Người dùng
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/admin/" target="_blank">
-                            <i class="bi bi-sliders me-1"></i>Django Admin
-                        </a>
-                    </li>
-                    {% endif %}
-                </ul>
+    <div class="app-layout">
+        <!-- A. Sidebar Navigation -->
+        <aside class="app-sidebar" id="sidebarMenu">
+            <div class="sidebar-brand">
+                <a href="{% if user.role == 'student' or user.role == 'teacher' %}{% url 'courses:class_list' %}{% else %}{% url 'accounts:user_list' %}{% endif %}" class="sidebar-brand-text">
+                    <i class="bi bi-mortarboard-fill"></i>
+                    <span>MR BEAN ENGLISH</span>
+                </a>
+            </div>
 
-                <ul class="navbar-nav ms-auto align-items-center">
-                    <li class="nav-item me-3">
-                        <a class="nav-link position-relative" href="{% url 'accounts:notification_list' %}">
-                            <i class="bi bi-bell-fill fs-5"></i>
-                            <span class="visually-hidden">Thông báo</span>
+            <ul class="sidebar-menu">
+                {% if user.is_superuser or user.role == 'admin' or user.role == 'manager' %}
+                    <!-- Dành riêng cho Admin và Quản lý -->
+                    <li class="sidebar-menu-item {% if request.resolver_match.url_name == 'user_list' %}active{% endif %}">
+                        <a href="{% url 'accounts:user_list' %}">
+                            <i class="bi bi-people-fill"></i>
+                            <span>QUẢN LÝ TÀI KHOẢN</span>
                         </a>
                     </li>
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" role="button" data-bs-toggle="dropdown">
-                            <div class="me-2 text-end d-none d-md-block">
-                                <div class="fw-bold text-light">{{ user.get_full_name|default:user.username }}</div>
-                                <span class="badge role-badge-{{ user.role }}">{{ user.get_role_display }}</span>
+                    <li class="sidebar-menu-item {% if 'courses:class' in request.resolver_match.view_name %}active{% endif %}">
+                        <a href="{% url 'courses:class_list' %}">
+                            <i class="bi bi-collection-fill"></i>
+                            <span>QUẢN LÝ LỚP HỌC</span>
+                        </a>
+                    </li>
+                    <li class="sidebar-menu-item {% if 'exemption' in request.resolver_match.url_name %}active{% endif %}">
+                        <a href="{% url 'courses:exemption_list' %}">
+                            <i class="bi bi-shield-check"></i>
+                            <span>KIỂM SOÁT MIỄN BTVN</span>
+                        </a>
+                    </li>
+                {% elif user.role == 'teacher' %}
+                    <!-- Dành riêng cho Giáo viên (KHÔNG có Quản lý tài khoản) -->
+                    <li class="sidebar-menu-item {% if 'courses:class' in request.resolver_match.view_name %}active{% endif %}">
+                        <a href="{% url 'courses:class_list' %}">
+                            <i class="bi bi-collection-fill"></i>
+                            <span>LỚP HỌC ĐANG DẠY</span>
+                        </a>
+                    </li>
+                    <li class="sidebar-menu-item {% if 'exemption' in request.resolver_match.url_name %}active{% endif %}">
+                        <a href="{% url 'courses:exemption_list' %}">
+                            <i class="bi bi-patch-check-fill"></i>
+                            <span>DUYỆT MIỄN BTVN</span>
+                        </a>
+                    </li>
+                {% elif user.role == 'student' %}
+                    <!-- Dành riêng cho Học viên (CHỈ THẤY KHÓA HỌC CỦA MÌNH) -->
+                    <li class="sidebar-menu-item {% if 'courses:class' in request.resolver_match.view_name %}active{% endif %}">
+                        <a href="{% url 'courses:class_list' %}">
+                            <i class="bi bi-journal-bookmark-fill"></i>
+                            <span>KHÓA HỌC CỦA TÔI</span>
+                        </a>
+                    </li>
+                {% endif %}
+
+                <!-- Thông báo (Dành cho mọi người dùng) -->
+                <li class="sidebar-menu-item {% if request.resolver_match.url_name == 'notification_list' %}active{% endif %}">
+                    <a href="{% url 'accounts:notification_list' %}">
+                        <i class="bi bi-bell-fill"></i>
+                        <span>THÔNG BÁO HỆ THỐNG</span>
+                    </a>
+                </li>
+
+                {% if user.is_superuser or user.role == 'admin' %}
+                <li class="sidebar-menu-item">
+                    <a href="/admin/" target="_blank">
+                        <i class="bi bi-sliders"></i>
+                        <span>DJANGO ADMIN</span>
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+
+            <div class="sidebar-footer">
+                <div>&copy; 2026 Mr Bean English Center</div>
+                <div class="small opacity-75">Hệ thống Quản trị & Vận hành</div>
+            </div>
+        </aside>
+
+        <!-- Main Workspace -->
+        <div class="app-main">
+            <!-- B. Topbar Header -->
+            <header class="app-topbar">
+                <div class="topbar-left">
+                    <button class="btn btn-outline-dark d-lg-none py-1 px-2 border-0" type="button" onclick="document.getElementById('sidebarMenu').classList.toggle('show')">
+                        <i class="bi bi-list fs-3"></i>
+                    </button>
+                    <div>
+                        <div class="user-role-sub text-uppercase">TRUNG TÂM TIẾNG ANH MR BEAN</div>
+                        <div class="user-name-title">Phân hệ Quản trị & Vận hành</div>
+                    </div>
+                </div>
+
+                <div class="topbar-right">
+                    <!-- Biểu tượng thông báo (Chuông) -->
+                    <a href="{% url 'accounts:notification_list' %}" class="btn-notification" title="Xem thông báo">
+                        <i class="bi bi-bell-fill"></i>
+                        {% if user.notifications.filter.is_read.all.count > 0 or pending_exemptions > 0 %}
+                            <span class="badge-dot"></span>
+                        {% endif %}
+                    </a>
+
+                    <!-- Dropdown thông tin tài khoản -->
+                    <div class="dropdown">
+                        <div class="user-dropdown-btn dropdown-toggle" id="userMenuDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                            <div class="user-avatar">
+                                {{ user.username|slice:":1"|upper }}
                             </div>
-                            <i class="bi bi-person-circle fs-3 text-secondary"></i>
-                        </a>
-                        <ul class="dropdown-menu dropdown-menu-end shadow">
-                            <li><h6 class="dropdown-header">Tài khoản: {{ user.username }}</h6></li>
-                            <li><a class="dropdown-item" href="{% url 'accounts:notification_list' %}"><i class="bi bi-bell me-2"></i>Thông báo</a></li>
+                            <div class="user-info-text d-none d-sm-block">
+                                <div class="user-name-title">{{ user.get_full_name|default:user.username }}</div>
+                                <div class="user-role-sub">{{ user.get_role_display }}</div>
+                            </div>
+                        </div>
+                        <ul class="dropdown-menu dropdown-menu-end shadow border-0 py-2 mt-2" aria-labelledby="userMenuDropdown" style="min-width: 200px;">
+                            <li class="px-3 py-2 border-bottom">
+                                <div class="small text-muted">Đang đăng nhập:</div>
+                                <div class="fw-bold text-dark">@{{ user.username }}</div>
+                            </li>
+                            <li><a class="dropdown-item py-2" href="{% url 'accounts:notification_list' %}"><i class="bi bi-bell me-2 text-warning"></i>Thông báo</a></li>
                             <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item text-danger" href="{% url 'accounts:logout' %}"><i class="bi bi-box-arrow-right me-2"></i>Đăng xuất</a></li>
+                            <li><a class="dropdown-item py-2 text-danger fw-semibold" href="{% url 'accounts:logout' %}"><i class="bi bi-box-arrow-right me-2"></i>Đăng xuất</a></li>
                         </ul>
-                    </li>
-                </ul>
-                {% else %}
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item">
-                        <a class="nav-link btn btn-outline-light px-3" href="{% url 'accounts:login' %}">Đăng nhập</a>
-                    </li>
-                </ul>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Alerts / Messages -->
+            <div class="px-4 pt-3">
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show border-0 shadow-sm" style="border-left: 5px solid var(--color-burn-orange) !important;" role="alert">
+                            <i class="bi bi-info-circle-fill me-2" style="color: var(--color-burn-orange);"></i>{{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endfor %}
                 {% endif %}
             </div>
-        </div>
-    </nav>
 
-    <!-- Messages Flash -->
-    <div class="container mt-3">
-        {% if messages %}
-            {% for message in messages %}
-                <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show shadow-sm" role="alert">
-                    <i class="bi bi-info-circle-fill me-2"></i>{{ message }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-            {% endfor %}
-        {% endif %}
+            <!-- Content Container -->
+            <main class="content-container">
+                {% block content %}{% endblock %}
+            </main>
+        </div>
     </div>
 
-    <!-- Main Content -->
-    <main class="container my-4">
-        {% block content %}{% endblock %}
-    </main>
-
-    <!-- Footer -->
-    <footer class="py-3 text-center text-muted small">
-        <div class="container">
-            <span>&copy; 2026 Trung tâm Tiếng Anh Mr Bean - Phân hệ Quản trị & Vận hành (Accounts & Courses)</span>
-        </div>
-    </footer>
-
-    <!-- Bootstrap 5 JS Bundle -->
+    <!-- Bootstrap 5 Bundle JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     {% block extra_js %}{% endblock %}
 </body>
