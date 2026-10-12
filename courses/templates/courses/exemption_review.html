@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+
+{% block title %}Xét duyệt đơn xin miễn BTVN Nghe{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <div class="card shadow-sm border-0 rounded-3">
+            <div class="card-header bg-white py-3 border-0">
+                <h4 class="fw-bold mb-1 text-primary"><i class="bi bi-patch-check-fill me-2"></i>Xét duyệt đơn xin miễn BTVN Nghe</h4>
+                <p class="text-muted small mb-0">Lớp: <strong>{{ classroom.name }}</strong> (<code>{{ classroom.class_code }}</code>)</p>
+            </div>
+            <div class="card-body p-4">
+                <!-- Thông tin đơn của học viên -->
+                <div class="bg-light rounded-3 p-3 mb-4">
+                    <div class="row g-2 small">
+                        <div class="col-sm-6">
+                            <span class="text-muted">Học viên:</span>
+                            <div class="fw-bold text-dark fs-6">{{ exemption.enrollment.student.get_full_name|default:exemption.enrollment.student.username }}</div>
+                        </div>
+                        <div class="col-sm-6">
+                            <span class="text-muted">Bài tập xin miễn:</span>
+                            <div class="fw-bold text-dark fs-6">{{ exemption.session_title }}</div>
+                        </div>
+                        <div class="col-sm-6">
+                            <span class="text-muted">Loại bài tập:</span>
+                            <div><span class="badge bg-success-subtle text-success fw-bold"><i class="bi bi-headphones me-1"></i>Listening (Hợp lệ)</span></div>
+                        </div>
+                        <div class="col-sm-6">
+                            <span class="text-muted">Hạn mức hiện tại:</span>
+                            <div class="fw-bold text-primary">Còn {{ quota.remaining_quota }} / {{ quota.max_quota }} buổi</div>
+                        </div>
+                        <div class="col-12 mt-2">
+                            <span class="text-muted">Lý do học viên nêu:</span>
+                            <div class="p-2 bg-white rounded border mt-1">{{ exemption.reason }}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small">Quyết định xét duyệt:</label>
+                        <div class="d-flex gap-4">
+                            {% for radio in form.action %}
+                                <div class="form-check">
+                                    {{ radio.tag }}
+                                    <label class="form-check-label fw-semibold" for="{{ radio.id_for_label }}">
+                                        {{ radio.choice_label }}
+                                    </label>
+                                </div>
+                            {% endfor %}
+                        </div>
+                        {% for error in form.action.errors %}
+                            <div class="text-danger small mt-1">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small">Ghi chú hoặc lý do phản hồi:</label>
+                        {{ form.note }}
+                        {% for error in form.note.errors %}
+                            <div class="text-danger small mt-1">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="alert alert-info small">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Khi bạn <strong>Chấp thuận</strong>, hệ thống sẽ tự động trừ 1 buổi miễn của học viên và gửi thông báo tới <strong>Quản lý</strong> và <strong>Học viên</strong>.
+                    </div>
+
+                    <div class="d-flex justify-content-between mt-4">
+                        <a href="{% url 'courses:exemption_list' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left me-1"></i>Quay lại
+                        </a>
+                        <button type="submit" class="btn btn-primary px-4">
+                            <i class="bi bi-check2-circle me-1"></i>Xác nhận xử lý
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

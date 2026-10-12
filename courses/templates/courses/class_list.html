@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+
+{% block title %}Danh sách Lớp học{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h3 class="fw-bold mb-1"><i class="bi bi-collection-fill text-primary me-2"></i>Danh sách Lớp học</h3>
+        <p class="text-muted small mb-0">
+            {% if user.role == 'admin' or user.role == 'manager' %}
+                Toàn quyền quản trị danh sách lớp, phân công giáo viên và thêm học viên.
+            {% elif user.role == 'teacher' %}
+                Danh sách lớp học bạn được phân công phụ trách giảng dạy và chấm điểm.
+            {% else %}
+                Các lớp học bạn đang tham gia học tập.
+            {% endif %}
+        </p>
+    </div>
+    {% if user.is_superuser or user.role == 'admin' or user.role == 'manager' %}
+    <a href="{% url 'courses:class_create' %}" class="btn btn-primary shadow-sm">
+        <i class="bi bi-plus-circle-fill me-1"></i>Tạo lớp học mới
+    </a>
+    {% endif %}
+</div>
+
+<div class="row g-4">
+    {% for c in classes %}
+    <div class="col-md-6 col-lg-4">
+        <div class="card h-100 shadow-sm border-0 rounded-3">
+            <div class="card-body p-4 d-flex flex-column">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <span class="badge bg-primary-subtle text-primary fw-bold px-2 py-1">{{ c.course.code }}</span>
+                    {% if c.is_active %}
+                        <span class="badge bg-success-subtle text-success">Đang hoạt động</span>
+                    {% else %}
+                        <span class="badge bg-secondary-subtle text-secondary">Đã kết thúc</span>
+                    {% endif %}
+                </div>
+                <h5 class="card-title fw-bold text-dark mb-1">{{ c.name }}</h5>
+                <div class="text-muted small mb-3">Mã lớp: <code>{{ c.class_code }}</code></div>
+
+                <div class="bg-light rounded-3 p-3 mb-3 small">
+                    <div class="mb-2">
+                        <i class="bi bi-mortarboard text-secondary me-2"></i>Chương trình:
+                        <strong>{{ c.course.name }}</strong>
+                    </div>
+                    <div class="mb-2">
+                        <i class="bi bi-person-workspace text-secondary me-2"></i>Giáo viên chấm bài:
+                        {% if c.teacher %}
+                            <strong class="text-primary">{{ c.teacher.get_full_name|default:c.teacher.username }}</strong>
+                        {% else %}
+                            <span class="text-danger">Chưa phân công</span>
+                        {% endif %}
+                    </div>
+                    <div class="mb-2">
+                        <i class="bi bi-people text-secondary me-2"></i>Sĩ số:
+                        <strong>{{ c.total_students }} học viên</strong>
+                    </div>
+                    <div>
+                        <i class="bi bi-shield-check text-secondary me-2"></i>Định mức miễn nghe:
+                        <span class="badge bg-info-subtle text-info fw-bold">{{ c.course.default_listening_exemption_quota }} buổi</span>
+                    </div>
+                </div>
+
+                <div class="mt-auto pt-2 d-flex gap-2">
+                    <a href="{% url 'courses:class_detail' c.id %}" class="btn btn-outline-primary w-100">
+                        <i class="bi bi-eye me-1"></i>Chi tiết lớp
+                    </a>
+                    {% if user.role == 'student' %}
+                    <a href="{% url 'courses:request_exemption' c.id %}" class="btn btn-warning text-dark" title="Xin miễn BTVN nghe">
+                        <i class="bi bi-file-earmark-plus"></i> Xin miễn
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12 text-center py-5">
+        <i class="bi bi-folder-x fs-1 text-muted d-block mb-2"></i>
+        <h5 class="text-secondary">Chưa có lớp học nào phù hợp với tài khoản của bạn.</h5>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

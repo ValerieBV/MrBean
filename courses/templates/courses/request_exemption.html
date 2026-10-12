@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+
+{% block title %}Nộp đơn xin miễn BTVN Nghe{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <div class="card shadow-sm border-0 rounded-3">
+            <div class="card-header bg-white py-3 border-0">
+                <h4 class="fw-bold mb-1 text-warning text-dark"><i class="bi bi-file-earmark-medical-fill text-warning me-2"></i>Nộp đơn xin miễn BTVN Nghe</h4>
+                <p class="text-muted small mb-0">Lớp: <strong>{{ classroom.name }}</strong> (<code>{{ classroom.class_code }}</code>)</p>
+            </div>
+            <div class="card-body p-4">
+                <!-- Banner Quy định Trung tâm -->
+                <div class="alert alert-warning border-0 shadow-sm small mb-3">
+                    <h6 class="fw-bold mb-1"><i class="bi bi-exclamation-triangle-fill me-1"></i>QUY ĐỊNH MIỄN BÀI TẬP VỀ NHÀ TẠI MR BEAN:</h6>
+                    <ul class="mb-0 ps-3">
+                        <li><strong>Chỉ áp dụng miễn cho bài tập NGHE (Listening)</strong>.</li>
+                        <li><strong>Bài tập Từ vựng và Nói (ghi âm) KHÔNG ĐƯỢC MIỄN</strong> dưới bất kỳ hình thức nào.</li>
+                        <li>Định mức: <strong>08 buổi</strong> (khóa TOEIC/VSTEP), <strong>05 buổi</strong> (khóa B1).</li>
+                        <li>Số buổi miễn còn lại của bạn trong lớp này: <strong class="text-success fs-6">{{ quota.remaining_quota }} / {{ quota.max_quota }} buổi</strong>.</li>
+                    </ul>
+                </div>
+
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small">Loại bài tập</label>
+                        {{ form.homework_type }}
+                        <div class="form-text text-muted small">{{ form.homework_type.help_text }}</div>
+                        {% for error in form.homework_type.errors %}
+                            <div class="text-danger small mt-1">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small">Buổi học / Tiêu đề bài tập xin miễn</label>
+                        {{ form.session_title }}
+                        {% for error in form.session_title.errors %}
+                            <div class="text-danger small mt-1">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small">Lý do xin miễn</label>
+                        {{ form.reason }}
+                        {% for error in form.reason.errors %}
+                            <div class="text-danger small mt-1">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="d-flex justify-content-between mt-4">
+                        <a href="{% url 'courses:class_detail' classroom.id %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left me-1"></i>Quay lại
+                        </a>
+                        <button type="submit" class="btn btn-warning text-dark fw-bold px-4">
+                            <i class="bi bi-send-fill me-1"></i>Gửi đơn xin miễn
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
