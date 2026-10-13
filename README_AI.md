@@ -126,3 +126,33 @@ audio thật và rubric đã thống nhất trước khi vận hành. LLM đánh
 nhận xét gợi ý, không thay thế công cụ đo phát âm chuẩn hóa. Hạ tầng production
 cần cấu hình Django secret/debug/hosts, database, file storage riêng tư và
 supervisor theo môi trường triển khai.
+
+## Báo cáo theo quy trình 7.1 / 7.2 / 7.3
+
+- 7.1: `assigned_count`, `submitted_count`, `submission_rate` lấy từ roster D4
+  và bài nộp D5. Dùng `dashboard.integration.sync_assignment_roster` khi giao
+  bài để sync mọi học viên, kể cả chưa nộp. Hàm retry không tạo lượt giao trùng;
+  không tự xóa học viên bị bỏ khỏi danh sách hoặc chuyển giáo viên của bài có
+  lịch sử. App B vẫn cần gọi bridge vì chưa có model D4/D5 trong nhánh nguồn.
+- 7.2: `graded_report` cung cấp điểm cuối, nhận xét giáo viên, người chấm và
+  thời điểm xác nhận; `graded_count` đếm tất cả bài đã xác nhận.
+- 7.3: `learner_progress` tổng hợp được giao, đã nộp, chưa nộp, chờ chấm,
+  đã chấm, quá hạn chưa nộp và điểm trung bình theo học viên. Trạng thái theo
+  lần nộp mới nhất; điểm theo lần nộp gần nhất đã chấm, có cột riêng cho nộp
+  lại còn chờ. Các nhóm chưa nộp/chờ chấm/đã chấm cộng bằng số lượt giao.
+- `sla_late_report` và `sla_late_count` giữ lịch sử bài được giáo viên xác nhận
+  từ giờ 48 trở đi; không biến mất khi bài rời hàng chấm. SLA kết thúc ở lần
+  giáo viên xác nhận. `finished_at` của bài graded là thời điểm xác nhận.
+- Bảng điểm và lịch sử SLA hiển thị tối đa 100 bài mới nhất, kèm tổng số.
+  Tiến độ và thống kê tổng lấy toàn bộ dữ liệu trong phạm vi quyền truy cập.
+
+```python
+from dashboard.integration import sync_assignment_roster
+
+roster = sync_assignment_roster(
+    assignment_key=str(assignment.pk), title=assignment.title, teacher=teacher,
+    learners=assigned_students, assigned_at=assignment.assigned_at,
+    due_at=assignment.due_at,
+)
+# Khi có bài nộp D5: lấy task đúng learner và gọi enqueue_submission như trên.
+```

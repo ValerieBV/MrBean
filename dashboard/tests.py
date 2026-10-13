@@ -81,3 +81,52 @@ class DashboardTests(TestCase):
         self.task(assigned_at=self.now + timedelta(days=1), due_at=self.now + timedelta(days=2))
         self.assertEqual(metrics_for(self.teacher, self.now)['assigned_count'], 0)
         self.assertEqual(metrics_for(self.teacher, self.now)['at_risk_learners'], [])
+
+    def test_progress_resubmission_keeps_confirmed_score(self):
+        task = self.task()
+        self.task('not-submitted')
+        self.job(task, 'old-grade', status='graded', final_score=8, submitted_at=self.now-timedelta(hours=3), finished_at=self.now-timedelta(hours=2), reviewed_by=self.teacher, teacher_feedback='Good')
+        self.job(task, 'new-attempt', status='manual', submitted_at=self.now)
+        data = metrics_for(self.teacher, self.now)
+        row = data['learner_progress'][0]
+        self.assertEqual((row['assigned'], row['submitted'], row['not_submitted']), (2, 1, 1))
+        self.assertEqual((row['awaiting_grade'], row['graded'], row['resubmissions_pending']), (1, 0, 1))
+        self.assertEqual(row['average_score'], 8)
+        self.assertEqual(data['graded_report'][0]['teacher_feedback'], 'Good')
+
+    def test_late_history_survives_confirmation_and_is_scoped(self):
+        task = self.task()
+        self.job(task, 'late', status='graded', final_score=7, submitted_at=self.now-timedelta(hours=50), finished_at=self.now)
+        self.job(task, 'on-time', status='graded', final_score=8, submitted_at=self.now-timedelta(hours=40), finished_at=self.now)
+        data = metrics_for(self.teacher, self.now)
+        self.assertEqual(data['sla_alerts'], [])
+        self.assertEqual(data['sla_late_count'], 1)
+        self.assertTrue(data['sla_late_report'][0]['sla_breached'])
+        self.assertEqual(data['sla_late_report'][0]['hours_to_grade'], 50)
+        self.assertEqual(metrics_for(self.other, self.now)['graded_report'], [])
+        self.assertEqual(metrics_for(self.other, self.now)['learner_progress'], [])
+        self.assertEqual(metrics_for(self.other, self.now)['sla_late_count'], 0)
+
+    def test_roster_sync_includes_non_submitters_and_is_idempotent(self):
+        from .integration import sync_assignment_roster
+        another = get_user_model().objects.create_user(username='second', role='student')
+        args = dict(assignment_key='synced', title='Lesson', teacher=self.teacher,
+                    learners=[self.student, another, another], assigned_at=self.now-timedelta(days=1), due_at=self.now)
+        tasks = sync_assignment_roster(**args)
+        self.assertEqual(len(tasks), 2)
+        self.job(tasks[0], 'submitted', submitted_at=self.now)
+        sync_assignment_roster(**args)
+        data = metrics_for(self.teacher, self.now)
+        self.assertEqual(data['assigned_count'], 2)
+        self.assertEqual(data['submission_rate'], 50)
+
+    def test_roster_sync_cannot_reassign_history(self):
+        from django.core.exceptions import ValidationError
+        from .integration import sync_assignment_roster
+        task = self.task()
+        self.job(task, 'existing', submitted_at=self.now)
+        with self.assertRaises(ValidationError):
+            sync_assignment_roster(assignment_key='a1', title='Changed', teacher=self.other,
+                                   learners=[self.student], assigned_at=self.now-timedelta(days=1), due_at=self.now)
+        task.refresh_from_db()
+        self.assertEqual(task.teacher, self.teacher)
