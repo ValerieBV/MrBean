@@ -13,11 +13,11 @@
 <div class="mb-4">
     <h1 class="page-title-h1">KHÓA HỌC CỦA TÔI</h1>
     <div class="text-muted small" style="color: #6d5b4e !important;">
-        Chào mừng <strong>{{ user.get_full_name|default:user.username }}</strong>! Dưới đây là các khóa học bạn đang theo học, các bài tập cần làm và hạn mức số buổi miễn làm bài tập nghe.
+        Chào mừng <strong>{{ user.get_full_name|default:user.username }}</strong>! Dưới đây là các khóa học bạn đang theo học, các bài tập cần làm và hạn mức số buổi miễn làm BTVN (Speaking/Vocab).
     </div>
 </div>
 
-<!-- 1. KHU VỰC THỐNG KÊ HẠN MỨC MIỄN BTVN NGHE (LISTENING ONLY) -->
+<!-- 1. KHU VỰC THỐNG KÊ HẠN MỨC MIỄN BTVN (SPEAKING/VOCAB) -->
 <div class="row g-3 mb-4">
     {% for enrollment in student_enrollments %}
     <div class="col-md-6 col-lg-6">
@@ -42,7 +42,7 @@
                     {% if enrollment.exemption_quota %}
                     <div class="p-3 rounded-3 mb-3" style="background-color: rgba(254, 243, 226, 0.08); border: 1px solid rgba(244, 174, 82, 0.2);">
                         <div class="d-flex justify-content-between align-items-center mb-2">
-                            <span class="small" style="color: #ecd9c6;"><i class="bi bi-headphones me-1" style="color: var(--color-warm-orange);"></i>Hạn mức miễn BTVN nghe:</span>
+                            <span class="small" style="color: #ecd9c6;"><i class="bi bi-shield-check me-1" style="color: var(--color-warm-orange);"></i>Hạn mức miễn BTVN (Speaking/Vocab):</span>
                             <span class="fw-bold" style="color: var(--color-warm-orange); font-size: 1.1rem;">
                                 Còn lại: {{ enrollment.exemption_quota.remaining_quota }} / {{ enrollment.exemption_quota.max_quota }} buổi
                             </span>
@@ -56,7 +56,7 @@
 
                         <div class="d-flex justify-content-between mt-2 small" style="color: #eddcd0; font-size: 0.76rem;">
                             <span>Đã sử dụng: <strong style="color: var(--color-burn-orange);">{{ enrollment.exemption_quota.used_quota }} buổi</strong></span>
-                            <span>Định mức tối đa: <strong>{{ enrollment.exemption_quota.max_quota }} buổi</strong></span>
+                            <span>Định mức theo Mã ({{ user.student_code|default:"-" }}): <strong>{{ enrollment.exemption_quota.max_quota }} buổi</strong></span>
                         </div>
                     </div>
                     {% endif %}
@@ -68,7 +68,7 @@
                     </a>
                     {% if enrollment.exemption_quota and enrollment.exemption_quota.remaining_quota > 0 %}
                     <a href="{% url 'courses:request_exemption' enrollment.classroom.id %}" class="btn-cta-orange w-50 py-2 justify-content-center" style="font-size: 0.85rem;">
-                        <i class="bi bi-file-earmark-plus"></i> Xin miễn nghe
+                        <i class="bi bi-file-earmark-plus"></i> Xin miễn BTVN
                     </a>
                     {% else %}
                     <button class="btn btn-secondary w-50 py-2" disabled style="border-radius: 30px; font-size: 0.85rem; opacity: 0.5;">
@@ -96,76 +96,76 @@
     </div>
 
     <div class="row g-3">
-        <!-- Loại 1: Bài tập Listening -->
+        <!-- Loại 1: Bài tập Listening (BẮT BUỘC) -->
         <div class="col-md-4">
-            <div class="p-3 rounded-4 h-100" style="background-color: var(--color-light-cream); border: 2px solid var(--color-warm-orange);">
+            <div class="p-3 rounded-4 h-100" style="background-color: var(--color-light-cream); border: 2px solid #ef4444;">
                 <div class="d-flex align-items-center gap-2 mb-2">
                     <div style="width: 36px; height: 36px; border-radius: 50%; background-color: var(--color-dark-brown); color: var(--color-warm-orange); display: flex; align-items: center; justify-content: center;">
                         <i class="bi bi-headphones"></i>
                     </div>
                     <div>
                         <h6 class="fw-bold mb-0 text-dark">1. Bài tập Nghe (Listening)</h6>
-                        <span class="badge" style="background-color: #e6f6ec; color: #15803d; font-weight: 700;">ĐƯỢC ÁP DỤNG MIỄN</span>
-                    </div>
-                </div>
-                <p class="small text-secondary mb-3">
-                    Luyện nghe theo format đề thi.
-                    <strong>Chỉ loại bài tập này mới được gửi đơn xin miễn.</strong>
-                </p>
-                <div class="alert alert-warning py-1 px-2 small mb-0" style="font-size: 0.75rem;">
-                    <i class="bi bi-info-circle me-1"></i>08 buổi (TOEIC/VSTEP) &bull; 05 buổi (B1)
-                </div>
-            </div>
-        </div>
-
-        <!-- Loại 2: Bài tập Vocabulary -->
-        <div class="col-md-4">
-            <div class="p-3 rounded-4 h-100" style="background-color: var(--color-light-cream); border: 1px solid rgba(42, 26, 14, 0.15);">
-                <div class="d-flex align-items-center gap-2 mb-2">
-                    <div style="width: 36px; height: 36px; border-radius: 50%; background-color: var(--color-dark-brown); color: var(--color-light-cream); display: flex; align-items: center; justify-content: center;">
-                        <i class="bi bi-book-half"></i>
-                    </div>
-                    <div>
-                        <h6 class="fw-bold mb-0 text-dark">2. Bài tập Từ vựng (Vocabulary)</h6>
                         <span class="badge" style="background-color: #fee2e2; color: #b91c1c; font-weight: 700;">BẮT BUỘC - KHÔNG MIỄN</span>
                     </div>
                 </div>
                 <p class="small text-secondary mb-3">
-                    Flashcard & trắc nghiệm ngữ nghĩa.
+                    Luyện nghe theo format đề thi.
+                    <strong>Bắt buộc hoàn thành 100%, hệ thống không cho phép miễn.</strong>
                 </p>
-                <div class="text-muted small" style="font-size: 0.75rem;">
-                    * Bắt buộc hoàn thành 100% để đủ điều kiện thi đầu ra.
+                <div class="alert alert-danger py-1 px-2 small mb-0" style="font-size: 0.75rem;">
+                    <i class="bi bi-exclamation-octagon-fill me-1"></i>Bắt buộc làm Listening cho mọi học viên
                 </div>
             </div>
         </div>
 
-        <!-- Loại 3: Bài tập Speaking -->
+        <!-- Loại 2: Bài tập Speaking (ĐƯỢC XIN MIỄN) -->
         <div class="col-md-4">
-            <div class="p-3 rounded-4 h-100" style="background-color: var(--color-light-cream); border: 1px solid rgba(42, 26, 14, 0.15);">
+            <div class="p-3 rounded-4 h-100" style="background-color: var(--color-light-cream); border: 2px solid var(--color-warm-orange);">
                 <div class="d-flex align-items-center gap-2 mb-2">
                     <div style="width: 36px; height: 36px; border-radius: 50%; background-color: var(--color-burn-orange); color: #ffffff; display: flex; align-items: center; justify-content: center;">
                         <i class="bi bi-mic-fill"></i>
                     </div>
                     <div>
-                        <h6 class="fw-bold mb-0 text-dark">3. Bài tập Nói (Speaking)</h6>
-                        <span class="badge" style="background-color: #fee2e2; color: #b91c1c; font-weight: 700;">BẮT BUỘC - KHÔNG MIỄN</span>
+                        <h6 class="fw-bold mb-0 text-dark">2. Bài tập Nói (Speaking)</h6>
+                        <span class="badge" style="background-color: #e6f6ec; color: #15803d; font-weight: 700;">ĐƯỢC ÁP DỤNG MIỄN</span>
                     </div>
                 </div>
                 <p class="small text-secondary mb-3">
-                    Học viên ghi âm trực tiếp câu trả lời.
+                    Ghi âm trực tiếp trả lời. <strong>Có nút xin miễn</strong> trong hạn mức quy định.
                 </p>
-                <div class="text-muted small" style="font-size: 0.75rem;">
-                    * Bắt buộc hoàn thành 100%.
+                <div class="alert alert-warning py-1 px-2 small mb-0" style="font-size: 0.75rem;">
+                    <i class="bi bi-info-circle me-1"></i>Hạn mức theo Mã: 8 buổi (T/V) &bull; 5 buổi (B)
+                </div>
+            </div>
+        </div>
+
+        <!-- Loại 3: Bài tập Vocabulary (ĐƯỢC XIN MIỄN) -->
+        <div class="col-md-4">
+            <div class="p-3 rounded-4 h-100" style="background-color: var(--color-light-cream); border: 2px solid var(--color-warm-orange);">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <div style="width: 36px; height: 36px; border-radius: 50%; background-color: var(--color-dark-brown); color: var(--color-light-cream); display: flex; align-items: center; justify-content: center;">
+                        <i class="bi bi-book-half"></i>
+                    </div>
+                    <div>
+                        <h6 class="fw-bold mb-0 text-dark">3. Bài tập Từ vựng (Vocabulary)</h6>
+                        <span class="badge" style="background-color: #e6f6ec; color: #15803d; font-weight: 700;">ĐƯỢC ÁP DỤNG MIỄN</span>
+                    </div>
+                </div>
+                <p class="small text-secondary mb-3">
+                    Flashcard & trắc nghiệm. <strong>Có nút xin miễn</strong> trong hạn mức quy định.
+                </p>
+                <div class="alert alert-warning py-1 px-2 small mb-0" style="font-size: 0.75rem;">
+                    <i class="bi bi-info-circle me-1"></i>Hạn mức theo Mã: 8 buổi (T/V) &bull; 5 buổi (B)
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- 3. LỊCH SỬ CÁC ĐƠN XIN MIỄN BTVN NGHE ĐÃ GỬI -->
+<!-- 3. LỊCH SỬ CÁC ĐƠN XIN MIỄN BTVN ĐÃ GỬI -->
 <div class="data-card-wrapper">
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h2 class="section-title-h2 mb-0">LỊCH SỬ ĐƠN XIN MIỄN BTVN NGHE CỦA TÔI</h2>
+        <h2 class="section-title-h2 mb-0">LỊCH SỬ ĐƠN XIN MIỄN BTVN CỦA TÔI</h2>
     </div>
 
     <div class="table-responsive">
@@ -190,7 +190,15 @@
                     </td>
                     <td>
                         <strong>{{ req.session_title }}</strong>
-                        <div class="small text-success"><i class="bi bi-headphones me-1"></i>Listening</div>
+                        <div class="small fw-semibold" style="color: var(--color-burn-orange);">
+                            {% if req.homework_type == 'speaking' %}
+                                <i class="bi bi-mic-fill me-1"></i>Speaking
+                            {% elif req.homework_type == 'vocabulary' %}
+                                <i class="bi bi-book-half me-1"></i>Vocabulary
+                            {% else %}
+                                <i class="bi bi-headphones me-1"></i>Listening
+                            {% endif %}
+                        </div>
                     </td>
                     <td class="small text-secondary" style="max-width: 250px;">{{ req.reason }}</td>
                     <td>
@@ -218,7 +226,7 @@
                 <tr>
                     <td colspan="6" class="text-center py-4 text-muted">
                         <i class="bi bi-shield-check fs-2 d-block mb-1" style="color: var(--color-warm-orange);"></i>
-                        Bạn chưa nộp đơn xin miễn bài tập nghe nào.
+                        Bạn chưa nộp đơn xin miễn bài tập nào.
                     </td>
                 </tr>
                 {% endfor %}

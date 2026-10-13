@@ -64,6 +64,8 @@ def user_list_view(request):
             email__icontains=query
         ) | users.filter(
             phone_number__icontains=query
+        ) | users.filter(
+            student_code__icontains=query
         )
 
     # Thống kê nhanh phục vụ Overview Cards

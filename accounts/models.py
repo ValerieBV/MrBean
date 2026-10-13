@@ -28,6 +28,13 @@ class CustomUser(AbstractUser):
         null=True,
         verbose_name="Số điện thoại"
     )
+    student_code = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True,
+        verbose_name="Mã học viên",
+        help_text="Định dạng: [T/V/B][Khóa][Cơ sở][Tên][STT] — VD: T253C1KieuAnh01. Ký tự đầu xác định hạn mức miễn bài."
+    )
 
     # Thêm related_name để tránh xung đột với auth.User mặc định của Django
     groups = models.ManyToManyField(
@@ -71,6 +78,23 @@ class CustomUser(AbstractUser):
     @property
     def is_student_user(self):
         return self.role == self.ROLE_STUDENT
+
+    @property
+    def exemption_quota_max(self):
+        """
+        Xác định hạn mức miễn bài tập (Speaking/Vocab) dựa trên ký tự đầu của Mã học viên:
+        - T (TOEIC): 8 buổi
+        - V (VSTEP): 8 buổi
+        - B (B1):    5 buổi
+        - Khác / Chưa có mã: 8 buổi (mặc định)
+        """
+        if self.student_code:
+            prefix = self.student_code[0].upper()
+            if prefix == 'B':
+                return 5
+            elif prefix in ('T', 'V'):
+                return 8
+        return 8  # Mặc định
 
     def save(self, *args, **kwargs):
         # Tự động set is_staff cho admin và manager để quản trị hệ thống

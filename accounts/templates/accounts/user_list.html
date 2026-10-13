@@ -134,7 +134,12 @@
                             </div>
                             <div>
                                 <div class="fw-bold">{{ u.get_full_name|default:u.username }}</div>
-                                <div class="small opacity-75">@{{ u.username }}</div>
+                                <div class="small opacity-75">
+                                    {% if u.student_code %}
+                                        <span class="badge" style="background-color: var(--color-warm-orange); color: var(--color-dark-brown); font-weight: 700; font-size: 0.72rem;">{{ u.student_code }}</span>
+                                    {% endif %}
+                                    @{{ u.username }}
+                                </div>
                             </div>
                         </div>
                     </td>
@@ -240,10 +245,10 @@
         <div>
             <!-- Tiêu đề mục (H2) -->
             <h2 class="section-title-h2 mb-1" style="color: var(--color-burn-orange) !important;">
-                <i class="bi bi-headphones me-2"></i>KIỂM SOÁT MIỄN BTVN (CHỈ MIỄN LISTENING)
+                <i class="bi bi-shield-check me-2"></i>KIỂM SOÁT MIỄN BTVN (CHỈ MIỄN SPEAKING & VOCABULARY)
             </h2>
             <div class="text-muted small" style="color: #6d5b4e !important;">
-                Định mức tối đa: <strong>08 buổi</strong> (Khóa TOEIC / VSTEP) &bull; <strong>05 buổi</strong> (Khóa B1). Không áp dụng cho bài tập Từ vựng và Nói.
+                Định mức theo Mã học viên: <strong>08 buổi</strong> (Mã T - TOEIC / V - VSTEP) &bull; <strong>05 buổi</strong> (Mã B - B1). Bắt buộc hoàn thành 100% bài tập Listening.
             </div>
         </div>
         <a href="{% url 'courses:exemption_list' %}" class="btn-cta-orange py-2 px-3" style="font-size: 0.82rem;">
@@ -261,6 +266,9 @@
                 <div class="tracker-student-name">
                     <i class="bi bi-person-circle me-1" style="color: var(--color-burn-orange);"></i>
                     Học viên {{ q.enrollment.student.get_full_name|default:q.enrollment.student.username }}
+                    {% if q.enrollment.student.student_code %}
+                        <span class="badge ms-1" style="background-color: var(--color-warm-orange); color: var(--color-dark-brown); font-weight: 700; font-size: 0.72rem;">{{ q.enrollment.student.student_code }}</span>
+                    {% endif %}
                 </div>
                 <div class="tracker-student-class">
                     Lớp: {{ q.enrollment.classroom.class_code }} ({{ q.enrollment.classroom.course.code }} - {{ q.enrollment.classroom.course.get_course_type_display }})

@@ -56,10 +56,12 @@ class Command(BaseCommand):
                 'first_name': 'Tran',
                 'last_name': 'Hoc Vien 1',
                 'email': 'student1@mrbean.edu.vn',
-                'role': CustomUser.ROLE_STUDENT
+                'role': CustomUser.ROLE_STUDENT,
+                'student_code': 'T253C1Tran01'  # T = TOEIC -> 8 buoi mien Speaking/Vocab
             }
         )
         student1.set_password('student123')
+        student1.student_code = 'T253C1Tran01'
         student1.save()
 
         student2, _ = CustomUser.objects.get_or_create(
@@ -68,10 +70,12 @@ class Command(BaseCommand):
                 'first_name': 'Le',
                 'last_name': 'Hoc Vien 2',
                 'email': 'student2@mrbean.edu.vn',
-                'role': CustomUser.ROLE_STUDENT
+                'role': CustomUser.ROLE_STUDENT,
+                'student_code': 'B253C1Le02'  # B = B1 -> 5 buoi mien Speaking/Vocab
             }
         )
         student2.set_password('student123')
+        student2.student_code = 'B253C1Le02'
         student2.save()
 
         # 2. Tao Khoa hoc
@@ -132,7 +136,7 @@ class Command(BaseCommand):
 Accounts:
 1. Admin:    admin / admin123        (Toan quyen quan tri)
 2. Quan ly:  quanly1 / quanly123     (Giao bai tap, nhan thong bao mien BTVN)
-3. Giao vien: gv_bean / teacher123    (Cham bai lop TOEIC-K24, B1-K10; duyet mien BTVN nghe)
-4. Hoc vien 1: hocvien1 / student123 (Lop TOEIC: Duoc cap 08 buoi mien nghe)
-5. Hoc vien 2: hocvien2 / student123 (Lop B1: Duoc cap 05 buoi mien nghe)
+3. Giao vien: gv_bean / teacher123    (Cham bai, duyet mien BTVN Speaking/Vocab, khong duyet Listening)
+4. Hoc vien 1: hocvien1 / student123 (Ma T253C1Tran01: 08 buoi mien Speaking/Vocab)
+5. Hoc vien 2: hocvien2 / student123 (Ma B253C1Le02: 05 buoi mien Speaking/Vocab)
 """)

@@ -76,3 +76,14 @@ class AccountRBACModelTest(TestCase):
         )
         self.assertEqual(self.manager.notifications.count(), 1)
         self.assertFalse(noti.is_read)
+
+    def test_student_code_and_quota_property(self):
+        s_toeic = CustomUser(role=CustomUser.ROLE_STUDENT, student_code='T253C1KieuAnh01')
+        s_b1 = CustomUser(role=CustomUser.ROLE_STUDENT, student_code='B253C1Minh02')
+        s_vstep = CustomUser(role=CustomUser.ROLE_STUDENT, student_code='V253C1Lan03')
+        s_default = CustomUser(role=CustomUser.ROLE_STUDENT, student_code='')
+
+        self.assertEqual(s_toeic.exemption_quota_max, 8)
+        self.assertEqual(s_b1.exemption_quota_max, 5)
+        self.assertEqual(s_vstep.exemption_quota_max, 8)
+        self.assertEqual(s_default.exemption_quota_max, 8)

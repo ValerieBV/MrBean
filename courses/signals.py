@@ -7,19 +7,13 @@ from accounts.models import Notification, CustomUser
 @receiver(post_save, sender=Enrollment)
 def auto_create_student_exemption_quota(sender, instance, created, **kwargs):
     """
-    Tự động cấp hạn mức miễn BTVN Nghe khi học viên được thêm vào lớp học:
-    - 08 buổi cho TOEIC và VSTEP
-    - 05 buổi cho B1
-    - Khóa khác: theo default của Course
+    Tự động cấp hạn mức miễn BTVN (Speaking/Vocab) khi học viên được thêm vào lớp học:
+    - Bóc tách theo ký tự đầu của Mã học viên (student_code):
+      * 'T' (TOEIC) hoặc 'V' (VSTEP): 8 buổi
+      * 'B' (B1): 5 buổi
     """
     if created:
-        course = instance.classroom.course
-        if course.course_type in [Course.COURSE_TYPE_TOEIC, Course.COURSE_TYPE_VSTEP]:
-            quota_val = 8
-        elif course.course_type == Course.COURSE_TYPE_B1:
-            quota_val = 5
-        else:
-            quota_val = course.default_listening_exemption_quota
+        quota_val = instance.student.exemption_quota_max
 
         StudentExemptionQuota.objects.get_or_create(
             enrollment=instance,
@@ -36,15 +30,16 @@ def notify_on_exemption_request_created(sender, instance, created, **kwargs):
         classroom = instance.enrollment.classroom
         student = instance.enrollment.student
         student_name = student.get_full_name() or student.username
+        hw_display = instance.get_homework_type_display()
 
         # 1. Gửi cho Giáo viên phụ trách lớp để vào chấm/duyệt
         if classroom.teacher:
             Notification.objects.create(
                 recipient=classroom.teacher,
                 sender=student,
-                title=f"Đơn xin miễn BTVN Nghe mới: {student_name} ({classroom.class_code})",
+                title=f"Đơn xin miễn {hw_display} mới: {student_name} ({classroom.class_code})",
                 message=(
-                    f"Học viên {student_name} thuộc lớp {classroom.name} vừa nộp đơn xin miễn BTVN Nghe.\n"
+                    f"Học viên {student_name} thuộc lớp {classroom.name} vừa nộp đơn xin miễn {hw_display}.\n"
                     f"- Bài tập: {instance.session_title}\n"
                     f"- Lý do: {instance.reason}\n"
                     f"Vui lòng vào hệ thống xem xét và phê duyệt."
@@ -58,9 +53,9 @@ def notify_on_exemption_request_created(sender, instance, created, **kwargs):
             Notification.objects.create(
                 recipient=mgr,
                 sender=student,
-                title=f"[Quản lý] Học viên xin miễn BTVN: {student_name} ({classroom.class_code})",
+                title=f"[Quản lý] Học viên xin miễn {hw_display}: {student_name} ({classroom.class_code})",
                 message=(
-                    f"Học viên {student_name} (Lớp {classroom.class_code}) vừa gửi đơn xin miễn BTVN Nghe.\n"
+                    f"Học viên {student_name} (Lớp {classroom.class_code}) vừa gửi đơn xin miễn {hw_display}.\n"
                     f"- Bài tập: {instance.session_title}\n"
                     f"- Giáo viên phụ trách: {classroom.teacher.get_full_name() if classroom.teacher else 'Chưa có'}"
                 ),

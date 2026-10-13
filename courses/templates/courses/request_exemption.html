@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}Nộp đơn xin miễn BTVN Nghe - MR BEAN ENGLISH{% endblock %}
+{% block title %}Nộp đơn xin miễn BTVN - MR BEAN ENGLISH{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
@@ -8,7 +8,7 @@
         <div class="card border-0 rounded-4 shadow-sm" style="background: #ffffff; border: 1px solid rgba(212, 98, 26, 0.25) !important;">
             <div class="card-header py-3 bg-transparent border-0">
                 <h2 class="section-title-h2 mb-1" style="color: var(--color-burn-orange);">
-                    <i class="bi bi-file-earmark-medical-fill me-2"></i>NỘP ĐƠN XIN MIỄN BTVN NGHE
+                    <i class="bi bi-file-earmark-medical-fill me-2"></i>NỘP ĐƠN XIN MIỄN BTVN
                 </h2>
                 <div class="small" style="color: #6d5b4e;">Lớp: <strong>{{ classroom.name }}</strong> (<code>{{ classroom.class_code }}</code>)</div>
             </div>
@@ -19,9 +19,9 @@
                         <i class="bi bi-exclamation-triangle-fill me-1"></i>QUY ĐỊNH MIỄN BTVN TẠI TRUNG TÂM:
                     </h6>
                     <ul class="mb-0 ps-3">
-                        <li><strong>CHỈ MIỄN BÀI TẬP NGHE (LISTENING)</strong>.</li>
-                        <li><strong>Bài tập Từ vựng và Nói (ghi âm) BẮT BUỘC PHẢI HOÀN THÀNH</strong>.</li>
-                        <li>Định mức: <strong>08 buổi</strong> (Khóa TOEIC / VSTEP), <strong>05 buổi</strong> (Khóa B1).</li>
+                        <li><strong class="text-danger">BẮT BUỘC LÀM BÀI TẬP NGHE (LISTENING)</strong> — Không áp dụng miễn giảm.</li>
+                        <li><strong>CHỈ CHO PHÉP XIN MIỄN BÀI TẬP NÓI (SPEAKING) VÀ TỪ VỰNG (VOCABULARY)</strong>.</li>
+                        <li>Định mức theo Mã học viên: <strong>08 buổi</strong> (Mã T - TOEIC / V - VSTEP), <strong>05 buổi</strong> (Mã B - B1).</li>
                         <li>Số buổi còn lại của bạn: <strong style="color: var(--color-burn-orange); font-size: 1rem;">{{ quota.remaining_quota }} / {{ quota.max_quota }} buổi</strong>.</li>
                     </ul>
                 </div>

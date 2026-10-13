@@ -43,7 +43,7 @@
                 {% endif %}
                 {% if user.role == 'student' %}
                 <a href="{% url 'courses:request_exemption' classroom.id %}" class="btn-cta-orange">
-                    <i class="bi bi-file-earmark-plus me-1"></i>Nộp đơn xin miễn BTVN Nghe
+                    <i class="bi bi-file-earmark-plus me-1"></i>Nộp đơn xin miễn BTVN
                 </a>
                 {% endif %}
             </div>
@@ -62,9 +62,9 @@
                 {% endif %}
             </div>
             <div class="col-md-4">
-                <span class="d-block" style="color: #846d5c;">Chính sách miễn BTVN Nghe:</span>
-                <strong class="fs-6" style="color: var(--color-dark-brown);"><i class="bi bi-headphones me-1" style="color: var(--color-burn-orange);"></i>{{ classroom.course.default_listening_exemption_quota }} buổi miễn</strong>
-                <span style="color: var(--color-burn-orange); font-weight: 600;">(Chỉ miễn Listening)</span>
+                <span class="d-block" style="color: #846d5c;">Chính sách miễn BTVN:</span>
+                <strong class="fs-6" style="color: var(--color-dark-brown);"><i class="bi bi-shield-check me-1" style="color: var(--color-burn-orange);"></i>8 buổi (Mã T/V) &bull; 5 buổi (Mã B)</strong>
+                <span style="color: var(--color-burn-orange); font-weight: 600;">(Chỉ miễn Speaking/Vocab, Bắt buộc Listening)</span>
             </div>
             <div class="col-md-4">
                 <span class="d-block" style="color: #846d5c;">Thời gian:</span>
@@ -79,9 +79,9 @@
 <div class="rounded-4 p-4 mb-4 shadow-sm" style="background-color: var(--color-dark-brown); color: #ffffff;">
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
         <div>
-            <h5 class="fw-bold mb-1" style="color: var(--color-warm-orange);"><i class="bi bi-headphones me-2"></i>HẠN MỨC MIỄN BTVN NGHE CỦA BẠN TRONG LỚP NÀY</h5>
+            <h5 class="fw-bold mb-1" style="color: var(--color-warm-orange);"><i class="bi bi-shield-check me-2"></i>HẠN MỨC MIỄN BTVN (SPEAKING/VOCAB) CỦA BẠN</h5>
             <div class="small opacity-75">
-                Bạn đã sử dụng <strong style="color: var(--color-warm-orange);">{{ student_quota.used_quota }}</strong> trên tổng số <strong>{{ student_quota.max_quota }}</strong> buổi được miễn.
+                Bạn đã sử dụng <strong style="color: var(--color-warm-orange);">{{ student_quota.used_quota }}</strong> trên tổng số <strong>{{ student_quota.max_quota }}</strong> buổi được miễn theo mã học viên.
             </div>
         </div>
         <div class="text-end">
@@ -99,7 +99,7 @@
 <div class="card border-0 rounded-4 shadow-sm mb-4" style="background: #ffffff; border: 2px solid var(--color-warm-orange) !important;">
     <div class="card-header py-3 bg-transparent border-0">
         <h2 class="section-title-h2 mb-0" style="color: var(--color-burn-orange);">
-            <i class="bi bi-hourglass-split me-2"></i>ĐƠN XIN MIỄN BTVN NGHE ĐANG CHỜ DUYỆT ({{ pending_exemptions.count }})
+            <i class="bi bi-hourglass-split me-2"></i>ĐƠN XIN MIỄN BTVN ĐANG CHỜ DUYỆT ({{ pending_exemptions.count }})
         </h2>
     </div>
     <div class="table-responsive">
@@ -157,7 +157,7 @@
                     <th>Học viên</th>
                     <th>Email & SĐT</th>
                     <th>Trạng thái</th>
-                    <th>Tiến trình miễn BTVN nghe</th>
+                    <th>Tiến trình miễn BTVN (Speaking/Vocab)</th>
                     <th>Ngày vào lớp</th>
                     {% if can_manage %}
                     <th class="text-end pe-3">Hành động</th>
@@ -169,7 +169,12 @@
                 <tr>
                     <td>
                         <div class="fw-bold">{{ e.student.get_full_name|default:e.student.username }}</div>
-                        <div class="small opacity-75">@{{ e.student.username }}</div>
+                        <div class="small opacity-75">
+                            {% if e.student.student_code %}
+                            <span class="badge" style="background-color: var(--color-warm-orange); color: var(--color-dark-brown); font-weight: 700; font-size: 0.72rem;">{{ e.student.student_code }}</span>
+                            {% endif %}
+                            @{{ e.student.username }}
+                        </div>
                     </td>
                     <td class="small">
                         <div>{{ e.student.email|default:"-" }}</div>

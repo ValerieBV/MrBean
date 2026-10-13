@@ -5,8 +5,8 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
-        <h1 class="page-title-h1">KIỂM SOÁT MIỄN BTVN (CHỈ MIỄN LISTENING)</h1>
-        <div class="text-muted small" style="color: #6d5b4e !important;">Danh sách đơn xin miễn BTVN nghe của học viên theo đúng định mức 08 buổi (TOEIC/VSTEP) và 05 buổi (B1)</div>
+        <h1 class="page-title-h1">KIỂM SOÁT MIỄN BTVN (CHỈ MIỄN SPEAKING & VOCABULARY)</h1>
+        <div class="text-muted small" style="color: #6d5b4e !important;">Danh sách đơn xin miễn BTVN của học viên. Bắt buộc hoàn thành bài tập Listening.</div>
     </div>
 </div>
 
@@ -50,7 +50,12 @@
                 <tr>
                     <td>
                         <div class="fw-bold">{{ req.enrollment.student.get_full_name|default:req.enrollment.student.username }}</div>
-                        <div class="small opacity-75">@{{ req.enrollment.student.username }}</div>
+                        <div class="small opacity-75">
+                            {% if req.enrollment.student.student_code %}
+                            <span class="badge" style="background-color: var(--color-warm-orange); color: var(--color-dark-brown); font-weight: 700; font-size: 0.72rem;">{{ req.enrollment.student.student_code }}</span>
+                            {% endif %}
+                            @{{ req.enrollment.student.username }}
+                        </div>
                     </td>
                     <td>
                         <div><a href="{% url 'courses:class_detail' req.enrollment.classroom.id %}" class="fw-bold text-decoration-none" style="color: var(--color-burn-orange);">{{ req.enrollment.classroom.class_code }}</a></div>
@@ -60,8 +65,14 @@
                         <span class="badge" style="background-color: var(--color-light-cream); color: var(--color-dark-brown); border: 1px solid var(--color-warm-orange);">
                             {{ req.session_title }}
                         </span>
-                        <div class="small mt-1" style="color: #15803d; font-weight: 700;">
-                            <i class="bi bi-headphones me-1"></i>Listening
+                        <div class="small mt-1 fw-bold" style="color: var(--color-burn-orange);">
+                            {% if req.homework_type == 'speaking' %}
+                                <i class="bi bi-mic-fill me-1"></i>Speaking
+                            {% elif req.homework_type == 'vocabulary' %}
+                                <i class="bi bi-book-half me-1"></i>Vocabulary
+                            {% else %}
+                                <i class="bi bi-headphones me-1"></i>Listening
+                            {% endif %}
                         </div>
                     </td>
                     <td class="small text-muted" style="max-width: 200px;">

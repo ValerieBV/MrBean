@@ -33,8 +33,12 @@ class ClassManagementService:
         if student.role != CustomUser.ROLE_STUDENT:
             raise ValidationError(f"Người dùng '{student.username}' không phải là Học viên (vai trò hiện tại: {student.get_role_display()}).")
 
-        if Enrollment.objects.filter(classroom=classroom, student=student).exists():
-            raise ValidationError(f"Học viên '{student.username}' đã có tên trong lớp {classroom.class_code}.")
+        existing_enrollment = Enrollment.objects.filter(student=student, status=Enrollment.STATUS_ACTIVE).first()
+        if existing_enrollment:
+            raise ValidationError(
+                f"Học viên '{student.username}' đã thuộc lớp {existing_enrollment.classroom.class_code}. "
+                f"Mỗi học viên chỉ được cố định tại 1 lớp duy nhất."
+            )
 
         enrollment = Enrollment.objects.create(
             classroom=classroom,
@@ -60,26 +64,34 @@ class ClassManagementService:
 class ExemptionControlService:
     """
     Dịch vụ kiểm soát số buổi miễn Bài tập về nhà (BTVN):
-    - Định mức: 08 buổi cho TOEIC/VSTEP, 05 buổi cho B1.
-    - Nghiệp vụ bắt buộc: CHỈ MIỄN BÀI TẬP NGHE (LISTENING).
+    - Hạn mức theo mã học viên (T/V: 8 buổi, B: 5 buổi).
+    - Nghiệp vụ: Bắt buộc làm Listening. CHỈ CHO PHÉP MIỄN SPEAKING VÀ VOCABULARY.
     - Thông báo đến Quản lý và Học viên khi duyệt.
     """
 
     @staticmethod
     @transaction.atomic
-    def submit_listening_exemption(
+    def submit_exemption(
         student: CustomUser,
         classroom: ClassRoom,
+        homework_type: str,
         session_title: str,
         reason: str
     ) -> ExemptionRequest:
         """
-        Học viên nộp đơn xin miễn BTVN Nghe.
+        Học viên nộp đơn xin miễn BTVN (Speaking hoặc Vocabulary).
+        Bắt buộc làm Listening (hệ thống từ chối miễn Listening).
         Tự động kiểm tra:
-        1. Học viên có đang học lớp này không.
-        2. Hạn mức còn lại có > 0 không.
-        3. Khóa cứng loại bài tập là 'listening'.
+        1. Loại bài tập không phải Listening.
+        2. Học viên có đang học lớp này không.
+        3. Hạn mức còn lại có > 0 không.
         """
+        if homework_type == ExemptionRequest.HOMEWORK_TYPE_LISTENING:
+            raise ValidationError(
+                "Bài tập Nghe (Listening) là BẮT BUỘC đối với mọi học viên. "
+                "Hệ thống chỉ cho phép xin miễn bài tập Nói (Speaking) hoặc Từ vựng (Vocabulary)."
+            )
+
         enrollment = Enrollment.objects.filter(
             classroom=classroom,
             student=student,
@@ -92,12 +104,13 @@ class ExemptionControlService:
         quota, _ = StudentExemptionQuota.objects.get_or_create(enrollment=enrollment)
         if quota.remaining_quota <= 0:
             raise ValidationError(
-                f"Bạn đã sử dụng hết số buổi miễn BTVN Nghe của khóa này ({quota.used_quota}/{quota.max_quota} buổi)."
+                f"Bạn đã sử dụng hết số buổi miễn BTVN ({quota.used_quota}/{quota.max_quota} buổi)."
             )
 
-        # Kiểm tra xem đã nộp đơn cho buổi này và đang chờ duyệt chưa
+        # Kiểm tra xem đã nộp đơn cho buổi này và loại bài tập này đang chờ duyệt chưa
         if ExemptionRequest.objects.filter(
             enrollment=enrollment,
+            homework_type=homework_type,
             session_title=session_title,
             status=ExemptionRequest.STATUS_PENDING
         ).exists():
@@ -105,7 +118,7 @@ class ExemptionControlService:
 
         exemption_req = ExemptionRequest(
             enrollment=enrollment,
-            homework_type=ExemptionRequest.HOMEWORK_TYPE_LISTENING,  # BẮT BUỘC LISTENING
+            homework_type=homework_type,
             session_title=session_title,
             reason=reason,
             status=ExemptionRequest.STATUS_PENDING
@@ -113,6 +126,11 @@ class ExemptionControlService:
         exemption_req.full_clean()
         exemption_req.save()
         return exemption_req
+
+    @staticmethod
+    def submit_listening_exemption(student, classroom, session_title, reason):
+        """Deprecated: Giữ để tương thích ngược nếu còn lời gọi cũ."""
+        raise ValidationError("Bài tập Nghe (Listening) là bắt buộc, không được phép xin miễn.")
 
     @staticmethod
     def approve_exemption(exemption_id: int, teacher: CustomUser, note: str = "") -> ExemptionRequest:

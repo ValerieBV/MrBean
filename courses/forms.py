@@ -46,35 +46,41 @@ class EnrollStudentForm(forms.Form):
 
     def __init__(self, *args, classroom=None, **kwargs):
         super().__init__(*args, **kwargs)
-        if classroom:
-            # Loại trừ những học viên đã có trong lớp rồi
-            enrolled_ids = classroom.enrollments.values_list('student_id', flat=True)
-            self.fields['student'].queryset = self.fields['student'].queryset.exclude(id__in=enrolled_ids)
+        # Học viên cố định 1 lớp: loại trừ những học viên đã có lớp active
+        enrolled_ids = Enrollment.objects.filter(status=Enrollment.STATUS_ACTIVE).values_list('student_id', flat=True)
+        self.fields['student'].queryset = self.fields['student'].queryset.exclude(id__in=enrolled_ids)
 
 
 class ExemptionRequestForm(forms.ModelForm):
     """
     Form xin miễn BTVN của học viên:
-    Quy tắc nghiệp vụ: CHỈ CHO PHÉP MIỄN BÀI TẬP NGHE (LISTENING).
+    Quy tắc nghiệp vụ: Bắt buộc làm Listening. CHỈ CHO PHÉP MIỄN SPEAKING VÀ VOCABULARY.
     """
     class Meta:
         model = ExemptionRequest
         fields = ('homework_type', 'session_title', 'reason')
         widgets = {
             'homework_type': forms.Select(attrs={'class': 'form-select'}),
-            'session_title': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'VD: Buổi 3 - Listening Part 2'}),
+            'session_title': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'VD: Buổi 3 - Speaking Part 2'}),
             'reason': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Nhập lý do xin miễn...'}),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Khóa lựa chọn chỉ cho phép chọn Listening hoặc hiển thị cảnh báo
-        self.fields['homework_type'].help_text = "Lưu ý: Trung tâm chỉ áp dụng miễn cho bài tập Nghe (Listening)."
+        # Chỉ hiển thị lựa chọn cho Speaking và Vocabulary (không cho chọn Listening)
+        self.fields['homework_type'].choices = [
+            (ExemptionRequest.HOMEWORK_TYPE_SPEAKING, 'Bài tập Nói (Speaking)'),
+            (ExemptionRequest.HOMEWORK_TYPE_VOCABULARY, 'Bài tập Từ vựng (Vocabulary)'),
+        ]
+        self.fields['homework_type'].help_text = "Lưu ý: Bài tập Listening là BẮT BUỘC. Trung tâm chỉ cho phép xin miễn bài tập Speaking hoặc Vocabulary."
 
     def clean_homework_type(self):
         hw_type = self.cleaned_data.get('homework_type')
-        if hw_type != ExemptionRequest.HOMEWORK_TYPE_LISTENING:
-            raise forms.ValidationError("Quy định trung tâm Mr Bean: CHỈ MIỄN BÀI TẬP NGHE (LISTENING)! Bài tập Từ vựng và Nói bắt buộc phải làm.")
+        if hw_type == ExemptionRequest.HOMEWORK_TYPE_LISTENING:
+            raise forms.ValidationError(
+                "Quy định trung tâm Mr Bean: Bài tập Nghe (Listening) là BẮT BUỘC! "
+                "Chỉ được phép xin miễn bài tập Nói (Speaking) hoặc Từ vựng (Vocabulary)."
+            )
         return hw_type
 
 

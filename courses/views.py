@@ -197,15 +197,16 @@ def remove_student_view(request, class_id, student_id):
 
 
 # ==========================================================
-# CƠ CHẾ KIỂM SOÁT MIỄN BTVN NGHE (LISTENING ONLY)
+# CƠ CHẾ KIỂM SOÁT MIỄN BTVN (CHỈ SPEAKING & VOCABULARY - BẮT BUỘC LISTENING)
 # ==========================================================
 
 @login_required
 def request_exemption_view(request, class_id):
     """
     Học viên nộp đơn xin miễn BTVN:
-    - Bắt buộc kiểm tra: CHỈ ÁP DỤNG CHO BÀI TẬP NGHE (LISTENING).
-    - Kiểm tra số buổi miễn còn lại (> 0).
+    - Bắt buộc làm bài tập Listening.
+    - Chỉ cho phép xin miễn Speaking và Vocabulary.
+    - Kiểm tra số buổi miễn còn lại (> 0) theo mã học viên.
     """
     classroom = get_object_or_404(ClassRoom, id=class_id)
     user = request.user
@@ -222,7 +223,7 @@ def request_exemption_view(request, class_id):
 
     quota = getattr(enrollment, 'exemption_quota', None)
     if not quota or quota.remaining_quota <= 0:
-        messages.error(request, f"Bạn đã sử dụng hết số buổi miễn BTVN nghe của khóa này ({quota.used_quota if quota else 0}/{quota.max_quota if quota else 0}).")
+        messages.error(request, f"Bạn đã sử dụng hết số buổi miễn BTVN ({quota.used_quota if quota else 0}/{quota.max_quota if quota else 0}).")
         return redirect('courses:class_detail', class_id=classroom.id)
 
     if request.method == 'POST':
@@ -230,22 +231,23 @@ def request_exemption_view(request, class_id):
         form.instance.enrollment = enrollment
         if form.is_valid():
             try:
-                exemption = ExemptionControlService.submit_listening_exemption(
+                exemption = ExemptionControlService.submit_exemption(
                     student=user,
                     classroom=classroom,
+                    homework_type=form.cleaned_data['homework_type'],
                     session_title=form.cleaned_data['session_title'],
                     reason=form.cleaned_data['reason']
                 )
                 messages.success(
                     request,
-                    f"Đã gửi đơn xin miễn bài tập nghe '{exemption.session_title}' thành công! "
+                    f"Đã gửi đơn xin miễn {exemption.get_homework_type_display()} '{exemption.session_title}' thành công! "
                     f"Giáo viên phụ trách sẽ xem xét và phê duyệt."
                 )
                 return redirect('courses:class_detail', class_id=classroom.id)
             except ValidationError as e:
                 messages.error(request, str(e))
     else:
-        form = ExemptionRequestForm(initial={'homework_type': ExemptionRequest.HOMEWORK_TYPE_LISTENING})
+        form = ExemptionRequestForm(initial={'homework_type': ExemptionRequest.HOMEWORK_TYPE_SPEAKING})
 
     return render(request, 'courses/request_exemption.html', {
         'form': form,
@@ -317,7 +319,7 @@ def exemption_review_view(request, exemption_id):
             try:
                 if action == 'approve':
                     ExemptionControlService.approve_exemption(exemption.id, teacher=request.user, note=note)
-                    messages.success(request, f"Đã duyệt đơn miễn BTVN Nghe cho học viên {exemption.enrollment.student.username}. Quản lý đã được thông báo.")
+                    messages.success(request, f"Đã duyệt đơn miễn {exemption.get_homework_type_display()} cho học viên {exemption.enrollment.student.username}. Quản lý đã được thông báo.")
                 else:
                     ExemptionControlService.reject_exemption(exemption.id, teacher=request.user, reason=note)
                     messages.info(request, f"Đã từ chối đơn miễn BTVN của học viên {exemption.enrollment.student.username}.")

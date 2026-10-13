@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}Xét duyệt đơn xin miễn BTVN Nghe - MR BEAN ENGLISH{% endblock %}
+{% block title %}Xét duyệt đơn xin miễn BTVN - MR BEAN ENGLISH{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
@@ -8,7 +8,7 @@
         <div class="card border-0 rounded-4 shadow-sm" style="background: #ffffff; border: 1px solid rgba(212, 98, 26, 0.25) !important;">
             <div class="card-header py-3 bg-transparent border-0">
                 <h2 class="section-title-h2 mb-1" style="color: var(--color-burn-orange);">
-                    <i class="bi bi-patch-check-fill me-2"></i>XÉT DUYỆT ĐƠN XIN MIỄN BTVN NGHE
+                    <i class="bi bi-patch-check-fill me-2"></i>XÉT DUYỆT ĐƠN XIN MIỄN BTVN
                 </h2>
                 <div class="small" style="color: #6d5b4e;">Lớp: <strong>{{ classroom.name }}</strong> (<code>{{ classroom.class_code }}</code>)</div>
             </div>
@@ -26,7 +26,15 @@
                         </div>
                         <div class="col-sm-6">
                             <span style="color: #846d5c;">Loại bài tập:</span>
-                            <div><span class="badge" style="background-color: #e6f6ec; color: #15803d; font-weight: 700;"><i class="bi bi-headphones me-1"></i>Listening (Hợp lệ)</span></div>
+                            <div>
+                                {% if exemption.homework_type == 'speaking' %}
+                                    <span class="badge" style="background-color: #e6f6ec; color: #15803d; font-weight: 700;"><i class="bi bi-mic-fill me-1"></i>Speaking (Được miễn)</span>
+                                {% elif exemption.homework_type == 'vocabulary' %}
+                                    <span class="badge" style="background-color: #e6f6ec; color: #15803d; font-weight: 700;"><i class="bi bi-book-half me-1"></i>Vocabulary (Được miễn)</span>
+                                {% else %}
+                                    <span class="badge" style="background-color: #fee2e2; color: #b91c1c; font-weight: 700;"><i class="bi bi-headphones me-1"></i>Listening (Bắt buộc - Không thể duyệt)</span>
+                                {% endif %}
+                            </div>
                         </div>
                         <div class="col-sm-6">
                             <span style="color: #846d5c;">Hạn mức hiện tại:</span>
