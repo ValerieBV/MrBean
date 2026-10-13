@@ -1,3 +1,41 @@
+from datetime import timedelta
+from django.conf import settings
 from django.db import models
+from django.utils import timezone
 
-# Create your models here.
+
+class GradingJob(models.Model):
+    class Status(models.TextChoices):
+        QUEUED = 'queued', 'Chờ AI'
+        PROCESSING = 'processing', 'AI đang chấm'
+        AI_REVIEWED = 'ai_reviewed', 'AI đã nhận xét'
+        MANUAL = 'manual', 'Chờ giáo viên'
+        GRADED = 'graded', 'Giáo viên đã chấm'
+
+    task = models.ForeignKey('dashboard.LearningTask', on_delete=models.PROTECT, related_name='jobs')
+    submission_key = models.CharField(max_length=128, unique=True)
+    kind = models.CharField(max_length=16, choices=[('speaking', 'Bài nói'), ('vocabulary', 'Từ vựng')])
+    text = models.TextField(blank=True)
+    audio = models.FileField(upload_to='ai_submissions/%Y/%m/', blank=True)
+    reference_text = models.TextField(blank=True)
+    submitted_at = models.DateTimeField(default=timezone.now, db_index=True)
+    started_at = models.DateTimeField(null=True, blank=True)
+    finished_at = models.DateTimeField(null=True, blank=True)
+    status = models.CharField(max_length=16, choices=Status.choices, default=Status.QUEUED, db_index=True)
+    result = models.JSONField(default=dict, blank=True)
+    suggested_score = models.FloatField(null=True, blank=True)
+    final_score = models.FloatField(null=True, blank=True)
+    teacher_feedback = models.TextField(blank=True)
+    reviewed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    fallback_reason = models.CharField(max_length=64, blank=True)
+
+    @property
+    def ai_deadline(self):
+        return self.submitted_at + timedelta(seconds=settings.AI_DEADLINE_SECONDS)
+
+    @property
+    def sla_deadline(self):
+        return self.submitted_at + timedelta(hours=48)
+
+    class Meta:
+        ordering = ['submitted_at', 'pk']

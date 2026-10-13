@@ -125,7 +125,7 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 STATIC_URL = 'static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
-STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
+STATICFILES_DIRS = []
 
 # Cấu hình lưu trữ file tải lên (Media - File audio, bài tập)
 MEDIA_URL = '/media/'
@@ -140,3 +140,16 @@ MAILERS = {
     },
 }
 AUTH_USER_MODEL = 'accounts.CustomUser'
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# AI keys are environment-only. Never commit production credentials.
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY', '')
+OPENAI_TEXT_MODEL = os.getenv('OPENAI_TEXT_MODEL', 'gpt-4o-mini')
+OPENAI_AUDIO_MODEL = os.getenv('OPENAI_AUDIO_MODEL', 'gpt-audio-1.5')
+AI_DEADLINE_SECONDS = 300
+AI_REQUEST_TIMEOUT_SECONDS = 120
+AI_MAX_AUDIO_BYTES = 20 * 1024 * 1024
+SLA_WARNING_HOURS = 6
+DROPOUT_MISSED_TASKS = 3
+DROPOUT_INACTIVE_DAYS = 7
+LOGIN_REDIRECT_URL = '/dashboard/'
