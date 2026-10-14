@@ -1,175 +1,123 @@
-# Create your views here.
+from functools import wraps
 
-from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
-from django.contrib.admin.views.decorators import staff_member_required
-from django.db.models import Q
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render, get_object_or_404, redirect
 
-from .models import assignment
+from .models import Lesson, VocabWord, ListeningQuestion, SpeakingTask, Skill
+from .forms import LessonForm, VocabWordForm, ListeningQuestionForm, SpeakingTaskForm
 
 
-# Danh sách ngân hàng bài tập
-@staff_member_required
+def staff_required(view):
+    @wraps(view)
+    @login_required
+    def wrapper(request, *args, **kwargs):
+        role = getattr(request.user, "role", None)
+        if role == "student" and not request.user.is_staff:
+            messages.error(request, "Bạn không có quyền truy cập khu quản trị.")
+            return redirect("submissions:student_home")
+        return view(request, *args, **kwargs)
+    return wrapper
+
+
+SKILL_LABELS = dict(Skill.choices)
+
+
+@staff_required
 def assignment_list(request):
-    keyword = request.GET.get("q", "").strip()
-
-    assignments = assignment.objects.all()
-
-    if keyword:
-        assignments = assignments.filter(
-            Q(code__icontains=keyword)
-            | Q(title__icontains=keyword)
-        )
-
-    category = request.GET.get("category", "")
-    if category:
-        assignments = assignments.filter(category=category)
-
-    program = request.GET.get("program", "")
-    if program:
-        assignments = assignments.filter(program=program)
-
-    context = {
-        "assignments": assignments,
-        "keyword": keyword,
-        "category_choices": assignment.CATEGORY_CHOICES,
-        "program_choices": assignment.PROGRAM_CHOICES,
-        "selected_category": category,
-        "selected_program": program,
-    }
-
-    return render(
-        request,
-        "assignments/assignment_list.html",
-        context,
-    )
+    cards = []
+    for value, label in Skill.choices:
+        cards.append({
+            "skill": value,
+            "label": label,
+            "count": Lesson.objects.filter(skill=value).count(),
+        })
+    return render(request, "assignments/assignment_list.html", {"cards": cards})
 
 
-# Thêm bài tập
-@staff_member_required
-def assignment_create(request):
+@staff_required
+def skill_lessons(request, skill):
+    lessons = Lesson.objects.filter(skill=skill)
+    return render(request, "assignments/skill_lessons.html", {
+        "skill": skill, "skill_label": SKILL_LABELS.get(skill, skill), "lessons": lessons,
+    })
+
+
+@staff_required
+def lesson_create(request, skill):
+    initial = {"skill": skill, "order": Lesson.objects.filter(skill=skill).count() + 1}
+    form = LessonForm(request.POST or None, request.FILES or None, initial=initial)
+    if request.method == "POST" and form.is_valid():
+        lesson = form.save(commit=False)
+        lesson.created_by = request.user
+        lesson.save()
+        messages.success(request, "Đã tạo buổi học. Giờ thêm nội dung cho buổi.")
+        return redirect("lesson_detail", pk=lesson.pk)
+    return render(request, "assignments/lesson_form.html", {
+        "form": form, "skill": skill, "skill_label": SKILL_LABELS.get(skill, skill),
+        "title": "Tạo buổi mới",
+    })
+
+
+@staff_required
+def lesson_update(request, pk):
+    lesson = get_object_or_404(Lesson, pk=pk)
+    form = LessonForm(request.POST or None, request.FILES or None, instance=lesson)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, "Đã cập nhật buổi học.")
+        return redirect("lesson_detail", pk=lesson.pk)
+    return render(request, "assignments/lesson_form.html", {
+        "form": form, "skill": lesson.skill, "skill_label": lesson.get_skill_display(),
+        "title": "Sửa buổi học", "lesson": lesson,
+    })
+
+
+@staff_required
+def lesson_delete(request, pk):
+    lesson = get_object_or_404(Lesson, pk=pk)
+    skill = lesson.skill
     if request.method == "POST":
-        code = request.POST.get("code", "").strip()
-        title = request.POST.get("title", "").strip()
-        category = request.POST.get("category", "")
-        program = request.POST.get("program", "")
-        description = request.POST.get("description", "")
-        content = request.POST.get("content", "")
-        answer_key = request.POST.get("answer_key", "")
-        audio_file = request.FILES.get("audio_file")
-        attachment = request.FILES.get("attachment")
-
-        if not code or not title or not category:
-            messages.error(
-                request,
-                "Vui lòng nhập mã, tên và danh mục bài tập.",
-            )
-        elif assignment.objects.filter(code=code).exists():
-            messages.error(request, "Mã bài tập đã tồn tại.")
-        elif category == "practice_test" and not program:
-            messages.error(
-                request,
-                "Vui lòng chọn chương trình cho kho luyện đề.",
-            )
-        else:
-            assignment.objects.create(
-                code=code,
-                title=title,
-                category=category,
-                program=program if category == "practice_test" else "",
-                description=description,
-                content=content,
-                answer_key=answer_key,
-                audio_file=audio_file,
-                attachment=attachment,
-                created_by=request.user,
-            )
-
-            messages.success(request, "Thêm bài tập thành công.")
-            return redirect("assignment_list")
-
-    context = {
-        "category_choices": assignment.CATEGORY_CHOICES,
-        "program_choices": assignment.PROGRAM_CHOICES,
-    }
-
-    return render(
-        request,
-        "assignments/assignment_form.html",
-        context,
-    )
+        lesson.delete()
+        messages.success(request, "Đã xóa buổi học.")
+        return redirect("skill_lessons", skill=skill)
+    return render(request, "assignments/confirm_delete.html", {
+        "object_name": str(lesson), "back_url": "skill_lessons", "back_arg": skill,
+    })
 
 
-# Sửa bài tập
-@staff_member_required
-def assignment_update(request, pk):
-    assignment = get_object_or_404(assignment, pk=pk)
+@staff_required
+def lesson_detail(request, pk):
+    lesson = get_object_or_404(Lesson, pk=pk)
 
-    if request.method == "POST":
-        code = request.POST.get("code", "").strip()
-        title = request.POST.get("title", "").strip()
-        category = request.POST.get("category", "")
-        program = request.POST.get("program", "")
+    if lesson.skill == Skill.VOCABULARY:
+        form_cls, rel = VocabWordForm, "words"
+    elif lesson.skill == Skill.LISTENING:
+        form_cls, rel = ListeningQuestionForm, "questions"
+    else:
+        form_cls, rel = SpeakingTaskForm, "speaking_tasks"
 
-        if not code or not title or not category:
-            messages.error(
-                request,
-                "Vui lòng nhập mã, tên và danh mục bài tập.",
-            )
-        elif assignment.objects.filter(code=code).exclude(pk=pk).exists():
-            messages.error(request, "Mã bài tập đã tồn tại.")
-        elif category == "practice_test" and not program:
-            messages.error(
-                request,
-                "Vui lòng chọn chương trình cho kho luyện đề.",
-            )
-        else:
-            assignment.code = code
-            assignment.title = title
-            assignment.category = category
-            assignment.program = (
-                program if category == "practice_test" else ""
-            )
-            assignment.description = request.POST.get("description", "")
-            assignment.content = request.POST.get("content", "")
-            assignment.answer_key = request.POST.get("answer_key", "")
+    items = getattr(lesson, rel).all()
+    initial = {"order": items.count() + 1}
+    form = form_cls(request.POST or None, request.FILES or None, initial=initial)
+    if request.method == "POST" and form.is_valid():
+        item = form.save(commit=False)
+        item.lesson = lesson
+        item.save()
+        messages.success(request, "Đã thêm nội dung.")
+        return redirect("lesson_detail", pk=lesson.pk)
 
-            if request.FILES.get("audio_file"):
-                assignment.audio_file = request.FILES["audio_file"]
-
-            if request.FILES.get("attachment"):
-                assignment.attachment = request.FILES["attachment"]
-
-            assignment.save()
-
-            messages.success(request, "Cập nhật bài tập thành công.")
-            return redirect("assignment_list")
-
-    context = {
-        "assignment": assignment,
-        "category_choices": assignment.CATEGORY_CHOICES,
-        "program_choices": assignment.PROGRAM_CHOICES,
-    }
-
-    return render(
-        request,
-        "assignments/assignment_form.html",
-        context,
-    )
+    return render(request, "assignments/lesson_detail.html", {
+        "lesson": lesson, "items": items, "form": form,
+    })
 
 
-# Xóa bài tập
-@staff_member_required
-def assignment_delete(request, pk):
-    assignment = get_object_or_404(assignment, pk=pk)
-
-    if request.method == "POST":
-        assignment.delete()
-        messages.success(request, "Xóa bài tập thành công.")
-        return redirect("assignment_list")
-
-    return render(
-        request,
-        "assignments/assignment_confirm_delete.html",
-        {"assignment": assignment},
-    )
+@staff_required
+def item_delete(request, skill, pk):
+    model_map = {"vocabulary": VocabWord, "listening": ListeningQuestion, "speaking": SpeakingTask}
+    model = model_map.get(skill)
+    item = get_object_or_404(model, pk=pk)
+    lesson_pk = item.lesson.pk
+    item.delete()
+    messages.success(request, "Đã xóa nội dung.")
+    return redirect("lesson_detail", pk=lesson_pk)

@@ -1,119 +1,113 @@
-
-from django.db import models
 from django.conf import settings
-class assignment(models.Model):
+from django.db import models
 
-    # Chương trình / trình độ luyện đề
-    PROGRAM_CHOICES = [
-        ("TOEIC", "TOEIC"),
-        ("B1", "B1"),
-        ("B2", "B2"),
-        ("VSTEP", "VSTEP"),
-    ]
 
-    # Loại bài tập
-    CATEGORY_CHOICES = [
-        ("listening", "Bài tập Nghe"),
-        ("speaking", "Bài tập Nói"),
-        ("vocabulary", "Bài tập Từ vựng"),
-        ("practice_test", "Kho luyện đề"),
-    ]
+class Skill(models.TextChoices):
+    LISTENING = "listening", "Listening"
+    SPEAKING = "speaking", "Speaking"
+    VOCABULARY = "vocabulary", "Vocabulary"
 
-    # Mã bài tập
-    code = models.CharField(
-        max_length=30,
-        unique=True,
-        verbose_name="Mã bài tập",
-    )
 
-    # Tên bài tập
-    title = models.CharField(
-        max_length=255,
-        verbose_name="Tên bài tập",
-    )
+class Program(models.TextChoices):
+    CHUNG = "CHUNG", "Dùng chung"
+    TOEIC = "TOEIC", "TOEIC"
+    B1 = "B1", "B1"
+    B2 = "B2", "B2"
+    VSTEP = "VSTEP", "VSTEP"
 
-    # Chỉ chọn chương trình khi là bài luyện đề
+
+class ListeningType(models.TextChoices):
+    PART12 = "part12", "Nghe chọn đáp án (ABCD, có hình ảnh)"
+    PART34 = "part34", "Nghe điền đáp án"
+
+
+class Lesson(models.Model):
+    skill = models.CharField("Kỹ năng", max_length=20, choices=Skill.choices)
     program = models.CharField(
-        max_length=10,
-        choices=PROGRAM_CHOICES,
-        blank=True,
-        default="",
-        verbose_name="Chương trình luyện đề",
+        "Chương trình", max_length=10, choices=Program.choices, default=Program.CHUNG
     )
-
-    # Danh mục bài tập
-    category = models.CharField(
-        max_length=30,
-        choices=CATEGORY_CHOICES,
-        verbose_name="Danh mục bài tập",
+    order = models.PositiveIntegerField("Buổi số", default=1)
+    title = models.CharField("Tên buổi", max_length=200)
+    description = models.TextField("Mô tả", blank=True)
+    listening_type = models.CharField(
+        "Loại bài nghe", max_length=10, choices=ListeningType.choices, blank=True
     )
-
-    # Mô tả
-    description = models.TextField(
-        blank=True,
-        verbose_name="Mô tả",
-    )
-
-    # Nội dung bài tập
-    content = models.TextField(
-        blank=True,
-        verbose_name="Nội dung bài tập",
-    )
-
-    # File âm thanh
     audio_file = models.FileField(
-        upload_to="assignments/audio/",
-        blank=True,
-        null=True,
-        verbose_name="File âm thanh",
+        "File nghe", upload_to="assignments/audio/", blank=True, null=True
     )
-
-    # Tài liệu đính kèm
-    attachment = models.FileField(
-        upload_to="assignments/files/",
-        blank=True,
-        null=True,
-        verbose_name="Tài liệu đính kèm",
-    )
-
-    # Đáp án
-    answer_key = models.TextField(
-        blank=True,
-        verbose_name="Đáp án",
-    )
-
-    # Người tạo bài tập
+    youtube_url = models.URLField("Link YouTube (bài nói)", blank=True)
+    is_active = models.BooleanField("Đang mở", default=True)
     created_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="created_assignments",
-        verbose_name="Người tạo",
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="created_lessons",
     )
-
-    # Trạng thái sử dụng
-    is_active = models.BooleanField(
-        default=True,
-        verbose_name="Đang sử dụng",
-    )
-
-    # Thời gian tạo
-    created_at = models.DateTimeField(
-        auto_now_add=True,
-        verbose_name="Ngày tạo",
-    )
-
-    # Thời gian cập nhật
-    updated_at = models.DateTimeField(
-        auto_now=True,
-        verbose_name="Ngày cập nhật",
-    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ["-created_at"]
-        verbose_name = "Bài tập"
-        verbose_name_plural = "Ngân hàng bài tập"
+        ordering = ["skill", "program", "order"]
+        unique_together = ("skill", "program", "order")
+        verbose_name = "Buổi học"
+        verbose_name_plural = "Ngân hàng bài tập (Buổi)"
 
     def __str__(self):
-        return f"{self.code} - {self.title}"
+        return f"[{self.get_skill_display()}] Buổi {self.order} - {self.title}"
+
+    @property
+    def item_count(self):
+        if self.skill == Skill.VOCABULARY:
+            return self.words.count()
+        if self.skill == Skill.LISTENING:
+            return self.questions.count()
+        return self.speaking_tasks.count()
+
+
+class VocabWord(models.Model):
+    lesson = models.ForeignKey(Lesson, on_delete=models.CASCADE, related_name="words")
+    word = models.CharField("Từ", max_length=120)
+    word_type = models.CharField("Loại từ", max_length=60, blank=True)
+    meaning = models.CharField("Nghĩa", max_length=255)
+    example = models.TextField("Ví dụ", blank=True)
+    order = models.PositiveIntegerField("Thứ tự", default=1)
+
+    class Meta:
+        ordering = ["order", "id"]
+
+    def __str__(self):
+        return self.word
+
+
+class ListeningQuestion(models.Model):
+    lesson = models.ForeignKey(Lesson, on_delete=models.CASCADE, related_name="questions")
+    order = models.PositiveIntegerField("Câu số", default=1)
+    image = models.ImageField(
+        "Hình ảnh (part 1-2)", upload_to="assignments/listening_img/", blank=True, null=True
+    )
+    question_text = models.TextField("Nội dung câu hỏi", blank=True)
+    option_a = models.CharField("Đáp án A", max_length=255, blank=True)
+    option_b = models.CharField("Đáp án B", max_length=255, blank=True)
+    option_c = models.CharField("Đáp án C", max_length=255, blank=True)
+    option_d = models.CharField("Đáp án D", max_length=255, blank=True)
+    correct_option = models.CharField(
+        "Đáp án đúng", max_length=1, blank=True,
+        choices=[("A", "A"), ("B", "B"), ("C", "C"), ("D", "D")],
+    )
+    correct_answer = models.CharField("Đáp án điền (tham khảo)", max_length=255, blank=True)
+
+    class Meta:
+        ordering = ["order", "id"]
+
+    def __str__(self):
+        return f"Câu {self.order} - {self.lesson.title}"
+
+
+class SpeakingTask(models.Model):
+    lesson = models.ForeignKey(Lesson, on_delete=models.CASCADE, related_name="speaking_tasks")
+    order = models.PositiveIntegerField("Câu số", default=1)
+    sentence = models.TextField("Câu/đoạn cần nói")
+
+    class Meta:
+        ordering = ["order", "id"]
+
+    def __str__(self):
+        return f"Câu {self.order} - {self.lesson.title}"
