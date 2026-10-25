@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+
+{% block title %}Xét duyệt đơn xin miễn BTVN - MR BEAN ENGLISH{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <div class="card border-0 rounded-4 shadow-sm" style="background: #ffffff; border: 1px solid rgba(212, 98, 26, 0.25) !important;">
+            <div class="card-header py-3 bg-transparent border-0">
+                <h2 class="section-title-h2 mb-1" style="color: var(--color-burn-orange);">
+                    <i class="bi bi-patch-check-fill me-2"></i>XÉT DUYỆT ĐƠN XIN MIỄN BTVN
+                </h2>
+                <div class="small" style="color: #6d5b4e;">Lớp: <strong>{{ classroom.name }}</strong> (<code>{{ classroom.class_code }}</code>)</div>
+            </div>
+            <div class="card-body p-4 pt-1">
+                <!-- Thông tin đơn của học viên -->
+                <div class="rounded-3 p-3 mb-4" style="background-color: var(--color-light-cream); border: 1px dashed rgba(212, 98, 26, 0.3);">
+                    <div class="row g-2 small">
+                        <div class="col-sm-6">
+                            <span style="color: #846d5c;">Học viên:</span>
+                            <div class="fw-bold fs-6" style="color: var(--color-dark-brown);">{{ exemption.enrollment.student.get_full_name|default:exemption.enrollment.student.username }}</div>
+                        </div>
+                        <div class="col-sm-6">
+                            <span style="color: #846d5c;">Bài tập xin miễn:</span>
+                            <div class="fw-bold fs-6" style="color: var(--color-dark-brown);">{{ exemption.session_title }}</div>
+                        </div>
+                        <div class="col-sm-6">
+                            <span style="color: #846d5c;">Loại bài tập:</span>
+                            <div>
+                                {% if exemption.homework_type == 'speaking' %}
+                                    <span class="badge" style="background-color: #e6f6ec; color: #15803d; font-weight: 700;"><i class="bi bi-mic-fill me-1"></i>Speaking (Được miễn)</span>
+                                {% elif exemption.homework_type == 'vocabulary' %}
+                                    <span class="badge" style="background-color: #e6f6ec; color: #15803d; font-weight: 700;"><i class="bi bi-book-half me-1"></i>Vocabulary (Được miễn)</span>
+                                {% else %}
+                                    <span class="badge" style="background-color: #fee2e2; color: #b91c1c; font-weight: 700;"><i class="bi bi-headphones me-1"></i>Listening (Bắt buộc - Không thể duyệt)</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <span style="color: #846d5c;">Hạn mức hiện tại:</span>
+                            <div class="fw-bold" style="color: var(--color-burn-orange);">Còn {{ quota.remaining_quota }} / {{ quota.max_quota }} buổi</div>
+                        </div>
+                        <div class="col-12 mt-2">
+                            <span style="color: #846d5c;">Lý do học viên nêu:</span>
+                            <div class="p-2 bg-white rounded border mt-1" style="color: var(--color-dark-brown);">{{ exemption.reason }}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small" style="color: var(--color-dark-brown);">Quyết định xét duyệt:</label>
+                        <div class="d-flex gap-4">
+                            {% for radio in form.action %}
+                                <div class="form-check">
+                                    {{ radio.tag }}
+                                    <label class="form-check-label fw-bold" for="{{ radio.id_for_label }}" style="color: var(--color-dark-brown);">
+                                        {{ radio.choice_label }}
+                                    </label>
+                                </div>
+                            {% endfor %}
+                        </div>
+                        {% for error in form.action.errors %}
+                            <div class="small mt-1 fw-bold" style="color: var(--color-burn-orange);">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small" style="color: var(--color-dark-brown);">Ghi chú hoặc lý do phản hồi:</label>
+                        {{ form.note }}
+                        {% for error in form.note.errors %}
+                            <div class="small mt-1 fw-bold" style="color: var(--color-burn-orange);">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="p-3 rounded-3 small mb-3" style="background-color: #fffbf5; border-left: 4px solid var(--color-warm-orange); color: var(--color-dark-brown);">
+                        <i class="bi bi-info-circle me-1" style="color: var(--color-warm-orange);"></i>
+                        Khi bạn <strong>Chấp thuận</strong>, hệ thống tự động trừ 1 buổi miễn của học viên và bắn thông báo tức thời tới <strong>Quản lý</strong> và <strong>Học viên</strong>.
+                    </div>
+
+                    <div class="d-flex justify-content-between mt-4 pt-2 border-top">
+                        <a href="{% url 'courses:exemption_list' %}" class="btn" style="background-color: var(--color-light-cream); color: var(--color-dark-brown); border: 1px solid rgba(42, 26, 14, 0.2); border-radius: 30px; font-weight: 600;">
+                            <i class="bi bi-arrow-left me-1"></i>Quay lại
+                        </a>
+                        <button type="submit" class="btn-cta-orange px-4">
+                            <i class="bi bi-check2-circle me-1"></i>Xác nhận xử lý
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

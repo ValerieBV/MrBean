@@ -1,158 +1,257 @@
-# Thành viên C — AI & Báo cáo (BV)
+# Mr Bean — Dashboard ba vai trò và chấm bài tự động
 
-Nhánh nguồn: `AI`. Phạm vi: `ai_core`, `dashboard` và cấu hình URL/dependency.
-Các app `assignments`, `submissions`, `courses` ở nhánh nguồn chưa có model,
-cho nên dùng snapshot `LearningTask` để kết nối với Thành viên B, không tự thay
-schema của các app đó. Cần nối adapter dưới đây vào luồng nộp bài của B khi tích hợp.
+## Phạm vi và nguồn tích hợp
 
-## Chạy
+Mọi thay đổi chỉ được đưa vào nhánh **`codex/ai-dashboard-bv`**. Không merge vào
+`AI`, `master`, `assignments` hoặc `feature/setup-web-admin`.
 
-```sh
+Nguồn đọc (snapshot đã tích hợp vào chính nhánh này):
+
+| Nguồn | Commit | Phần được tái sử dụng |
+| --- | --- | --- |
+| `feature/setup-web-admin` | `a2e0c37ed8e4e2a014679f0903738a450025b76c` | CustomUser, Notification, Course, ClassRoom, Enrollment, quota/miễn bài, forms, views, template chung và migrations |
+| `assignments` | `0254880f397168a31132197d074db8231a30c9ef` | Lesson, VocabWord, ListeningQuestion, SpeakingTask, LessonProgress, QuestionResponse, SpeakingRecording, migrations và nguyên tắc chấm nghe |
+| Nhánh dashboard trước tích hợp | `ecb4537eb3f77daebaf605630130aaaaa1bb6d12` | LearningTask, GradingJob, queue lưu DB, fallback và báo cáo |
+
+Bổ sung `ClassAssignment` để nối buổi học với lớp; roster lấy từ `Enrollment`
+thật, gồm cả người chưa nộp. Đề bài/đáp án/số lượt viết được snapshot khi giao,
+không dùng yêu cầu hay điểm do client tự gửi. Mỗi lần nộp lưu một GradingJob
+bất biến về bài làm, kể cả khi học viên nộp lại. `LessonProgress` và
+`QuestionResponse` tiếp tục nhận cập nhật tương thích phần B.
+
+Repository không chứa database sản xuất hoặc file audio/ảnh gốc. Việc lấy
+model/migration và nội dung mẫu không đồng nghĩa đã sao chép dữ liệu thật từ
+máy thành viên khác. Có lệnh seed local và lệnh nhập tiến độ đã tồn tại trong
+DB (xem dưới).
+
+## Chạy trên Windows PowerShell
+
+Ở thư mục repository:
+
+```powershell
+git fetch origin
+git switch codex/ai-dashboard-bv
+git pull --ff-only origin codex/ai-dashboard-bv
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
 python -m pip install -r requirements.txt
+Copy-Item .env.example .env
 python manage.py migrate
 python manage.py createsuperuser
 python manage.py runserver
-# Một tiến trình riêng, do supervisor/systemd quản lý:
+```
+
+Nếu đã có DB, sao lưu trước khi migrate. Không xóa DB, không dùng `--fake`
+để bỏ qua lỗi migration. Các migration nguồn được giữ lại và các field mới
+được thêm bằng migration tiếp theo.
+
+Mở `http://127.0.0.1:8000/` → dashboard / đăng nhập. Lần đầu chỉ có superuser,
+có thể tạo lớp và người dùng trong giao diện quản trị hoặc dùng mẫu local.
+
+### Dữ liệu mẫu đủ ba vai trò
+
+```powershell
+python manage.py seed_demo --password "LocalDemo-2026!"
+```
+
+Chỉ chạy khi `DJANGO_DEBUG=true`; tạo `demo_admin`, `demo_manager`,
+`demo_teacher`, `demo_student`, `demo_student2`, lớp `DEMO-01` và 3 bài
+nghe/nói/từ vựng đã giao. Mật khẩu ở trên là ví dụ cho môi trường local,
+người chạy có thể chọn mật khẩu khác. Chạy lại không reset mật khẩu đã có,
+không tạo trùng roster và không gọi OpenAI.
+
+Nội dung mẫu từ phần B gồm Business English (Resilience, Customer, Deadline),
+Self Introduction và hai câu TOEIC A–D. Mẫu nghe chưa kèm audio thật: giáo viên
+bổ sung qua Sửa buổi học trước khi giao buổi mới. Hai lệnh seed cũ `seed_data`
+và `seed_phanb` chuyển tới cùng lệnh an toàn này, cũng bắt buộc `--password`.
+
+## Cấu hình API OpenAI để chấm bài
+
+1. Tạo API key của dự án tại `https://platform.openai.com/api-keys` và thiết lập
+   Billing/Usage của dự án theo tài khoản của bạn. Ứng dụng gọi OpenAI API bằng
+   key của backend; không dùng cookie hoặc mật khẩu ChatGPT.
+2. Mở file `.env` vừa sao chép, điền:
+
+```dotenv
+OPENAI_API_KEY=YOUR_API_KEY_HERE
+OPENAI_TEXT_MODEL=gpt-4o-mini
+OPENAI_TRANSCRIBE_MODEL=gpt-4o-mini-transcribe
+DJANGO_DEBUG=true
+DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1
+DJANGO_SECRET_KEY=YOUR_RANDOM_DJANGO_SECRET
+```
+
+`.env` được nạp bằng python-dotenv; biến môi trường có sẵn được ưu tiên.
+Không commit key, không gửi key trong chat hoặc đưa key vào HTML/JavaScript.
+Có thể tạo Django secret bằng:
+
+```powershell
+python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
+```
+
+3. Kiểm tra cấu hình (không gọi API):
+
+```powershell
+python manage.py check_openai
+```
+
+4. Tùy chọn kiểm tra kết nối bằng yêu cầu nhỏ (có thể phát sinh phí API):
+
+```powershell
+python manage.py check_openai --live
+```
+
+5. Giữ web server và mở terminal thứ hai, cùng thư mục và virtualenv:
+
+```powershell
+.\.venv\Scripts\Activate.ps1
 python manage.py run_ai_worker
 ```
 
-Đặt `OPENAI_API_KEY` trong môi trường tiến trình worker; `.env` không tự được đọc.
-Mô hình cấu hình qua `OPENAI_TEXT_MODEL` (mặc định `gpt-4o-mini`) và
-`OPENAI_AUDIO_MODEL` (mặc định `gpt-audio-1.5`). Không cần key để chạy kiểm thử.
-Audio dùng Chat Completions với `input_audio`, trả text JSON, `store=False`:
-https://developers.openai.com/api/docs/guides/audio-chat-completions
+Worker đọc `.env` lúc khởi động. Sau khi sửa key/model phải khởi động lại worker
+và web server. `python manage.py run_ai_worker --once` xử lý tối đa một bài rồi
+thoát. Không có worker thì bài chỉ nằm chờ; hết 5 phút phải qua watchdog để
+chuyển manual.
 
-Đăng nhập tại `/accounts/login/`, dashboard tại `/dashboard/`. Tạo danh sách bài
-được giao trong Django admin hoặc sync bằng code từ app B. Giáo viên chỉ thấy
-bài mình phụ trách; manager/admin xem toàn hệ thống; học viên chỉ gửi/đọc bài
-của chính mình và không được truy cập báo cáo.
+6. Học viên nộp transcript/ảnh/text. Sau khi worker xử lý, vào kết quả bài nộp
+để xem điểm AI gợi ý; giáo viên xác nhận điểm chính thức. Nghe không cần key
+hay worker: chấm ngay bằng đáp án ở backend.
 
-Chạy watchdog độc lập mỗi phút để bài quá 5 phút chuyển sang chấm thủ công
-kể cả worker bị treo hoặc dừng:
+### Xử lý lỗi thường gặp
 
-```cron
-* * * * * cd /absolute/path/to/MrBean && /absolute/path/to/venv/bin/python manage.py expire_ai_jobs
+- `Chưa có OPENAI_API_KEY`: kiểm tra tên `.env` (không phải `.env.txt`), thư mục
+  chứa `manage.py`, rồi restart worker.
+- Key bị từ chối: tạo/kiểm tra key trong đúng project OpenAI.
+- Hết quota/rate limit: kiểm tra Billing và Usage; lần nộp chuyển giáo viên,
+  không retry API ẩn gây gọi lặp.
+- Model không được cấp quyền hoặc JSON không hợp lệ: dùng model được project
+  hỗ trợ, có Responses API / Structured Outputs; bài vẫn chuyển manual.
+- Ảnh mờ, transcript rỗng hoặc lỗi mạng: giáo viên xem bài và chấm thủ công.
+
+Tài liệu OpenAI đã dùng:
+- https://developers.openai.com/api/docs/guides/structured-outputs
+- https://developers.openai.com/api/docs/guides/speech-to-text
+- https://developers.openai.com/api/docs/guides/images-vision
+
+## Quy tắc chấm theo yêu cầu
+
+### Nghe
+
+Tái sử dụng model câu hỏi và nguyên tắc so đáp án của phần B. Luồng mới chỉ
+cho giao bài nghe khi từng câu có A–D hợp lệ và lựa chọn đúng đã được cấu hình.
+Bỏ trống tính sai; câu của bài khác bị từ chối. Điểm chính thức = số câu đúng /
+tổng câu × 10; hoàn tất ngay, không gọi OpenAI. Không công khai correct_option
+trong HTML/form/API đề bài học viên. Các câu part34 cũ không đủ lựa chọn A–D
+phải được giáo viên bổ sung trước khi giao theo yêu cầu trắc nghiệm mới.
+
+### Nói
+
+Học viên nhập transcript, hoặc gửi audio để OpenAI tạo transcript rồi chấm.
+Nếu gửi cả hai thì transcript nhập là nguồn được dùng và UI ghi rõ nguồn;
+không khẳng định transcript nhập là bằng chứng đã nói đúng như audio.
+Điểm AI = trung bình nội dung, từ vựng, ngữ pháp (mỗi tiêu chí 0–10).
+**Không chấm phát âm, giọng, nét âm hoặc độ trôi chảy âm thanh.**
+Audio WAV/MP3/M4A/WebM/MP4/OGG, tối đa 20 MiB. Không cần audio khi đã có
+transcript. Transcript được lưu và hiển thị để giáo viên đối chiếu.
+
+### Từ vựng
+
+Giáo viên thiết lập từ phải viết và số lượt viết mỗi từ (1–100) lúc giao.
+Học viên gửi text hoặc tối đa 5 ảnh JPEG/PNG/WebP, mỗi ảnh tối đa 8 MiB và
+20 triệu điểm ảnh. Ảnh được kiểm tra, xoay theo EXIF và chuẩn hóa JPEG.
+OpenAI đọc bài và trả số lượt quan sát của từng từ. Backend kiểm tra kiểu,
+word thuộc rubric, không trùng, không âm và tính lại:
+
+`matched = tổng min(số lượt quan sát từng từ, số lượt yêu cầu)`
+
+`điểm AI = matched / tổng lượt yêu cầu × 10`
+
+Ví dụ: 2 từ, mỗi từ 3 lượt → cần 6 lượt. Viết Customer 6 lần nhưng không viết
+Deadline chỉ đáp ứng 3/6, không được tính là đủ. **Không chấm chữ đẹp/xấu**.
+Ảnh trùng nội dung byte sau chuẩn hóa bị từ chối. Khi gửi cả ảnh và text, AI chỉ đếm trên ảnh để tránh cộng trùng bản chép.
+Ảnh không rõ hoặc không chắc số lượt → manual, không đoán thành điểm 0/10.
+Kết quả OCR/AI là gợi ý cần giáo viên kiểm tra; chống nhầm lẫn khi ảnh trùng
+hoặc chứa cả bản in đề bài cần kiểm tra bằng dữ liệu thật trước vận hành.
+
+### Điểm và fallback
+
+AI tự tạo điểm gợi ý + nhận xét. Giáo viên phụ trách hoặc admin xác nhận
+điểm cuối; manager theo dõi và giao bài, không xác nhận điểm. Nghe tự có
+điểm chính thức. Điểm trung bình chính thức tách khỏi điểm trung bình AI.
+
+Queue lưu DB; atomic claim tránh nhiều worker cùng chấm một bài. Deadline
+300 giây tính từ lúc nộp, timeout mỗi tác vụ worker tối đa 120 giây và không
+retry ẩn. Kết quả đến muộn không ghi đè manual hoặc điểm giáo viên.
+Có thể chạy nhiều worker với PostgreSQL khi tải tăng.
+
+Chạy watchdog `python manage.py expire_ai_jobs` bằng Task Scheduler mỗi phút
+(Windows), hoặc cron/supervisor ở máy chủ, độc lập với worker. Watchdog có
+sai số tối đa một chu kỳ; hạ tầng dừng thì không thể cam kết thời gian tuyệt
+đối. Các mục SLA tiếp tục không hiển thị trên dashboard.
+
+## Dashboard theo vai trò và luồng sử dụng
+
+- **Admin/manager:** xem tổng hợp, lọc lớp/kỹ năng/tên/ngày giao, giao bài, xem tỷ lệ
+  nộp, điểm, tiến độ từng học viên, học viên cần hỗ trợ và lịch sử.
+- **Giáo viên:** chỉ xem dữ liệu lớp đang phụ trách; tạo buổi học của mình,
+  giao cho lớp mình và chấm/duyệt. Giáo viên lớp khác không đọc bài hoặc media.
+- **Học viên:** chỉ xem task/điểm/nhận xét của mình; làm nghe trắc nghiệm,
+  gửi transcript/audio và bài từ vựng; nộp lại giữ lịch sử từng lần.
+
+Các bảng báo cáo có phân trang 25 bản ghi, không giới hạn lịch sử ở 100 bài.
+Polling 10 giây; dữ liệu rỗng/lỗi/phiên hết hạn được thông báo. Khi xác nhận
+điểm thành công chuyển lại kết quả mới ngay. Giao diện dùng base.html được
+nhập từ nhánh quản trị để thống nhất màu, font và điều hướng.
+
+Tỷ lệ nộp = lượt giao đã có ít nhất một submission / toàn bộ lượt giao đến
+thời điểm hiện tại. Không tính draft là đã nộp, không đếm trùng retry/nộp lại.
+Trạng thái tiến độ theo lần nộp mới nhất; điểm theo lần nộp gần nhất đã chấm,
+có chỉ báo riêng khi nộp lại đang chờ. Nguy cơ hỗ trợ: ít nhất 3 task quá hạn
+chưa nộp, hoặc 7 ngày không nộp và còn task quá hạn (quy tắc, không phải ML).
+
+Ghi danh qua service quản lý lớp tự thêm học viên vào các bài còn hạn. Nếu
+đã chỉnh Enrollment qua admin hoặc nhập DB ngoài service, chạy:
+
+```powershell
+python manage.py sync_assignment_rosters
+# Chỉ dùng khi chủ ý bổ sung cả bài đã hết hạn:
+python manage.py sync_assignment_rosters --include-closed
 ```
 
-`run_ai_worker --once` xử lý tối đa một bài. Queue nằm trong database, dùng
-atomic compare-and-set để chỉ một worker nhận bài. Khi tải cao, dùng PostgreSQL
-và nhiều worker. Worker mặc định timeout API 120 giây, không retry ẩn; hạn
-300 giây tính từ lúc enqueue. Kết quả đến muộn không ghi đè hàng chấm thủ công
-hoặc điểm giáo viên. Watchdog có sai số tối đa một chu kỳ chạy (~1 phút):
-không có cam kết thời gian tuyệt đối khi hạ tầng dừng. Cần giám sát backlog và
-bố trí đủ worker để AI có thể hoàn tất trước 5 phút.
+Không tự xóa roster lịch sử khi học viên rời lớp. Học viên đã rời lớp được
+xem lịch sử riêng nhưng không được nộp tiếp. Đổi giáo viên phụ trách lớp thay
+đổi quyền xem/chấm theo lớp hiện tại; reviewed_by vẫn giữ người đã chấm.
 
-## Hợp đồng tích hợp cho Thành viên B
+## Dữ liệu tiến độ cũ của B đã có trong database
 
-Khi giao bài, sync **toàn bộ** roster, gồm cả học viên chưa nộp. Nếu chỉ tạo row
-khi đã nộp, tỷ lệ nộp bài sẽ sai. `assignment_key` và `submission_key` là ID ổn
-định từ app B, tối đa 128 ký tự. Mỗi lần nộp mới dùng submission key mới; retry
-của cùng lần nộp dùng key cũ. Không đổi teacher/learner của task có lịch sử bài
-nộp; tạo task mới hoặc triển khai luồng chuyển giao có phân quyền riêng.
+Sau migrate, nếu DB đang có LessonProgress hoàn thành và đã có ghi danh thật:
 
-```python
-from django.db import transaction
-from dashboard.models import LearningTask
-from ai_core.services import enqueue_submission
-
-with transaction.atomic():
-    task, _ = LearningTask.objects.update_or_create(
-        assignment_key=str(assignment.pk), learner=student,
-        defaults={"title": assignment.title, "teacher": teacher,
-                  "assigned_at": assignment.assigned_at, "due_at": assignment.due_at},
-    )
-    # Ngay trong transaction lưu bài nộp của B:
-    job, created = enqueue_submission(
-        task=task, submission_key=str(submission.pk),
-        kind="speaking", audio=submission.audio,
-        text="", reference_text=assignment.reference_text,
-    )
+```powershell
+python manage.py import_legacy_progress --classroom "YOUR-CLASS-CODE" --due-at "2026-10-30T23:59:00+07:00"
 ```
 
-Truyền `File`/`FieldFile` của Django hoặc `UploadedFile`; audio WAV/MP3 tối đa
-20 MiB. Bài nói thiếu audio hoặc định dạng AI không hỗ trợ sẽ chấm thủ công,
-không suy đoán phát âm từ transcript. Bài từ vựng cần `kind="vocabulary"`,
-`text` không rỗng; pronunciation luôn null. Text/reference tối đa 20.000 ký tự.
-Ứng dụng không chuyển đổi WebM/M4A: B cần đổi sang WAV/MP3 trước khi gửi nếu
-muốn AI chấm. Audio chỉ được phát qua endpoint có kiểm tra quyền; không public
-thư mục `media/ai_submissions` trong production.
+Hạn nộp do người vận hành cung cấp, không được suy đoán từ dữ liệu thiếu.
+Lệnh tạo bài giao/roster và liên kết job với progress cũ, chạy lại không trùng.
+Điểm nghe cũ thang 100 đổi sang 10, không chấm lại theo đáp án có thể đã sửa.
+Bài nói/từ vựng cũ đưa manual vì không có đủ snapshot nội dung/ảnh và số lượt
+viết tại thời điểm cũ. Teacher đối chiếu dữ liệu gốc; lệnh không tự gửi dữ liệu
+cũ lên OpenAI. Chỉ nhập học viên đang ghi danh trong lớp chỉ định.
 
-API dự phòng cho client đã đăng nhập (Django session + CSRF, không phải
-webhook công khai):
+## Kiểm tra và triển khai
 
-| Endpoint | Dữ liệu / hành vi |
-| --- | --- |
-| `POST /ai/submissions/` | JSON `task_id, submission_key, kind, text, reference_text`; hoặc multipart thêm `audio` |
-| `GET /ai/jobs/<id>/` | Trạng thái, điểm gợi ý, điểm cuối và nhận xét; chỉ người có quyền với task |
-| `GET /ai/jobs/<id>/audio/` | Audio riêng tư, cùng phạm vi quyền |
-| `POST /ai/jobs/<id>/review/` | Giáo viên phụ trách / manager: JSON `score` 0–10 và `feedback` không rỗng |
-| `GET /dashboard/metrics/` | Tỷ lệ nộp, điểm, trạng thái, SLA, nguy cơ và hàng chấm |
-
-Lần enqueue đầu trả 201, callback lặp trả 200 cùng job. Key đã dùng cho task
-khác trả 400. Auth thiếu: 401; vai trò không được phép: 403; bài ngoài phạm vi:
-404; review bài chưa sẵn sàng hoặc đã chấm: 409. Phản hồi không hợp lệ: 400.
-
-## Điểm & chỉ số
-
-- AI chấm vocabulary/grammar, và pronunciation khi nghe được audio. JSON được
-  kiểm tra kiểu dữ liệu, giá trị hữu hạn 0–10, nhận xét và yêu cầu chấm thủ công.
-  Điểm gợi ý là trung bình các tiêu chí áp dụng; giáo viên xác nhận điểm cuối.
-- AI lỗi, thiếu key, JSON sai, refusal, audio không dùng được hoặc quá hạn:
-  chuyển `manual`; không lộ nội dung lỗi API ra giao diện/log.
-- Tỷ lệ nộp = số task có ít nhất một bài / toàn bộ task đã giao. Retry và
-  nộp nhiều lần không làm tăng mẫu số/tử số.
-- Điểm trung bình giáo viên: mỗi task lấy lần chấm xác nhận gần nhất, bỏ qua
-  task chưa chấm; điểm AI hiển thị riêng, mỗi task lấy gợi ý gần nhất.
-- SLA 48 giờ tính từ mỗi lần nộp đến điểm giáo viên xác nhận. Cờ vàng từ giờ
-  42 đến trước giờ 48; đỏ từ giờ 48. Bài AI đã nhận xét nhưng chưa duyệt vẫn
-  thuộc SLA. `SLA_WARNING_HOURS` cấu hình trong settings.
-- Nguy cơ: >= `DROPOUT_MISSED_TASKS` (3) task quá hạn chưa nộp; hoặc không
-  nộp trong `DROPOUT_INACTIVE_DAYS` (7) ngày và còn task quá hạn chưa nộp.
-  Học viên mới chưa có bài quá hạn không bị gắn cờ. Đây là quy tắc để giáo viên
-  hỗ trợ, không phải dự đoán ML đã được hiệu chuẩn.
-- Dashboard polling 10 giây, có thông báo khi tải lỗi; không phải WebSocket.
-  Hàng chấm hiển thị 100 bài cũ nhất; duyệt sẽ đưa các bài tiếp theo lên.
-
-## Kiểm thử
-
-```sh
+```powershell
 python manage.py check
 python manage.py makemigrations --check --dry-run
-python manage.py test ai_core dashboard
+python manage.py test
 ```
 
-Tests dùng provider giả lập: không gọi API trả phí. Cần smoke test với API key,
-audio thật và rubric đã thống nhất trước khi vận hành. LLM đánh giá audio là
-nhận xét gợi ý, không thay thế công cụ đo phát âm chuẩn hóa. Hạ tầng production
-cần cấu hình Django secret/debug/hosts, database, file storage riêng tư và
-supervisor theo môi trường triển khai.
+Test không gọi API thật: kiểm tra đủ ba vai trò, quyền lớp/học viên/media,
+CSRF, snapshot rubric, nghe đúng/sai/bỏ trống, vocab thiếu lượt, transcript,
+idempotency, timeout, fallback, phân trang và tích hợp các model nguồn.
+Cần smoke test với key và bài làm thật để hiệu chỉnh rubric và độ chính xác
+OCR/transcription. Không có tuyên bố AI đã được huấn luyện riêng.
 
-## Báo cáo theo quy trình 7.1 / 7.2 / 7.3
-
-- 7.1: `assigned_count`, `submitted_count`, `submission_rate` lấy từ roster D4
-  và bài nộp D5. Dùng `dashboard.integration.sync_assignment_roster` khi giao
-  bài để sync mọi học viên, kể cả chưa nộp. Hàm retry không tạo lượt giao trùng;
-  không tự xóa học viên bị bỏ khỏi danh sách hoặc chuyển giáo viên của bài có
-  lịch sử. App B vẫn cần gọi bridge vì chưa có model D4/D5 trong nhánh nguồn.
-- 7.2: `graded_report` cung cấp điểm cuối, nhận xét giáo viên, người chấm và
-  thời điểm xác nhận; `graded_count` đếm tất cả bài đã xác nhận.
-- 7.3: `learner_progress` tổng hợp được giao, đã nộp, chưa nộp, chờ chấm,
-  đã chấm, quá hạn chưa nộp và điểm trung bình theo học viên. Trạng thái theo
-  lần nộp mới nhất; điểm theo lần nộp gần nhất đã chấm, có cột riêng cho nộp
-  lại còn chờ. Các nhóm chưa nộp/chờ chấm/đã chấm cộng bằng số lượt giao.
-- `sla_late_report` và `sla_late_count` giữ lịch sử bài được giáo viên xác nhận
-  từ giờ 48 trở đi; không biến mất khi bài rời hàng chấm. SLA kết thúc ở lần
-  giáo viên xác nhận. `finished_at` của bài graded là thời điểm xác nhận.
-- Bảng điểm và lịch sử SLA hiển thị tối đa 100 bài mới nhất, kèm tổng số.
-  Tiến độ và thống kê tổng lấy toàn bộ dữ liệu trong phạm vi quyền truy cập.
-
-```python
-from dashboard.integration import sync_assignment_roster
-
-roster = sync_assignment_roster(
-    assignment_key=str(assignment.pk), title=assignment.title, teacher=teacher,
-    learners=assigned_students, assigned_at=assignment.assigned_at,
-    due_at=assignment.due_at,
-)
-# Khi có bài nộp D5: lấy task đúng learner và gọi enqueue_submission như trên.
-```
+Production: đặt DJANGO_DEBUG=false, secret riêng, hosts đúng, HTTPS,
+PostgreSQL, storage riêng tư; không public thư mục `media/ai_submissions`.
+File bài nộp chỉ đi qua endpoint có kiểm tra quyền. Không bật debug media
+server công khai cho bài nộp. Chọn chính sách lưu trữ/xóa theo đơn vị vận hành.

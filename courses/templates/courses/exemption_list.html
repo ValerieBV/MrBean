@@ -1,0 +1,121 @@
+{% extends 'base.html' %}
+
+{% block title %}Kiểm soát Miễn BTVN Nghe - MR BEAN ENGLISH{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="page-title-h1">KIỂM SOÁT MIỄN BTVN (CHỈ MIỄN SPEAKING & VOCABULARY)</h1>
+        <div class="text-muted small" style="color: #6d5b4e !important;">Danh sách đơn xin miễn BTVN của học viên. Bắt buộc hoàn thành bài tập Listening.</div>
+    </div>
+</div>
+
+<!-- Bộ lọc trạng thái -->
+<div class="data-card-wrapper p-3 mb-4">
+    <div class="d-flex flex-wrap gap-2 align-items-center">
+        <span class="fw-bold small me-2" style="color: var(--color-dark-brown);">Bộ lọc trạng thái:</span>
+        <a href="{% url 'courses:exemption_list' %}" class="btn btn-sm {% if not status_filter %}btn-cta-orange{% else %}btn-outline-secondary{% endif %}" style="border-radius: 20px; font-weight: 600;">
+            Tất cả
+        </a>
+        <a href="{% url 'courses:exemption_list' %}?status=pending" class="btn btn-sm {% if status_filter == 'pending' %}btn-export-excel{% else %}btn-outline-secondary{% endif %}" style="border-radius: 20px; font-weight: 600;">
+             Chờ duyệt
+        </a>
+        <a href="{% url 'courses:exemption_list' %}?status=approved" class="btn btn-sm {% if status_filter == 'approved' %}btn-cta-orange{% else %}btn-outline-secondary{% endif %}" style="border-radius: 20px; font-weight: 600;">
+            ✔ Đã duyệt
+        </a>
+        <a href="{% url 'courses:exemption_list' %}?status=rejected" class="btn btn-sm {% if status_filter == 'rejected' %}btn-action-delete{% else %}btn-outline-secondary{% endif %}" style="border-radius: 20px; font-weight: 600;">
+            ✖ Bị từ chối
+        </a>
+    </div>
+</div>
+
+<!-- Bảng danh sách đơn xin miễn -->
+<div class="data-card-wrapper">
+    <div class="table-responsive">
+        <table class="custom-data-table">
+            <thead>
+                <tr>
+                    <th>Học viên</th>
+                    <th>Lớp học</th>
+                    <th>Buổi / Bài tập</th>
+                    <th>Lý do</th>
+                    <th>Trạng thái</th>
+                    <th>Người duyệt</th>
+                    <th>Ngày gửi</th>
+                    <th class="text-end pe-3">Thao tác</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for req in exemptions %}
+                <tr>
+                    <td>
+                        <div class="fw-bold">{{ req.enrollment.student.get_full_name|default:req.enrollment.student.username }}</div>
+                        <div class="small opacity-75">
+                            {% if req.enrollment.student.student_code %}
+                            <span class="badge" style="background-color: var(--color-warm-orange); color: var(--color-dark-brown); font-weight: 700; font-size: 0.72rem;">{{ req.enrollment.student.student_code }}</span>
+                            {% endif %}
+                            @{{ req.enrollment.student.username }}
+                        </div>
+                    </td>
+                    <td>
+                        <div><a href="{% url 'courses:class_detail' req.enrollment.classroom.id %}" class="fw-bold text-decoration-none" style="color: var(--color-burn-orange);">{{ req.enrollment.classroom.class_code }}</a></div>
+                        <div class="small text-muted">{{ req.enrollment.classroom.course.code }}</div>
+                    </td>
+                    <td>
+                        <span class="badge" style="background-color: var(--color-light-cream); color: var(--color-dark-brown); border: 1px solid var(--color-warm-orange);">
+                            {{ req.session_title }}
+                        </span>
+                        <div class="small mt-1 fw-bold" style="color: var(--color-burn-orange);">
+                            {% if req.homework_type == 'speaking' %}
+                                <i class="bi bi-mic-fill me-1"></i>Speaking
+                            {% elif req.homework_type == 'vocabulary' %}
+                                <i class="bi bi-book-half me-1"></i>Vocabulary
+                            {% else %}
+                                <i class="bi bi-headphones me-1"></i>Listening
+                            {% endif %}
+                        </div>
+                    </td>
+                    <td class="small text-muted" style="max-width: 200px;">
+                        {{ req.reason|truncatechars:60 }}
+                    </td>
+                    <td>
+                        {% if req.status == 'approved' %}
+                            <span class="badge" style="background-color: #e6f6ec; color: #15803d; font-weight: 700; border-radius: 20px; padding: 0.35rem 0.75rem;"> Đã duyệt</span>
+                        {% elif req.status == 'rejected' %}
+                            <span class="badge" style="background-color: #fee2e2; color: #b91c1c; font-weight: 700; border-radius: 20px; padding: 0.35rem 0.75rem;"> Từ chối</span>
+                        {% else %}
+                            <span class="badge" style="background-color: #fff7ed; color: var(--color-burn-orange); border: 1px solid var(--color-warm-orange); font-weight: 700; border-radius: 20px; padding: 0.35rem 0.75rem;"> Chờ duyệt</span>
+                        {% endif %}
+                    </td>
+                    <td class="small">
+                        {% if req.reviewed_by %}
+                            <div class="fw-bold" style="color: var(--color-dark-brown);">{{ req.reviewed_by.get_full_name|default:req.reviewed_by.username }}</div>
+                            <div class="text-muted">{{ req.reviewed_at|date:"d/m H:i" }}</div>
+                        {% else %}
+                            <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td class="small text-muted">{{ req.created_at|date:"d/m/Y H:i" }}</td>
+                    <td class="text-end pe-3">
+                        {% if req.status == 'pending' and user.role in 'admin,teacher' %}
+                        <a href="{% url 'courses:exemption_review' req.id %}" class="btn-cta-orange py-1 px-3" style="font-size: 0.8rem;">
+                            <i class="bi bi-check2-circle me-1"></i>Xét duyệt
+                        </a>
+                        {% else %}
+                        <span class="text-muted small">Chi tiết</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="8" class="text-center py-5 text-muted">
+                        <i class="bi bi-inbox fs-2 d-block mb-1" style="color: var(--color-warm-orange);"></i>
+                        Không có đơn xin miễn nào.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

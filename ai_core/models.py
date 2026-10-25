@@ -10,11 +10,16 @@ class GradingJob(models.Model):
         PROCESSING = 'processing', 'AI đang chấm'
         AI_REVIEWED = 'ai_reviewed', 'AI đã nhận xét'
         MANUAL = 'manual', 'Chờ giáo viên'
-        GRADED = 'graded', 'Giáo viên đã chấm'
+        GRADED = 'graded', 'Đã có điểm chính thức'
 
     task = models.ForeignKey('dashboard.LearningTask', on_delete=models.PROTECT, related_name='jobs')
     submission_key = models.CharField(max_length=128, unique=True)
-    kind = models.CharField(max_length=16, choices=[('speaking', 'Bài nói'), ('vocabulary', 'Từ vựng')])
+    kind = models.CharField(max_length=16, choices=[('speaking', 'Bài nói'), ('vocabulary', 'Từ vựng'), ('listening', 'Nghe')])
+    rubric_snapshot = models.JSONField(default=dict, blank=True)
+    answers = models.JSONField(default=dict, blank=True)
+    transcript = models.TextField(blank=True)
+    grading_method = models.CharField(max_length=20, blank=True)
+    progress = models.ForeignKey('submissions.LessonProgress', on_delete=models.SET_NULL, null=True, blank=True, related_name='grading_jobs')
     text = models.TextField(blank=True)
     audio = models.FileField(upload_to='ai_submissions/%Y/%m/', blank=True)
     reference_text = models.TextField(blank=True)
@@ -39,3 +44,8 @@ class GradingJob(models.Model):
 
     class Meta:
         ordering = ['submitted_at', 'pk']
+
+
+class VocabularyPage(models.Model):
+    job = models.ForeignKey(GradingJob, on_delete=models.CASCADE, related_name='pages')
+    image = models.FileField(upload_to='ai_submissions/vocabulary/%Y/%m/')

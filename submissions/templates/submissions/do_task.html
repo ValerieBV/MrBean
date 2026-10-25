@@ -1,0 +1,21 @@
+{% extends 'base.html' %}{% block title %}Làm bài {{ task.title }}{% endblock %}{% block content %}
+<h1 class="report-title">{{ task.title }}</h1><p>{{ task.assignment.classroom.class_code }} · Hạn nộp {{ task.due_at|date:'d/m/Y H:i' }}</p><p>{{ rubric.description }}</p>
+<section class="report-panel"><form id="submissionForm" enctype="multipart/form-data">{% csrf_token %}<input type="hidden" name="task_id" value="{{ task.pk }}"><input type="hidden" name="submission_key" value="{{ submission_key }}">
+{% if rubric.skill == 'listening' %}
+<p>Chọn đáp án cho từng câu. Câu bỏ trống tính là chưa đúng; điểm = số câu đúng / tổng câu × 10.</p>
+{% if task.assignment.lesson.audio_file %}<audio controls src="{% url 'submissions:lesson_audio' task.pk %}" style="width:100%"></audio>{% endif %}
+{% for q in questions %}<fieldset class="report-panel"><legend>Câu {{ forloop.counter }}</legend><p>{{ q.question_text }}</p>{% if q.has_image %}<img class="report-img" alt="Hình câu hỏi {{ forloop.counter }}" src="{% url 'submissions:lesson_image' task.pk q.id %}">{% endif %}
+{% if q.option_a %}<label><input type="radio" name="q_{{ q.id }}" value="A"> A. {{ q.option_a }}</label><br>{% endif %}{% if q.option_b %}<label><input type="radio" name="q_{{ q.id }}" value="B"> B. {{ q.option_b }}</label><br>{% endif %}{% if q.option_c %}<label><input type="radio" name="q_{{ q.id }}" value="C"> C. {{ q.option_c }}</label><br>{% endif %}{% if q.option_d %}<label><input type="radio" name="q_{{ q.id }}" value="D"> D. {{ q.option_d }}</label>{% endif %}</fieldset>{% endfor %}
+{% elif rubric.skill == 'speaking' %}
+<h2>Yêu cầu bài nói</h2><ul>{% for prompt in rubric.prompts %}<li>{{ prompt }}</li>{% endfor %}</ul>
+<p class="report-subtle">AI chấm nội dung, từ vựng và ngữ pháp từ transcript. Không chấm phát âm. Nếu gửi cả transcript và ghi âm, AI dùng transcript bạn nhập.</p>
+<label for="text">Transcript bài nói</label><textarea id="text" name="text" rows="8" maxlength="20000" placeholder="Nhập transcript hoặc tải file ghi âm để OpenAI chuyển thành văn bản">{{ draft_text }}</textarea>
+<label for="audio">Ghi âm (tùy chọn, tối đa 20 MiB)</label><input id="audio" type="file" name="audio" accept=".wav,.mp3,.m4a,.webm,.mp4,.ogg">
+{% else %}
+<h2>Yêu cầu chép từ vựng</h2><p>Mỗi từ viết {{ rubric.repetitions }} lượt. Chỉ kiểm tra đủ số lượng, không chấm chữ đẹp/xấu.</p><ul>{% for word in rubric.words %}<li>{{ word }}</li>{% endfor %}</ul><label for="text">Bài làm dạng văn bản (nếu có)</label><textarea id="text" name="text" rows="8" maxlength="20000">{{ draft_text }}</textarea><label for="images">Ảnh bài làm, tối đa 5 ảnh, mỗi ảnh tối đa 8 MiB</label><input id="images" type="file" name="images" accept="image/png,image/jpeg,image/webp" multiple><p class="report-subtle">Gửi ảnh rõ, đủ trang và không trùng lặp. Nếu gửi cả ảnh và văn bản, AI chỉ kiểm đếm trên ảnh. Nếu AI không đọc chắc chắn sẽ chuyển giáo viên kiểm tra.</p>
+{% endif %}
+<p id="submissionStatus" role="status"></p><button type="submit" class="report-button">Nộp bài</button> <a href="{% url 'dashboard:index' %}">Về dashboard</a></form></section>
+{% endblock %}{% block extra_js %}<script>
+const form=document.getElementById('submissionForm'),statusBox=document.getElementById('submissionStatus');
+form.onsubmit=async event=>{event.preventDefault();const button=event.submitter;button.disabled=true;statusBox.textContent='Đang gửi bài…';try{const data=new FormData(form),answers={};for(const [key,value]of data)if(key.startsWith('q_'))answers[key.slice(2)]=value;data.set('answers',JSON.stringify(answers));const response=await fetch('{% url "ai_core:submit" %}',{method:'POST',body:data,headers:{'X-CSRFToken':form.querySelector('[name=csrfmiddlewaretoken]').value}});const job=await response.json();if(!response.ok)throw Error(job.message||'Không gửi được bài. Kiểm tra đăng nhập và dữ liệu.');location.href=job.detail_url;}catch(error){statusBox.textContent=error.message;button.disabled=false;}};
+</script>{% endblock %}

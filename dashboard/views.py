@@ -1,24 +1,29 @@
+from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
-from django.conf import settings
 from django.shortcuts import render
 from django.views.decorators.http import require_GET
-from ai_core.permissions import staff_required
+from ai_core.permissions import classes_for, is_manager
 from .services import metrics_for
 
 
 @require_GET
-@staff_required
+@login_required
 def index(request):
-    return render(request, 'dashboard/index.html', {
-        'sla_warning_hours': settings.SLA_WARNING_HOURS,
-        'dropout_missed_tasks': settings.DROPOUT_MISSED_TASKS,
-        'dropout_inactive_days': settings.DROPOUT_INACTIVE_DAYS,
-    })
+    template = 'dashboard/student.html' if request.user.role == 'student' and not request.user.is_superuser else 'dashboard/staff.html'
+    return render(request, template, {'classes': classes_for(request.user).order_by('class_code'),
+        'dashboard_title': 'Tổng quan quản lý' if is_manager(request.user) else 'Lớp học và bài cần chấm'})
 
 
 @require_GET
-@staff_required
 def metrics(request):
-    response = JsonResponse(metrics_for(request.user))
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'authentication_required'}, status=401)
+    try:
+        if request.GET.get('classroom'):
+            int(request.GET['classroom'])
+        data = metrics_for(request.user, filters=request.GET)
+    except (ValueError, TypeError):
+        return JsonResponse({'error': 'invalid_filter'}, status=400)
+    response = JsonResponse(data)
     response['Cache-Control'] = 'private, no-store'
     return response

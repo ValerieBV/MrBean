@@ -1,204 +1,235 @@
+import io
 import json
 import tempfile
 from datetime import timedelta
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
-from django.contrib.auth import get_user_model
+from PIL import Image
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
-from django.test import TestCase, override_settings
+from django.test import Client, override_settings
 from django.utils import timezone
-from dashboard.models import LearningTask
+from dashboard.testutils import IntegratedFixture
 from .models import GradingJob
-from .providers import OpenAIGrader, validate_result
-from .services import enqueue_submission, expire_jobs, process_job
+from .services import enqueue_submission, process_job, expire_jobs
+from .providers import validate_result, OpenAIGrader
+
+GOOD = {'content':8,'vocabulary':7,'grammar':6,'feedback':'Dùng thì quá khứ đúng; cần bổ sung ví dụ.','needs_manual':False}
 
 
-GOOD = {'vocabulary': 8, 'grammar': 6, 'pronunciation': None, 'feedback': 'Sửa thì quá khứ.', 'needs_manual': False}
+class GradingTests(IntegratedFixture):
+    def job(self,key='s1'):
+        return enqueue_submission(task=self.task,submission_key=key,text='My hobby is reading.')[0]
 
+    def post(self,user,task=None,**extra):
+        self.client.force_login(user)
+        data={'task_id':(task or self.task).pk,'submission_key':'api1','text':'I enjoy reading.',**extra}
+        return self.client.post('/ai/submissions/', data, content_type='application/json')
 
-class GradingTests(TestCase):
-    def setUp(self):
-        User = get_user_model()
-        self.student = User.objects.create_user(username='student', role='student')
-        self.teacher = User.objects.create_user(username='teacher', role='teacher')
-        self.other = User.objects.create_user(username='other', role='teacher')
-        self.task = LearningTask.objects.create(assignment_key='a1', title='Vocabulary', learner=self.student,
-                                               teacher=self.teacher, due_at=timezone.now() + timedelta(days=1))
-
-    def job(self, key='s1', **kwargs):
-        return enqueue_submission(task=self.task, submission_key=key, kind='vocabulary', text='I went home.', **kwargs)[0]
-
-    def test_success_idempotency_and_single_claim(self):
-        job = self.job()
-        duplicate = self.job()
-        self.assertEqual(job.pk, duplicate.pk)
-        provider = Mock()
-        provider.grade.return_value = GOOD
-        self.assertTrue(process_job(job.pk, provider))
-        self.assertFalse(process_job(job.pk, provider))
+    def test_transcript_success_and_single_claim(self):
+        job=self.job(); provider=Mock();provider.grade.return_value=GOOD
+        self.assertTrue(process_job(job.pk,provider)); self.assertFalse(process_job(job.pk,provider))
+        job.refresh_from_db();self.assertEqual(job.status,'ai_reviewed');self.assertEqual(job.suggested_score,7)
+        self.assertEqual(job.transcript,'My hobby is reading.');self.assertIsNone(job.result['pronunciation'])
         provider.grade.assert_called_once()
-        job.refresh_from_db()
-        self.assertEqual(job.status, 'ai_reviewed')
-        self.assertEqual(job.suggested_score, 7)
-        self.assertIsNone(job.final_score)
-        self.assertLessEqual(provider.grade.call_args.kwargs['timeout'], 120)
 
-    def test_ai_failure_and_timeout_fallback(self):
-        for index, error in enumerate([RuntimeError('secret'), TimeoutError()]):
-            job = self.job(str(index))
-            provider = Mock()
-            provider.grade.side_effect = error
-            process_job(job.pk, provider)
-            job.refresh_from_db()
-            self.assertEqual(job.status, 'manual')
-            self.assertNotIn('secret', job.fallback_reason)
+    def test_duplicate_callback_returns_same_job(self):
+        self.assertEqual(self.job().pk,self.job().pk)
+        self.assertEqual(GradingJob.objects.count(),1)
 
-    def test_deadline_queued_and_interrupted_processing(self):
-        now = timezone.now()
-        jobs = [self.job('queued'), self.job('processing')]
-        for job, status in zip(jobs, ['queued', 'processing']):
-            GradingJob.objects.filter(pk=job.pk).update(status=status, submitted_at=now - timedelta(seconds=300))
-        self.assertEqual(expire_jobs(now), 2)
-        provider = Mock()
-        self.assertFalse(process_job(jobs[0].pk, provider))
-        provider.grade.assert_not_called()
-        self.assertEqual(GradingJob.objects.filter(status='manual').count(), 2)
-
-    def test_late_result_not_saved(self):
-        job = self.job()
-        provider = Mock()
-        def late(*args, **kwargs):
-            GradingJob.objects.filter(pk=job.pk).update(status='manual', fallback_reason='ai_deadline_exceeded')
-            return GOOD
-        provider.grade.side_effect = late
-        process_job(job.pk, provider)
-        job.refresh_from_db()
-        self.assertEqual(job.status, 'manual')
-        self.assertEqual(job.result, {})
-
-    def test_result_at_five_minute_boundary(self):
-        job = self.job()
-        start = job.submitted_at
-        provider = Mock()
-        provider.grade.return_value = GOOD
-        with patch('ai_core.services.timezone.now', side_effect=[start, start, start + timedelta(seconds=300), start + timedelta(seconds=300)]):
-            process_job(job.pk, provider)
-        job.refresh_from_db()
-        self.assertEqual(job.status, 'manual')
-
-    def test_invalid_ai_results(self):
-        for result in [dict(GOOD, grammar=11), dict(GOOD, grammar=True), dict(GOOD, grammar=float('nan')),
-                       dict(GOOD, needs_manual=True), dict(GOOD, feedback=''), dict(GOOD, pronunciation=9), []]:
-            with self.assertRaises(ValueError):
-                validate_result(result, 'vocabulary')
-        with self.assertRaises(ValueError):
-            validate_result(GOOD, 'speaking')
-
-    def test_missing_speaking_audio_goes_manual(self):
-        job, _ = enqueue_submission(task=self.task, submission_key='audio', kind='speaking')
-        process_job(job.pk)
-        job.refresh_from_db()
-        self.assertEqual(job.status, 'manual')
-
-    def test_invalid_submission(self):
-        for key, kind, text in [('', 'vocabulary', 'word'), ('valid', 'other', 'word'), ('valid', 'vocabulary', '')]:
-            with self.assertRaises(ValidationError):
-                enqueue_submission(task=self.task, submission_key=key, kind=kind, text=text)
-
-    def test_cross_task_duplicate_rejected(self):
+    def test_cross_task_key_rejected(self):
         self.job()
-        second = LearningTask.objects.create(assignment_key='a2', title='Next', learner=self.student,
-                                             teacher=self.teacher, due_at=timezone.now())
         with self.assertRaises(ValidationError):
-            enqueue_submission(task=second, submission_key='s1', kind='vocabulary', text='test')
+            enqueue_submission(task=self.vocab_task,submission_key='s1',text='Customer')
 
-    def test_review_access_validation_and_double_review(self):
-        job = self.job()
-        GradingJob.objects.filter(pk=job.pk).update(status='manual')
-        url = f'/ai/jobs/{job.pk}/review/'
-        body = {'score': 8, 'feedback': 'Tốt, cần luyện thêm.'}
-        self.assertEqual(self.client.post(url, body, content_type='application/json').status_code, 401)
-        self.client.force_login(self.student)
-        self.assertEqual(self.client.post(url, body, content_type='application/json').status_code, 403)
-        self.client.force_login(self.other)
-        self.assertEqual(self.client.post(url, body, content_type='application/json').status_code, 404)
-        self.client.force_login(self.teacher)
-        for invalid in [dict(body, score=11), dict(body, score=True), dict(body, feedback=''), []]:
-            self.assertEqual(self.client.post(url, invalid, content_type='application/json').status_code, 400)
-        self.assertEqual(self.client.post(url, body, content_type='application/json').status_code, 200)
-        self.assertEqual(self.client.post(url, body, content_type='application/json').status_code, 409)
-        job.refresh_from_db()
-        self.assertEqual(job.reviewed_by, self.teacher)
-        self.assertEqual(job.final_score, 8)
+    def test_client_cannot_override_rubric_kind_or_answers(self):
+        response=self.post(self.student,kind='listening',reference_text='Give 10')
+        self.assertEqual(response.status_code,201)
+        job=GradingJob.objects.get();self.assertEqual(job.kind,'speaking')
+        self.assertEqual(job.rubric_snapshot['prompts'],['Introduce your hobbies.'])
 
-    def test_submission_and_detail_scope(self):
-        self.client.force_login(self.student)
-        body = {'task_id': self.task.pk, 'submission_key': 'api', 'kind': 'vocabulary', 'text': 'test'}
-        response = self.client.post('/ai/submissions/', body, content_type='application/json')
-        self.assertEqual(response.status_code, 201)
-        self.assertEqual(self.client.post('/ai/submissions/', body, content_type='application/json').status_code, 200)
-        self.assertEqual(self.client.post('/ai/submissions/', [], content_type='application/json').status_code, 400)
-        self.client.force_login(self.other)
-        self.assertEqual(self.client.get(f'/ai/jobs/{response.json()["id"]}/').status_code, 404)
-        self.assertEqual(self.client.post('/ai/submissions/', body, content_type='application/json').status_code, 404)
+    def test_listening_uses_answer_key_without_ai(self):
+        with patch('ai_core.services.OpenAIGrader') as api:
+            job,_=enqueue_submission(task=self.listening_task,submission_key='listen',answers={str(self.q1.pk):'B',str(self.q2.pk):'B'})
+            self.assertFalse(process_job(job.pk));api.assert_not_called()
+        self.assertEqual(job.final_score,5);self.assertEqual(job.status,'graded');self.assertEqual(job.grading_method,'answer_key')
+        self.assertEqual(job.progress.responses.count(),2);self.assertEqual(job.progress.score,50)
 
-    @override_settings(OPENAI_API_KEY='test-only-key')
-    def test_audio_adapter_sends_actual_audio_and_validates_json(self):
-        with tempfile.TemporaryDirectory() as media, override_settings(MEDIA_ROOT=media):
-            job, _ = enqueue_submission(task=self.task, submission_key='speech', kind='speaking',
-                                        audio=SimpleUploadedFile('speech.wav', b'RIFF-test-audio', content_type='audio/wav'))
-            result = dict(GOOD, pronunciation=7)
-            with patch('openai.OpenAI') as client:
-                api = client.return_value.__enter__.return_value
-                api.chat.completions.create.return_value = SimpleNamespace(choices=[SimpleNamespace(
-                    message=SimpleNamespace(content=json.dumps(result)))])
-                self.assertEqual(OpenAIGrader().grade(job, 30), result)
-                params = api.chat.completions.create.call_args.kwargs
-                self.assertEqual(params['modalities'], ['text'])
-                self.assertEqual(params['messages'][1]['content'][1]['type'], 'input_audio')
-                self.assertFalse(params['store'])
-                client.assert_called_once_with(api_key='test-only-key', timeout=30, max_retries=0)
+    def test_listening_missing_answer_is_zero_not_omitted(self):
+        job,_=enqueue_submission(task=self.listening_task,submission_key='listen',answers={str(self.q1.pk):'B'})
+        self.assertEqual(job.final_score,5);self.assertEqual(job.result['total'],2)
+
+    def test_listening_rejects_unknown_question(self):
+        with self.assertRaises(ValidationError):
+            enqueue_submission(task=self.listening_task,submission_key='bad',answers={'999999':'A'})
+        self.assertEqual(GradingJob.objects.count(),0)
+
+    def test_snapshot_survives_answer_edit(self):
+        self.q1.correct_option='A';self.q1.save()
+        job,_=enqueue_submission(task=self.listening_task,submission_key='old-key',answers={str(self.q1.pk):'B',str(self.q2.pk):'A'})
+        self.assertEqual(job.final_score,10)
+
+    def test_vocabulary_missing_word_not_compensated_by_extra_repeats(self):
+        job,_=enqueue_submission(task=self.vocab_task,submission_key='vocab',text='Customer Customer Customer Customer Customer Customer')
+        provider=Mock();provider.grade.return_value={'needs_manual':False,'feedback':'Thiếu Deadline.','counts':[{'word':'Customer','count':6}]}
+        process_job(job.pk,provider);job.refresh_from_db()
+        self.assertEqual(job.suggested_score,5);self.assertEqual(job.result['matched_total'],3)
+        self.assertEqual(job.result['expected_total'],6);self.assertFalse(job.result['complete'])
+        self.assertNotIn('handwriting',job.result)
+
+    def test_vocab_complete_and_strict_count_validation(self):
+        rubric=self.assignments['vocabulary'].rubric
+        value={'needs_manual':False,'feedback':'Đủ lượt.','counts':[{'word':'customer','count':3},{'word':'Deadline','count':3}]}
+        self.assertEqual(validate_result(value,'vocabulary',rubric)['score'],10)
+        for counts in [[{'word':'unknown','count':3}],[{'word':'Customer','count':True}],[{'word':'Customer','count':-1}],[{'word':'Customer','count':2},{'word':'Customer','count':2}]]:
+            with self.assertRaises(ValueError):validate_result(dict(value,counts=counts),'vocabulary',rubric)
+
+    def test_invalid_results_fall_back(self):
+        for index,raw in enumerate([dict(GOOD,grammar=float('nan')),dict(GOOD,grammar=11),dict(GOOD,content=True),dict(GOOD,needs_manual=True),{},[]]):
+            job=self.job(str(index));provider=Mock();provider.grade.return_value=raw
+            process_job(job.pk,provider);job.refresh_from_db();self.assertEqual(job.status,'manual')
+
+    def test_errors_timeout_no_exception_text_leaked(self):
+        for index,error in enumerate([RuntimeError('secret-key'),TimeoutError()]):
+            job=self.job(str(index));provider=Mock();provider.grade.side_effect=error
+            process_job(job.pk,provider);job.refresh_from_db();self.assertEqual(job.status,'manual')
+            self.assertNotIn('secret-key',job.fallback_reason)
+
+    def test_watchdog_recovers_queued_and_crashed_jobs(self):
+        for state in ['queued','processing']:
+            job=self.job(state);GradingJob.objects.filter(pk=job.pk).update(status=state,submitted_at=self.now-timedelta(seconds=300))
+        self.assertEqual(expire_jobs(self.now),2)
+        provider=Mock();self.assertFalse(process_job(job.pk,provider));provider.grade.assert_not_called()
+
+    def test_late_result_cannot_overwrite_manual(self):
+        job=self.job();provider=Mock()
+        def late(*args,**kwargs):
+            GradingJob.objects.filter(pk=job.pk).update(status='manual');return GOOD
+        provider.grade.side_effect=late;process_job(job.pk,provider);job.refresh_from_db()
+        self.assertEqual(job.status,'manual');self.assertIsNone(job.suggested_score)
+
+    def test_late_at_five_minutes_falls_back(self):
+        job=self.job();provider=Mock();provider.grade.return_value=GOOD
+        with patch('ai_core.services.timezone.now',side_effect=[job.submitted_at,job.submitted_at,job.ai_deadline,job.ai_deadline]):process_job(job.pk,provider)
+        job.refresh_from_db();self.assertEqual(job.status,'manual')
+
+    def test_student_only_own_task_and_auth_required(self):
+        self.assertEqual(self.client.post('/ai/submissions/',{},content_type='application/json').status_code,401)
+        self.assertEqual(self.post(self.other_student).status_code,404)
+        self.assertEqual(self.post(self.teacher).status_code,403)
+        self.assertEqual(self.post(self.student).status_code,201)
+        self.assertEqual(self.post(self.student).status_code,200)
+
+    def test_review_permissions_and_duplicate_review(self):
+        job=self.job();GradingJob.objects.filter(pk=job.pk).update(status='manual')
+        url=f'/ai/jobs/{job.pk}/review/';body={'score':8,'feedback':'Đã kiểm tra.'}
+        for user,status in [(self.student,403),(self.manager,403),(self.other_teacher,404),(self.teacher,200)]:
+            self.client.force_login(user);self.assertEqual(self.client.post(url,body,content_type='application/json').status_code,status)
+        self.assertEqual(self.client.post(url,body,content_type='application/json').status_code,409)
+        job.refresh_from_db();self.assertEqual(job.reviewed_by,self.teacher);self.assertEqual(job.final_score,8)
+
+    def test_csrf_submission_and_review(self):
+        browser=Client(enforce_csrf_checks=True);browser.force_login(self.student)
+        browser.get(f'/hoc-tap/tasks/{self.task.pk}/')
+        data={'task_id':self.task.pk,'submission_key':'csrf','text':'Hi there.'}
+        self.assertEqual(browser.post('/ai/submissions/',data).status_code,403)
+        self.assertEqual(browser.post('/ai/submissions/',data,HTTP_X_CSRFTOKEN=browser.cookies['csrftoken'].value).status_code,201)
+
+    def test_invalid_submission_and_oversized_audio(self):
+        for text in ['', 'a'*20001]:
+            with self.assertRaises(ValidationError):enqueue_submission(task=self.task,submission_key='invalid',text=text)
+        with self.assertRaises(ValidationError):
+            enqueue_submission(task=self.task,submission_key='file',audio=SimpleUploadedFile('bad.exe',b'bad'))
+
+    def test_image_validation_and_private_access(self):
+        stream=io.BytesIO();Image.new('RGB',(20,20),'white').save(stream,'PNG')
+        with tempfile.TemporaryDirectory() as folder,override_settings(MEDIA_ROOT=folder):
+            job,_=enqueue_submission(task=self.vocab_task,submission_key='image',images=[SimpleUploadedFile('page.png',stream.getvalue())])
+            page=job.pages.get();url=f'/ai/pages/{page.pk}/'
+            self.assertEqual(self.client.get(url).status_code,401)
+            self.client.force_login(self.other_student);self.assertEqual(self.client.get(url).status_code,404)
+            self.client.force_login(self.student);response=self.client.get(url);self.assertEqual(response.status_code,200);response.close()
+            with self.assertRaises(ValidationError):enqueue_submission(task=self.vocab_task,submission_key='bad-img',images=[SimpleUploadedFile('fake.png',b'not an image')])
+
+    @override_settings(OPENAI_API_KEY='test-not-real')
+    def test_openai_adapter_transcribes_then_grades_text(self):
+        with tempfile.TemporaryDirectory() as folder,override_settings(MEDIA_ROOT=folder):
+            job,_=enqueue_submission(task=self.task,submission_key='audio',audio=SimpleUploadedFile('speech.webm',b'fake-test-audio'))
+            with patch('openai.OpenAI') as factory:
+                api=factory.return_value.__enter__.return_value;api.with_options.return_value=api
+                api.audio.transcriptions.create.return_value=SimpleNamespace(text='I like books.')
+                api.responses.create.return_value=SimpleNamespace(output_text=json.dumps(GOOD))
+                result=OpenAIGrader().grade(job,120)
+                self.assertEqual(result['transcript'],'I like books.')
+                self.assertEqual(result['transcript_source'],'openai_transcription')
+                api.audio.transcriptions.create.assert_called_once()
+                self.assertFalse(api.responses.create.call_args.kwargs['store'])
+                self.assertNotIn('input_audio',str(api.responses.create.call_args))
+
+    @override_settings(OPENAI_API_KEY='test-not-real')
+    def test_submitted_transcript_skips_audio_call(self):
+        job=self.job()
+        with patch('openai.OpenAI') as factory:
+            api=factory.return_value.__enter__.return_value;api.with_options.return_value=api
+            api.responses.create.return_value=SimpleNamespace(output_text=json.dumps(GOOD))
+            result=OpenAIGrader().grade(job,120)
+            api.audio.transcriptions.create.assert_not_called();self.assertEqual(result['transcript_source'],'submitted_text')
 
     def test_worker_once(self):
-        job = self.job()
+        job=self.job()
         with patch('ai_core.services.OpenAIGrader') as provider:
-            provider.return_value.grade.return_value = GOOD
-            call_command('run_ai_worker', once=True)
-        job.refresh_from_db()
-        self.assertEqual(job.status, 'ai_reviewed')
+            provider.return_value.grade.return_value=GOOD;call_command('run_ai_worker',once=True)
+        job.refresh_from_db();self.assertEqual(job.status,'ai_reviewed')
 
-    def test_csrf_required_for_browser_review(self):
-        from django.test import Client
-        job = self.job()
-        GradingJob.objects.filter(pk=job.pk).update(status='manual')
-        browser = Client(enforce_csrf_checks=True)
-        browser.force_login(self.teacher)
-        browser.get('/dashboard/')
-        url = f'/ai/jobs/{job.pk}/review/'
-        body = {'score': 8, 'feedback': 'Đã chấm.'}
-        self.assertEqual(browser.post(url, body, content_type='application/json').status_code, 403)
-        self.assertEqual(browser.post(url, body, content_type='application/json',
-                                      HTTP_X_CSRFTOKEN=browser.cookies['csrftoken'].value).status_code, 200)
+    def test_unreadable_vocabulary_routes_to_manual(self):
+        job,_=enqueue_submission(task=self.vocab_task,submission_key='blurred',text='Unreadable')
+        provider=Mock();provider.grade.return_value={'needs_manual':True,'feedback':'Không đọc rõ','counts':[]}
+        process_job(job.pk,provider);job.refresh_from_db();self.assertEqual(job.status,'manual')
 
-    def test_audio_access_and_missing_file(self):
-        with tempfile.TemporaryDirectory() as media, override_settings(MEDIA_ROOT=media):
-            job, _ = enqueue_submission(task=self.task, submission_key='private', kind='speaking',
-                                        audio=SimpleUploadedFile('private.wav', b'RIFF-private'))
-            url = f'/ai/jobs/{job.pk}/audio/'
-            self.assertEqual(self.client.get(url).status_code, 401)
-            self.client.force_login(self.other)
-            self.assertEqual(self.client.get(url).status_code, 404)
-            self.client.force_login(self.teacher)
-            response = self.client.get(url)
-            self.assertEqual(response.status_code, 200)
-            self.assertEqual(b''.join(response.streaming_content), b'RIFF-private')
-            response.close()
-
-    def test_queued_job_cannot_be_reviewed(self):
-        job = self.job()
+    def test_api_rejects_score_tampering_and_invalid_review(self):
+        job=self.job();GradingJob.objects.filter(pk=job.pk).update(status='manual')
         self.client.force_login(self.teacher)
-        response = self.client.post(f'/ai/jobs/{job.pk}/review/',
-                                    {'score': 7, 'feedback': 'test'}, content_type='application/json')
-        self.assertEqual(response.status_code, 409)
+        for body in [{'score':True,'feedback':'x'},{'score':float('inf'),'feedback':'x'},{'score':11,'feedback':'x'},{'score':5,'feedback':''},[]]:
+            self.assertEqual(self.client.post(f'/ai/jobs/{job.pk}/review/',body,content_type='application/json').status_code,400)
+
+    def test_audio_private_access(self):
+        with tempfile.TemporaryDirectory() as folder,override_settings(MEDIA_ROOT=folder):
+            job,_=enqueue_submission(task=self.task,submission_key='private-audio',audio=SimpleUploadedFile('speech.wav',b'RIFF-test'))
+            url=f'/ai/jobs/{job.pk}/audio/'
+            self.assertEqual(self.client.get(url).status_code,401)
+            self.client.force_login(self.other_teacher);self.assertEqual(self.client.get(url).status_code,404)
+            self.client.force_login(self.student);response=self.client.get(url)
+            self.assertEqual(response.status_code,200);self.assertIn('no-store',response['Cache-Control']);response.close()
+
+    def test_duplicate_vocabulary_pages_rejected(self):
+        stream=io.BytesIO();Image.new('RGB',(10,10),'white').save(stream,'PNG');raw=stream.getvalue()
+        with self.assertRaises(ValidationError):
+            enqueue_submission(task=self.vocab_task,submission_key='duplicates',images=[SimpleUploadedFile('a.png',raw),SimpleUploadedFile('b.png',raw)])
+        self.assertFalse(GradingJob.objects.filter(submission_key='duplicates').exists())
+
+    @override_settings(OPENAI_API_KEY='secret-test-do-not-print')
+    def test_key_check_is_offline_and_never_prints_key(self):
+        output=io.StringIO()
+        with patch('openai.OpenAI') as factory:
+            call_command('check_openai',stdout=output)
+            factory.assert_not_called()
+        self.assertNotIn('secret-test-do-not-print',output.getvalue())
+
+    @override_settings(OPENAI_API_KEY='')
+    def test_key_check_missing_key_gives_actionable_error(self):
+        from django.core.management.base import CommandError
+        with self.assertRaises(CommandError):
+            call_command('check_openai',stdout=io.StringIO())
+
+    @override_settings(OPENAI_API_KEY='test-not-real')
+    def test_transcription_preserved_when_grading_api_fails(self):
+        with tempfile.TemporaryDirectory() as folder,override_settings(MEDIA_ROOT=folder):
+            job,_=enqueue_submission(task=self.task,submission_key='transcript-fallback',audio=SimpleUploadedFile('clip.wav',b'RIFF-test'))
+            with patch('openai.OpenAI') as factory:
+                api=factory.return_value.__enter__.return_value;api.with_options.return_value=api
+                api.audio.transcriptions.create.return_value=SimpleNamespace(text='This transcript was recovered.')
+                api.responses.create.side_effect=RuntimeError('grading_failed')
+                process_job(job.pk)
+            job.refresh_from_db();self.assertEqual(job.status,'manual')
+            self.assertEqual(job.transcript,'This transcript was recovered.')

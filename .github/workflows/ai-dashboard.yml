@@ -3,7 +3,7 @@ on:
   pull_request:
     branches: [AI]
   push:
-    branches: [AI, 'codex/ai-dashboard-bv*']
+    branches: ['codex/ai-dashboard-bv']
 permissions:
   contents: read
 jobs:
@@ -18,4 +18,4 @@ jobs:
       - run: python -m pip install -r requirements.txt
       - run: python manage.py check
       - run: python manage.py makemigrations --check --dry-run
-      - run: python manage.py test ai_core dashboard
+      - run: python manage.py test

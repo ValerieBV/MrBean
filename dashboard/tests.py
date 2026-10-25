@@ -1,132 +1,183 @@
+import io
 from datetime import timedelta
-from django.contrib.auth import get_user_model
-from django.test import TestCase
+from django.core.exceptions import ValidationError, PermissionDenied
+from django.core.management import call_command
 from django.utils import timezone
+from django.test import override_settings
+from dashboard.testutils import IntegratedFixture
+from dashboard.models import LearningTask
+from dashboard.integration import sync_class_assignment
+from dashboard.services import metrics_for
+from assignments.models import ClassAssignment, Lesson, ListeningQuestion
+from assignments.services import assign_to_class
+from courses.models import Enrollment
+from accounts.models import CustomUser
 from ai_core.models import GradingJob
-from .models import LearningTask
-from .services import metrics_for
+from ai_core.services import enqueue_submission
 
 
-class DashboardTests(TestCase):
-    def setUp(self):
-        self.now = timezone.now()
-        User = get_user_model()
-        self.teacher = User.objects.create_user(username='teacher', role='teacher')
-        self.other = User.objects.create_user(username='other', role='teacher')
-        self.manager = User.objects.create_user(username='manager', role='manager')
-        self.student = User.objects.create_user(username='student', role='student')
+class DashboardTests(IntegratedFixture):
+    def test_roster_denominator_includes_non_submitters(self):
+        data=metrics_for(self.teacher)
+        self.assertEqual(data['assigned_count'],3);self.assertEqual(data['submission_rate'],0)
+        enqueue_submission(task=self.listening_task,submission_key='listen',answers={str(self.q1.pk):'B',str(self.q2.pk):'A'})
+        data=metrics_for(self.teacher);self.assertEqual(data['submitted_count'],1);self.assertEqual(data['submission_rate'],33.33)
+        self.assertEqual(data['average_score'],10)
 
-    def task(self, key='a1', **kwargs):
-        return LearningTask.objects.create(assignment_key=key, title=key, learner=self.student,
-                                           teacher=kwargs.get('teacher', self.teacher),
-                                           assigned_at=kwargs.get('assigned_at', self.now - timedelta(days=1)),
-                                           due_at=kwargs.get('due_at', self.now - timedelta(hours=1)))
+    def test_duplicate_submit_and_multiple_attempts_do_not_inflate_rate(self):
+        enqueue_submission(task=self.task,submission_key='first',text='Hello')
+        enqueue_submission(task=self.task,submission_key='first',text='Hello')
+        enqueue_submission(task=self.task,submission_key='second',text='Hello again')
+        data=metrics_for(self.teacher);self.assertEqual(data['submitted_count'],1)
+        self.assertEqual(data['learner_progress'][0]['awaiting_grade'],1)
 
-    def job(self, task, key, **kwargs):
-        return GradingJob.objects.create(task=task, submission_key=key, kind='vocabulary', **kwargs)
+    def test_resubmission_keeps_latest_confirmed_score(self):
+        GradingJob.objects.create(task=self.task,submission_key='old',kind='speaking',status='graded',final_score=8,submitted_at=self.now-timedelta(hours=1),teacher_feedback='Official feedback')
+        enqueue_submission(task=self.task,submission_key='new',text='New text')
+        data=metrics_for(self.teacher);row=data['learner_progress'][0]
+        self.assertEqual(row['average_score'],8);self.assertEqual(row['resubmissions_pending'],1)
+        self.assertEqual(row['graded'],0);self.assertEqual(row['awaiting_grade'],1)
+        self.assertEqual(data['graded_report'][0]['teacher_feedback'],'Official feedback')
 
-    def test_empty_and_permissions(self):
-        self.assertEqual(metrics_for(self.teacher, self.now)['submission_rate'], 0)
-        self.assertIsNone(metrics_for(self.teacher, self.now)['average_score'])
-        self.assertEqual(self.client.get('/dashboard/metrics/').status_code, 401)
-        self.client.force_login(self.student)
-        self.assertEqual(self.client.get('/dashboard/metrics/').status_code, 403)
-        self.client.force_login(self.teacher)
-        self.assertEqual(self.client.get('/dashboard/').status_code, 200)
-        response = self.client.get('/dashboard/metrics/')
-        self.assertEqual(response.status_code, 200)
-        self.assertIn('no-store', response['Cache-Control'])
+    def test_role_scoping_and_cross_class_filter(self):
+        for user in [self.other_teacher,self.other_student]:
+            data=metrics_for(user);self.assertEqual(data['assigned_count'],0);self.assertEqual(data['history'],[])
+        self.assertEqual(metrics_for(self.student)['assigned_count'],3)
+        self.assertEqual(metrics_for(self.manager)['assigned_count'],3)
+        self.assertEqual(metrics_for(self.teacher,filters={'classroom':str(self.other_classroom.pk)})['assigned_count'],0)
+        self.assertEqual(metrics_for(self.teacher,filters={'skill':'listening'})['assigned_count'],1)
 
-    def test_rate_unique_tasks_and_latest_final_score(self):
-        first, second = self.task(), self.task('a2')
-        self.job(first, '1', status='graded', final_score=2, submitted_at=self.now - timedelta(hours=2))
-        self.job(first, '2', status='graded', final_score=8, submitted_at=self.now - timedelta(hours=1))
-        self.job(first, '3', status='ai_reviewed', suggested_score=10, submitted_at=self.now)
-        data = metrics_for(self.teacher, self.now)
-        self.assertEqual(data['submission_rate'], 50)
-        self.assertEqual(data['submitted_count'], 1)
-        self.assertEqual(data['average_score'], 8)
-        self.assertEqual(data['average_ai_suggestion'], 10)
+    def test_three_dashboards_and_shared_nav(self):
+        for user,title in [(self.admin,'Tổng quan quản lý'),(self.manager,'Tổng quan quản lý'),(self.teacher,'Lớp học và bài cần chấm'),(self.student,'Bài tập và kết quả của tôi')]:
+            self.client.force_login(user);response=self.client.get('/dashboard/')
+            self.assertEqual(response.status_code,200);self.assertContains(response,title)
+            self.assertNotContains(response,'GIÁM SÁT SLA')
+            self.assertEqual(self.client.get('/dashboard/metrics/').status_code,200)
+        self.assertNotContains(response,'GIAO BÀI CHO LỚP')
 
-    def test_sla_boundaries_and_confirmed_grade_excluded(self):
-        task = self.task()
-        for key, hours, status in [('green', 41.99, 'manual'), ('yellow', 42, 'manual'),
-                                    ('red', 48, 'manual'), ('confirmed', 50, 'graded'), ('ai', 43, 'ai_reviewed')]:
-            self.job(task, key, status=status, submitted_at=self.now - timedelta(hours=hours))
-        data = metrics_for(self.teacher, self.now)
-        flags = {item['submission_key']: item['flag'] for item in data['sla_alerts']}
-        self.assertEqual(flags, {'yellow': 'yellow', 'red': 'red', 'ai': 'yellow'})
+    def test_student_result_privacy_and_html_escaping(self):
+        job,_=enqueue_submission(task=self.task,submission_key='xss',text='<script>alert(1)</script>')
+        self.client.force_login(self.other_student);self.assertEqual(self.client.get(f'/hoc-tap/results/{job.pk}/').status_code,404)
+        self.client.force_login(self.student);response=self.client.get(f'/hoc-tap/results/{job.pk}/')
+        self.assertEqual(response.status_code,200);self.assertContains(response,'&lt;script&gt;')
+        self.assertNotContains(response,'<form id="reviewForm">')
 
-    def test_scope(self):
-        task = self.task(teacher=self.other)
-        self.job(task, 'secret', status='manual', submitted_at=self.now - timedelta(hours=44))
-        self.assertEqual(metrics_for(self.teacher, self.now)['assigned_count'], 0)
-        self.assertEqual(metrics_for(self.teacher, self.now)['sla_alerts'], [])
-        self.assertEqual(metrics_for(self.manager, self.now)['assigned_count'], 1)
+    def test_metrics_no_sla_and_pagination(self):
+        for index in range(30):
+            GradingJob.objects.create(task=self.task,submission_key=str(index),kind='speaking',status='graded',final_score=5)
+        data=metrics_for(self.teacher,filters={'history_page':'2','grades_page':'2'})
+        self.assertEqual(data['history_pagination']['total'],30);self.assertEqual(len(data['history']),5)
+        self.assertEqual(len(data['graded_report']),5);self.assertNotIn('sla_alerts',data)
+        self.assertNotIn('sla_late_report',data)
 
-    def test_dropout_rules_and_recovery(self):
-        for i in range(3):
-            self.task(str(i))
-        data = metrics_for(self.teacher, self.now)
-        self.assertEqual(data['at_risk_learners'][0]['reason'], 'missed_tasks')
-        task = LearningTask.objects.first()
-        self.job(task, 'recovered', submitted_at=self.now)
-        self.assertEqual(metrics_for(self.teacher, self.now)['at_risk_learners'], [])
+    def test_dropout_rule_and_recovery(self):
+        LearningTask.objects.filter(learner=self.student).update(due_at=self.now-timedelta(days=1))
+        data=metrics_for(self.teacher);self.assertEqual(data['at_risk_learners'][0]['missed_tasks'],3)
+        enqueue_submission(task=self.task,submission_key='recover',text='Hi')
+        self.assertEqual(metrics_for(self.teacher)['at_risk_learners'],[])
 
-    def test_inactivity_with_overdue_task(self):
-        self.task(assigned_at=self.now - timedelta(days=7))
-        self.assertEqual(metrics_for(self.teacher, self.now)['at_risk_learners'][0]['reason'], 'inactive')
+    def test_new_enrollment_sync_includes_non_submitter(self):
+        learner=CustomUser.objects.create_user(username='new_student',role='student')
+        Enrollment.objects.create(classroom=self.classroom,student=learner)
+        for assignment in self.assignments.values():sync_class_assignment(assignment)
+        self.assertEqual(metrics_for(self.teacher)['assigned_count'],6)
+        for assignment in self.assignments.values():sync_class_assignment(assignment)
+        self.assertEqual(metrics_for(self.teacher)['assigned_count'],6)
 
-    def test_future_assignment_and_new_learner_not_at_risk(self):
-        self.task(assigned_at=self.now + timedelta(days=1), due_at=self.now + timedelta(days=2))
-        self.assertEqual(metrics_for(self.teacher, self.now)['assigned_count'], 0)
-        self.assertEqual(metrics_for(self.teacher, self.now)['at_risk_learners'], [])
-
-    def test_progress_resubmission_keeps_confirmed_score(self):
-        task = self.task()
-        self.task('not-submitted')
-        self.job(task, 'old-grade', status='graded', final_score=8, submitted_at=self.now-timedelta(hours=3), finished_at=self.now-timedelta(hours=2), reviewed_by=self.teacher, teacher_feedback='Good')
-        self.job(task, 'new-attempt', status='manual', submitted_at=self.now)
-        data = metrics_for(self.teacher, self.now)
-        row = data['learner_progress'][0]
-        self.assertEqual((row['assigned'], row['submitted'], row['not_submitted']), (2, 1, 1))
-        self.assertEqual((row['awaiting_grade'], row['graded'], row['resubmissions_pending']), (1, 0, 1))
-        self.assertEqual(row['average_score'], 8)
-        self.assertEqual(data['graded_report'][0]['teacher_feedback'], 'Good')
-
-    def test_late_history_survives_confirmation_and_is_scoped(self):
-        task = self.task()
-        self.job(task, 'late', status='graded', final_score=7, submitted_at=self.now-timedelta(hours=50), finished_at=self.now)
-        self.job(task, 'on-time', status='graded', final_score=8, submitted_at=self.now-timedelta(hours=40), finished_at=self.now)
-        data = metrics_for(self.teacher, self.now)
-        self.assertEqual(data['sla_alerts'], [])
-        self.assertEqual(data['sla_late_count'], 1)
-        self.assertTrue(data['sla_late_report'][0]['sla_breached'])
-        self.assertEqual(data['sla_late_report'][0]['hours_to_grade'], 50)
-        self.assertEqual(metrics_for(self.other, self.now)['graded_report'], [])
-        self.assertEqual(metrics_for(self.other, self.now)['learner_progress'], [])
-        self.assertEqual(metrics_for(self.other, self.now)['sla_late_count'], 0)
-
-    def test_roster_sync_includes_non_submitters_and_is_idempotent(self):
-        from .integration import sync_assignment_roster
-        another = get_user_model().objects.create_user(username='second', role='student')
-        args = dict(assignment_key='synced', title='Lesson', teacher=self.teacher,
-                    learners=[self.student, another, another], assigned_at=self.now-timedelta(days=1), due_at=self.now)
-        tasks = sync_assignment_roster(**args)
-        self.assertEqual(len(tasks), 2)
-        self.job(tasks[0], 'submitted', submitted_at=self.now)
-        sync_assignment_roster(**args)
-        data = metrics_for(self.teacher, self.now)
-        self.assertEqual(data['assigned_count'], 2)
-        self.assertEqual(data['submission_rate'], 50)
-
-    def test_roster_sync_cannot_reassign_history(self):
-        from django.core.exceptions import ValidationError
-        from .integration import sync_assignment_roster
-        task = self.task()
-        self.job(task, 'existing', submitted_at=self.now)
+    def test_create_assignment_requires_teacher_and_owned_class(self):
+        new=Lesson.objects.create(skill='speaking',program='CHUNG',order=2,title='Next',description='Tell your story')
+        with self.assertRaises(PermissionDenied):
+            assign_to_class(actor=self.other_teacher,lesson=new,classroom=self.classroom,assigned_at=self.now,due_at=self.now+timedelta(days=1))
         with self.assertRaises(ValidationError):
-            sync_assignment_roster(assignment_key='a1', title='Changed', teacher=self.other,
-                                   learners=[self.student], assigned_at=self.now-timedelta(days=1), due_at=self.now)
-        task.refresh_from_db()
-        self.assertEqual(task.teacher, self.teacher)
+            assign_to_class(actor=self.teacher,lesson=self.speaking,classroom=self.classroom,assigned_at=self.now,due_at=self.now+timedelta(days=1))
+        self.assertEqual(ClassAssignment.objects.count(),3)
+
+    def test_incomplete_listening_bank_cannot_be_assigned(self):
+        lesson=Lesson.objects.create(skill='listening',program='CHUNG',order=2,title='No key')
+        ListeningQuestion.objects.create(lesson=lesson,option_a='Answer')
+        with self.assertRaises(ValidationError):
+            assign_to_class(actor=self.teacher,lesson=lesson,classroom=self.classroom,assigned_at=self.now,due_at=self.now+timedelta(days=1))
+
+    def test_student_cannot_open_staff_bank_or_other_task(self):
+        self.client.force_login(self.student)
+        self.assertEqual(self.client.get('/quan-ly/bai-tap/').status_code,403)
+        self.client.force_login(self.other_student)
+        self.assertEqual(self.client.get(f'/hoc-tap/tasks/{self.task.pk}/').status_code,404)
+
+    def test_student_listening_form_does_not_leak_correct_option(self):
+        self.client.force_login(self.student);response=self.client.get(f'/hoc-tap/tasks/{self.listening_task.pk}/')
+        self.assertEqual(response.status_code,200)
+        self.assertNotContains(response,'correct_option');self.assertNotContains(response,'rubric_snapshot')
+        self.assertContains(response,'Question1');self.assertContains(response,'b1')
+
+    def test_all_assignment_templates_render(self):
+        self.client.force_login(self.teacher)
+        for url in ['/quan-ly/bai-tap/','/quan-ly/bai-tap/new/','/quan-ly/bai-tap/assign/',f'/quan-ly/bai-tap/lesson/{self.listening.pk}/']:
+            self.assertEqual(self.client.get(url).status_code,200,url)
+
+    @override_settings(DEBUG=True)
+    def test_seed_is_idempotent_and_does_not_reset_password(self):
+        call_command('seed_demo',password='DemoLocal123!',stdout=io.StringIO())
+        user=CustomUser.objects.get(username='demo_student');old=user.password
+        call_command('seed_demo',password='Different123!',stdout=io.StringIO())
+        user.refresh_from_db();self.assertEqual(user.password,old)
+        self.assertEqual(ClassAssignment.objects.filter(classroom__class_code='DEMO-01').count(),3)
+
+    def test_import_legacy_listening_progress_is_idempotent(self):
+        from submissions.models import LessonProgress
+        progress=LessonProgress.objects.create(student=self.student,lesson=self.listening,status='completed',score=80,completed_at=self.now)
+        args={'classroom':'C1','due_at':(self.now+timedelta(days=1)).isoformat(),'stdout':io.StringIO()}
+        call_command('import_legacy_progress',**args)
+        call_command('import_legacy_progress',**args)
+        job=GradingJob.objects.get(submission_key=f'legacy-progress:{progress.pk}')
+        self.assertEqual(job.final_score,8);self.assertEqual(job.progress,progress)
+        self.assertEqual(job.grading_method,'legacy_import')
+
+    def test_enrollment_service_adds_new_student_to_open_assignments(self):
+        from courses.services import ClassManagementService
+        learner=CustomUser.objects.create_user(username='added_later',role='student')
+        ClassManagementService.enroll_student_to_class(self.classroom,learner)
+        self.assertEqual(LearningTask.objects.filter(learner=learner).count(),3)
+        self.assertEqual(metrics_for(self.teacher)['assigned_count'],6)
+
+    def test_teacher_transfer_updates_scope_without_exposing_to_old_teacher(self):
+        self.classroom.teacher=self.other_teacher;self.classroom.save()
+        self.assertEqual(metrics_for(self.teacher)['assigned_count'],0)
+        self.assertEqual(metrics_for(self.other_teacher)['assigned_count'],3)
+        for assignment in self.assignments.values():
+            assignment.classroom.refresh_from_db();sync_class_assignment(assignment)
+        self.task.refresh_from_db();self.assertEqual(self.task.teacher,self.other_teacher)
+
+    def test_inactive_enrollment_cannot_submit(self):
+        Enrollment.objects.filter(classroom=self.classroom,student=self.student).update(status='dropped')
+        self.client.force_login(self.student)
+        self.assertEqual(self.client.post('/ai/submissions/',{'task_id':self.task.pk,'submission_key':'dropped','text':'Hi'},content_type='application/json').status_code,404)
+
+    def test_future_assignment_hidden_and_submission_blocked(self):
+        LearningTask.objects.filter(pk=self.task.pk).update(assigned_at=self.now+timedelta(days=1))
+        self.assertEqual(metrics_for(self.student)['assigned_count'],2)
+        self.client.force_login(self.student)
+        self.assertEqual(self.client.get(f'/hoc-tap/tasks/{self.task.pk}/').status_code,404)
+
+    def test_manager_can_assign_but_other_teacher_cannot(self):
+        self.client.force_login(self.manager)
+        lesson=Lesson.objects.create(skill='speaking',program='CHUNG',order=3,title='Story',description='Tell a story')
+        body={'lesson':lesson.pk,'classroom':self.classroom.pk,'assigned_at':self.now.isoformat(),
+              'due_at':(self.now+timedelta(days=1)).isoformat(),'repetitions':1}
+        self.assertEqual(self.client.post('/quan-ly/bai-tap/assign/',body).status_code,302)
+        self.client.force_login(self.other_teacher)
+        form=self.client.get('/quan-ly/bai-tap/assign/').context['form']
+        self.assertNotIn(self.classroom,list(form.fields['classroom'].queryset))
+
+    def test_date_filter_keeps_cohort_denominator(self):
+        tomorrow=(self.now+timedelta(days=1)).date().isoformat()
+        self.assertEqual(metrics_for(self.teacher,filters={'date_from':tomorrow})['assigned_count'],0)
+        self.client.force_login(self.teacher)
+        self.assertEqual(self.client.get('/dashboard/metrics/?date_from=not-a-date').status_code,400)
+
+    def test_account_with_reporting_history_is_deactivated(self):
+        self.client.force_login(self.admin)
+        response=self.client.post(f'/accounts/users/{self.student.pk}/delete/')
+        self.assertEqual(response.status_code,302)
+        self.student.refresh_from_db();self.assertFalse(self.student.is_active)
+        self.assertEqual(LearningTask.objects.filter(learner=self.student).count(),3)

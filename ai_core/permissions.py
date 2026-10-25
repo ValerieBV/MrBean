@@ -1,9 +1,22 @@
 from functools import wraps
+from django.db.models import Q
 from django.http import JsonResponse
 
 
 def is_manager(user):
     return user.is_superuser or user.role in ('admin', 'manager')
+
+
+def classes_for(user):
+    from courses.models import ClassRoom
+    rows = ClassRoom.objects.all()
+    if is_manager(user):
+        return rows
+    if user.role == 'teacher':
+        return rows.filter(teacher=user)
+    if user.role == 'student':
+        return rows.filter(enrollments__student=user, enrollments__status='active').distinct()
+    return rows.none()
 
 
 def tasks_for(user):
@@ -12,8 +25,10 @@ def tasks_for(user):
     if is_manager(user):
         return tasks
     if user.role == 'teacher':
-        return tasks.filter(teacher=user)
-    return tasks.filter(learner=user)
+        return tasks.filter(Q(assignment__classroom__teacher=user) | Q(assignment__isnull=True, teacher=user))
+    if user.role == 'student':
+        return tasks.filter(learner=user)
+    return tasks.none()
 
 
 def staff_required(view):

@@ -1,0 +1,12 @@
+{% extends 'base.html' %}{% load static %}
+{% block title %}Dashboard báo cáo{% endblock %}
+{% block content %}
+<h1 class="report-title">{{ dashboard_title }}</h1><p class="report-subtle">{% if is_reporting_manager %}Theo dõi tỷ lệ nộp, kết quả và tiến độ trên các lớp của trung tâm.{% else %}Chỉ hiển thị lớp và bài nộp do bạn phụ trách.{% endif %}</p>
+<a class="report-button" href="{% url 'assignments:assign' %}">Giao bài cho lớp</a>
+{% include 'dashboard/_filters.html' %}
+<section class="report-panel"><h2>Học viên cần hỗ trợ</h2><p class="report-subtle">Ít nhất 3 bài quá hạn chưa nộp, hoặc không nộp bài trong 7 ngày và còn bài quá hạn. Đây là dấu hiệu để hỗ trợ, không phải kết luận bỏ học.</p><div class="report-scroll"><table class="report-table"><thead><tr><th>Học viên</th><th>Bài quá hạn chưa nộp</th><th>Lý do</th></tr></thead><tbody id="risks"></tbody></table></div></section>
+<section class="report-panel"><h2>Bài cần chấm và duyệt AI</h2><div class="report-scroll"><table class="report-table"><thead><tr><th>Bài tập</th><th>Học viên</th><th>Trạng thái</th><th>AI gợi ý</th><th>Xử lý</th></tr></thead><tbody id="queue"></tbody></table></div><div id="queuePager" class="report-pages"></div></section>
+<section class="report-panel"><h2>Tiến độ từng học viên</h2><p class="report-subtle">Trạng thái theo lần nộp mới nhất của mỗi lượt giao. Điểm theo lần nộp gần nhất đã xác nhận; nộp lại đang chờ được ghi riêng.</p><div class="report-scroll"><table class="report-table"><thead><tr><th>Học viên</th><th>Được giao</th><th>Đã nộp</th><th>Chưa nộp</th><th>Chờ chấm</th><th>Đã chấm</th><th>Điểm TB</th><th>Nộp lại chờ chấm</th></tr></thead><tbody id="progress"></tbody></table></div><div id="progressPager" class="report-pages"></div></section>
+<section class="report-panel"><h2>Điểm và nhận xét đã xác nhận</h2><div class="report-scroll"><table class="report-table"><thead><tr><th>Bài tập</th><th>Học viên</th><th>Điểm cuối</th><th>Nhận xét</th><th>Xem bài</th></tr></thead><tbody id="grades"></tbody></table></div><div id="gradesPager" class="report-pages"></div></section>
+<section class="report-panel"><h2>Lượt giao và tình trạng nộp</h2><div class="report-scroll"><table class="report-table"><thead><tr><th>Bài tập</th><th>Lớp</th><th>Học viên</th><th>Hạn nộp</th><th>Trạng thái</th><th>Điểm cuối</th></tr></thead><tbody id="tasks"></tbody></table></div><div id="tasksPager" class="report-pages"></div></section>
+{% endblock %}{% block extra_js %}<script src="{% static 'dashboard/reports.js' %}"></script>{% endblock %}
