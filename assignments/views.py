@@ -72,7 +72,8 @@ def lesson_detail(request, pk):
             item.save()
             return redirect('assignments:lesson_detail', pk=pk)
     return render(request, 'assignments/detail.html', {'lesson': lesson, 'items': getattr(lesson, relation).all(),
-        'form': form, 'can_edit': can_edit})
+        'form': form, 'can_edit': can_edit,
+        'reading_assignments':lesson.class_assignments.filter(classroom__in=classes_for(request.user)).select_related('classroom') if lesson.skill=='speaking' else []})
 
 
 @login_required
@@ -87,3 +88,22 @@ def assign(request):
         except ValidationError as exc:
             form.add_error(None, exc)
     return render(request, 'assignments/form.html', {'form': form, 'title': 'Giao bài cho lớp'})
+
+
+@login_required
+def reading_reference(request, pk):
+    """Update future submission snapshots only; preserve all historical job rubrics."""
+    staff(request.user)
+    assignment=get_object_or_404(ClassAssignment.objects.select_related('lesson','classroom').filter(
+        classroom__in=classes_for(request.user), lesson__skill='speaking'), pk=pk)
+    from .forms import ReadingReferenceForm
+    initial={'youtube_url':assignment.rubric.get('youtube_url') or assignment.lesson.youtube_url,
+             'reference_transcript':assignment.rubric.get('reference_transcript') or assignment.lesson.reference_transcript}
+    form=ReadingReferenceForm(request.POST or None,initial=initial)
+    if request.method=='POST' and form.is_valid():
+        assignment.rubric={**assignment.rubric,'skill':'speaking','mode':'repeat_video',
+                          **form.cleaned_data}
+        assignment.save(update_fields=['rubric'])
+        messages.success(request,'Đã cập nhật mẫu cho các lần nộp mới. Kết quả và lời mẫu của bài đã nộp được giữ nguyên.')
+        return redirect('assignments:lesson_detail',pk=assignment.lesson_id)
+    return render(request,'assignments/form.html',{'form':form,'title':'Mẫu đọc theo video — '+assignment.classroom.class_code})

@@ -25,15 +25,15 @@ class DashboardTests(IntegratedFixture):
         self.assertEqual(data['average_score'],10)
 
     def test_duplicate_submit_and_multiple_attempts_do_not_inflate_rate(self):
-        enqueue_submission(task=self.task,submission_key='first',text='Hello')
-        enqueue_submission(task=self.task,submission_key='first',text='Hello')
-        enqueue_submission(task=self.task,submission_key='second',text='Hello again')
+        enqueue_submission(task=self.task,submission_key='first',audio=self.audio())
+        enqueue_submission(task=self.task,submission_key='first',audio=self.audio())
+        enqueue_submission(task=self.task,submission_key='second',audio=self.audio())
         data=metrics_for(self.teacher);self.assertEqual(data['submitted_count'],1)
         self.assertEqual(data['learner_progress'][0]['awaiting_grade'],1)
 
     def test_resubmission_keeps_latest_confirmed_score(self):
         GradingJob.objects.create(task=self.task,submission_key='old',kind='speaking',status='graded',final_score=8,submitted_at=self.now-timedelta(hours=1),teacher_feedback='Official feedback')
-        enqueue_submission(task=self.task,submission_key='new',text='New text')
+        enqueue_submission(task=self.task,submission_key='new',audio=self.audio())
         data=metrics_for(self.teacher);row=data['learner_progress'][0]
         self.assertEqual(row['average_score'],8);self.assertEqual(row['resubmissions_pending'],1)
         self.assertEqual(row['graded'],0);self.assertEqual(row['awaiting_grade'],1)
@@ -56,7 +56,7 @@ class DashboardTests(IntegratedFixture):
         self.assertNotContains(response,'GIAO BÀI CHO LỚP')
 
     def test_student_result_privacy_and_html_escaping(self):
-        job,_=enqueue_submission(task=self.task,submission_key='xss',text='<script>alert(1)</script>')
+        job=GradingJob.objects.create(task=self.task,submission_key='xss',kind='speaking',transcript='<script>alert(1)</script>')
         self.client.force_login(self.other_student);self.assertEqual(self.client.get(f'/hoc-tap/results/{job.pk}/').status_code,404)
         self.client.force_login(self.student);response=self.client.get(f'/hoc-tap/results/{job.pk}/')
         self.assertEqual(response.status_code,200);self.assertContains(response,'&lt;script&gt;')
@@ -73,7 +73,7 @@ class DashboardTests(IntegratedFixture):
     def test_dropout_rule_and_recovery(self):
         LearningTask.objects.filter(learner=self.student).update(due_at=self.now-timedelta(days=1))
         data=metrics_for(self.teacher);self.assertEqual(data['at_risk_learners'][0]['missed_tasks'],3)
-        enqueue_submission(task=self.task,submission_key='recover',text='Hi')
+        enqueue_submission(task=self.task,submission_key='recover',audio=self.audio())
         self.assertEqual(metrics_for(self.teacher)['at_risk_learners'],[])
 
     def test_new_enrollment_sync_includes_non_submitter(self):
@@ -121,7 +121,7 @@ class DashboardTests(IntegratedFixture):
         user=CustomUser.objects.get(username='demo_student');old=user.password
         call_command('seed_demo',password='Different123!',stdout=io.StringIO())
         user.refresh_from_db();self.assertEqual(user.password,old)
-        self.assertEqual(ClassAssignment.objects.filter(classroom__class_code='DEMO-01').count(),3)
+        self.assertEqual(ClassAssignment.objects.filter(classroom__class_code='DEMO-01').count(),2)
 
     def test_import_legacy_listening_progress_is_idempotent(self):
         from submissions.models import LessonProgress
@@ -161,7 +161,8 @@ class DashboardTests(IntegratedFixture):
 
     def test_manager_can_assign_but_other_teacher_cannot(self):
         self.client.force_login(self.manager)
-        lesson=Lesson.objects.create(skill='speaking',program='CHUNG',order=3,title='Story',description='Tell a story')
+        lesson=Lesson.objects.create(skill='speaking',program='CHUNG',order=3,title='Read along',
+            youtube_url=self.speaking.youtube_url,reference_transcript='Read this sample sentence.')
         body={'lesson':lesson.pk,'classroom':self.classroom.pk,'assigned_at':self.now.isoformat(),
               'due_at':(self.now+timedelta(days=1)).isoformat(),'repetitions':1}
         self.assertEqual(self.client.post('/quan-ly/bai-tap/assign/',body).status_code,302)

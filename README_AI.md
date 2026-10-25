@@ -55,13 +55,15 @@ python manage.py seed_demo --password "LocalDemo-2026!"
 ```
 
 Chỉ chạy khi `DJANGO_DEBUG=true`; tạo `demo_admin`, `demo_manager`,
-`demo_teacher`, `demo_student`, `demo_student2`, lớp `DEMO-01` và 3 bài
-nghe/nói/từ vựng đã giao. Mật khẩu ở trên là ví dụ cho môi trường local,
+`demo_teacher`, `demo_student`, `demo_student2`, lớp `DEMO-01`, bài
+nghe trắc nghiệm và từ vựng đã giao; bài đọc theo video để ở bản nháp. Mật khẩu ở trên là ví dụ cho môi trường local,
 người chạy có thể chọn mật khẩu khác. Chạy lại không reset mật khẩu đã có,
 không tạo trùng roster và không gọi OpenAI.
 
 Nội dung mẫu từ phần B gồm Business English (Resilience, Customer, Deadline),
-Self Introduction và hai câu TOEIC A–D. Mẫu nghe chưa kèm audio thật: giáo viên
+Self Introduction dạng nháp và hai câu TOEIC A–D. Giáo viên điền video thật,
+lời mẫu nguyên văn và bật hoạt động trước khi giao bài đọc; không dùng câu
+lệnh “Introduce yourself” làm đáp án mẫu. Mẫu nghe chưa kèm audio thật: giáo viên
 bổ sung qua Sửa buổi học trước khi giao buổi mới. Hai lệnh seed cũ `seed_data`
 và `seed_phanb` chuyển tới cùng lệnh an toàn này, cũng bắt buộc `--password`.
 
@@ -113,7 +115,7 @@ và web server. `python manage.py run_ai_worker --once` xử lý tối đa một
 thoát. Không có worker thì bài chỉ nằm chờ; hết 5 phút phải qua watchdog để
 chuyển manual.
 
-6. Học viên nộp transcript/ảnh/text. Sau khi worker xử lý, vào kết quả bài nộp
+6. Học viên ghi âm trực tiếp cho bài đọc theo video, hoặc nộp ảnh/text cho từ vựng. Sau khi worker xử lý, vào kết quả bài nộp
 để xem điểm AI gợi ý; giáo viên xác nhận điểm chính thức. Nghe không cần key
 hay worker: chấm ngay bằng đáp án ở backend.
 
@@ -135,7 +137,7 @@ Tài liệu OpenAI đã dùng:
 
 ## Quy tắc chấm theo yêu cầu
 
-### Nghe
+### Nghe trắc nghiệm
 
 Tái sử dụng model câu hỏi và nguyên tắc so đáp án của phần B. Luồng mới chỉ
 cho giao bài nghe khi từng câu có A–D hợp lệ và lựa chọn đúng đã được cấu hình.
@@ -144,15 +146,52 @@ tổng câu × 10; hoàn tất ngay, không gọi OpenAI. Không công khai corr
 trong HTML/form/API đề bài học viên. Các câu part34 cũ không đủ lựa chọn A–D
 phải được giáo viên bổ sung trước khi giao theo yêu cầu trắc nghiệm mới.
 
-### Nói
+### Nghe video và đọc lại — chỉ nộp ghi âm
 
-Học viên nhập transcript, hoặc gửi audio để OpenAI tạo transcript rồi chấm.
-Nếu gửi cả hai thì transcript nhập là nguồn được dùng và UI ghi rõ nguồn;
-không khẳng định transcript nhập là bằng chứng đã nói đúng như audio.
-Điểm AI = trung bình nội dung, từ vựng, ngữ pháp (mỗi tiêu chí 0–10).
-**Không chấm phát âm, giọng, nét âm hoặc độ trôi chảy âm thanh.**
-Audio WAV/MP3/M4A/WebM/MP4/OGG, tối đa 20 MiB. Không cần audio khi đã có
-transcript. Transcript được lưu và hiển thị để giáo viên đối chiếu.
+Đây là bài học viên xem video mẫu rồi đọc lại nguyên văn, lưu ở kỹ năng
+`speaking` để tương thích dữ liệu nguồn. Luồng `listening` vẫn là trắc nghiệm.
+
+1. Giáo viên tạo buổi học, nhập URL YouTube HTTPS và trường **Lời mẫu chính xác
+   của video** (đúng đoạn yêu cầu đọc; 1–1500 từ và tối đa 20.000 ký tự).
+   URL được kiểm tra và chuyển sang embed YouTube riêng tư; hiện dùng video
+   YouTube, chưa có luồng tải file video lên. Không tự lấy phụ đề hoặc tự suy
+   đoán lời mẫu từ video. Nội dung `SpeakingTask` cũ cần được kiểm tra rồi sao
+   chép vào trường lời mẫu khi thực sự là câu cần đọc.
+2. Giao bài cho lớp để chụp lại video/lời mẫu trong rubric. Học viên xem video,
+   tạm dừng video, bấm **Bắt đầu ghi âm → Dừng ghi âm**, nghe lại hoặc ghi lại,
+   rồi nộp. Không có ô nhập transcript hay chọn file ghi âm có sẵn trong UI.
+   API yêu cầu audio và từ chối `text` do học viên nhập, kể cả khi kèm audio.
+3. Trình duyệt cần HTTPS (hoặc localhost/127.0.0.1 khi phát triển), hỗ trợ
+   MediaRecorder và được cấp quyền micro. File do trình duyệt tạo là
+   WebM/OGG/MP4 tùy hỗ trợ, tối đa 20 MiB. Ghi lại sẽ thay thế bản ghi chưa nộp;
+   micro được tắt khi dừng/lỗi/rời trang. API vẫn nhận các định dạng audio đã
+   hỗ trợ để tương thích tích hợp backend; API không chứng minh nguồn của file.
+4. Worker dùng OpenAI chuyển audio sang transcript tiếng Anh. Không đưa lời
+   mẫu vào prompt chuyển giọng nói để tránh gợi ý ASR chép lại đáp án. Sau đó
+   backend chuẩn hóa chữ hoa/thường, dấu câu và một số dạng rút gọn thông dụng,
+   so khớp **thứ tự từ** bằng khoảng cách chỉnh sửa. Bỏ/đổi/thêm từ đều được
+   tính; lặp một từ nhiều lần không bù cho từ bị thiếu.
+
+`điểm gợi ý = max(0, 1 − (số từ khác + thiếu + thừa) / số từ mẫu) × 10`
+
+OpenAI viết nhận xét tiếng Việt dựa trên lời mẫu, transcript và bảng so khớp;
+backend tự tính lại điểm, không nhận điểm do model hoặc client tự đặt.
+Không chấm ý tưởng, độ đa dạng từ vựng, ngữ pháp của bài nói tự do, phát âm,
+giọng hay độ trôi chảy. Khác biệt trong transcript **không khẳng định** học
+viên phát âm sai. ASR có thể sai tên riêng/số; cách viết số bằng chữ và chữ số
+chưa được quy đổi tương đương, nên giáo viên cần nghe bản ghi trước khi duyệt.
+
+Trang kết quả hiển thị transcript, lời mẫu đã dùng, số từ khớp/thiếu/khác/thừa
+và tối đa 100 khác biệt đầu tiên (điểm vẫn tính trên toàn bộ đoạn). Audio và
+transcript được lưu để giáo viên kiểm tra. Transcript rỗng, lời mẫu thiếu,
+API lỗi hoặc AI không chắc chắn sẽ chuyển sang chấm thủ công.
+
+**Cập nhật bài cũ:** chạy `python manage.py migrate` để thêm trường lời mẫu.
+Vào **Ngân hàng bài tập → buổi đọc theo video → Cập nhật mẫu đọc** ở lớp cần
+sửa, nhập video và lời mẫu đúng. Chỉ admin/manager hoặc giáo viên phụ trách
+lớp được cập nhật. Chỉnh sửa áp dụng cho các lần nộp sau đó; rubric, điểm và
+bài làm đã nộp giữ nguyên. Bài chưa có mẫu hợp lệ bị chặn nộp mới; job cũ
+không đủ dữ liệu đọc lại đi vào danh sách chấm thủ công khi worker xử lý.
 
 ### Từ vựng
 
@@ -196,7 +235,7 @@ sai số tối đa một chu kỳ; hạ tầng dừng thì không thể cam kế
 - **Giáo viên:** chỉ xem dữ liệu lớp đang phụ trách; tạo buổi học của mình,
   giao cho lớp mình và chấm/duyệt. Giáo viên lớp khác không đọc bài hoặc media.
 - **Học viên:** chỉ xem task/điểm/nhận xét của mình; làm nghe trắc nghiệm,
-  gửi transcript/audio và bài từ vựng; nộp lại giữ lịch sử từng lần.
+  ghi âm đọc theo video và gửi bài từ vựng; nộp lại giữ lịch sử từng lần.
 
 Các bảng báo cáo có phân trang 25 bản ghi, không giới hạn lịch sử ở 100 bài.
 Polling 10 giây; dữ liệu rỗng/lỗi/phiên hết hạn được thông báo. Khi xác nhận
@@ -246,7 +285,8 @@ python manage.py test
 ```
 
 Test không gọi API thật: kiểm tra đủ ba vai trò, quyền lớp/học viên/media,
-CSRF, snapshot rubric, nghe đúng/sai/bỏ trống, vocab thiếu lượt, transcript,
+CSRF, snapshot rubric, nghe đúng/sai/bỏ trống, vocab thiếu lượt, chỉ nhận ghi âm,
+so khớp lời mẫu và transcript,
 idempotency, timeout, fallback, phân trang và tích hợp các model nguồn.
 Cần smoke test với key và bài làm thật để hiệu chỉnh rubric và độ chính xác
 OCR/transcription. Không có tuyên bố AI đã được huấn luyện riêng.

@@ -9,7 +9,7 @@ class LessonForm(forms.ModelForm):
     class Meta:
         model = Lesson
         fields = ["skill", "program", "order", "title", "description",
-                  "listening_type", "audio_file", "youtube_url", "is_active"]
+                  "listening_type", "audio_file", "youtube_url", "reference_transcript", "is_active"]
         widgets = {
             "skill": forms.Select(attrs={"class": INPUT, "id": "id_skill"}),
             "program": forms.Select(attrs={"class": INPUT}),
@@ -18,6 +18,7 @@ class LessonForm(forms.ModelForm):
             "description": forms.Textarea(attrs={"class": INPUT, "rows": 2}),
             "listening_type": forms.Select(attrs={"class": INPUT}),
             "audio_file": forms.ClearableFileInput(attrs={"class": INPUT}),
+            "reference_transcript": forms.Textarea(attrs={'rows':6, 'maxlength':20000}),
             "youtube_url": forms.URLInput(attrs={"class": INPUT, "placeholder": "https://youtube.com/..."}),
         }
 
@@ -70,3 +71,21 @@ class AssignmentForm(forms.Form):
         super().__init__(*args, **kwargs)
         from ai_core.permissions import classes_for
         self.fields['classroom'].queryset = classes_for(user).filter(is_active=True)
+
+
+class ReadingReferenceForm(forms.Form):
+    youtube_url = forms.URLField(label='Video mẫu YouTube HTTPS')
+    reference_transcript = forms.CharField(label='Lời mẫu chính xác của đoạn cần đọc', max_length=20000,
+        widget=forms.Textarea(attrs={'rows':8}), help_text='Không nhập yêu cầu kiểu Introduce yourself. Nhập nguyên văn lời cần đọc.')
+
+    def clean(self):
+        data=super().clean()
+        if data.get('youtube_url'):
+            from .video import youtube_embed
+            data['video_embed_url']=youtube_embed(data['youtube_url'])
+        if data.get('reference_transcript'):
+            from ai_core.reading import words, MAX_REFERENCE_WORDS
+            count=len(words(data['reference_transcript']))
+            if not 1 <= count <= MAX_REFERENCE_WORDS:
+                self.add_error('reference_transcript','Lời mẫu phải có từ 1 đến 1500 từ.')
+        return data

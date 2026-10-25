@@ -6,7 +6,7 @@ from django.db import transaction
 from django.utils import timezone
 from accounts.models import CustomUser
 from courses.models import Course, ClassRoom, Enrollment
-from assignments.models import Lesson, ListeningQuestion, SpeakingTask, VocabWord, ClassAssignment
+from assignments.models import Lesson, ListeningQuestion, VocabWord, ClassAssignment
 from assignments.services import assign_to_class
 from dashboard.integration import sync_class_assignment
 
@@ -41,13 +41,17 @@ class Command(BaseCommand):
         now = timezone.now()
         for skill, title in [('listening','TOEIC Part 1–2'),('speaking','Self Introduction'),('vocabulary','Business English cơ bản')]:
             lesson, _ = Lesson.objects.get_or_create(skill=skill, program='CHUNG', order=900,
-                defaults={'title':title,'listening_type':'part12' if skill=='listening' else '', 'created_by':users['admin']})
+                defaults={'title':title,'listening_type':'part12' if skill=='listening' else '',
+                          'is_active':skill!='speaking', 'created_by':users['admin']})
             if skill == 'listening':
                 for order, text, a, b, c, d, correct in [(1,'What is the man doing?','Reading a book','Writing a report','Making a call','Eating lunch','C'),
                                                        (2,'Where are they?','At a station','In an office','At a restaurant','In a park','B')]:
                     ListeningQuestion.objects.get_or_create(lesson=lesson, order=order, defaults=dict(question_text=text,option_a=a,option_b=b,option_c=c,option_d=d,correct_option=correct))
             elif skill=='speaking':
-                SpeakingTask.objects.get_or_create(lesson=lesson,order=1,defaults={'sentence':'Introduce your name, hometown and hobbies.'})
+                # Never invent a video/script pair or grade against a generic instruction.
+                if not lesson.youtube_url or not lesson.reference_transcript.strip():
+                    self.stdout.write('Bài đọc theo video là bản nháp: giáo viên cần điền video thật và lời mẫu nguyên văn trước khi giao. Bài đã giao từ phiên bản cũ cần Cập nhật mẫu đọc.')
+                    continue
             else:
                 for word, meaning in [('Resilience','Kiên cường'),('Customer','Khách hàng'),('Deadline','Hạn chót')]:
                     VocabWord.objects.get_or_create(lesson=lesson, word=word, defaults={'meaning':meaning})
@@ -56,4 +60,4 @@ class Command(BaseCommand):
                 sync_class_assignment(existing)
             else:
                 assign_to_class(actor=users['admin'],lesson=lesson,classroom=classroom,assigned_at=now-timedelta(days=1),due_at=now+timedelta(days=7),repetitions=3)
-        self.stdout.write(self.style.SUCCESS('Đã tạo demo_admin, demo_manager, demo_teacher, demo_student, demo_student2 và 3 bài được giao. Không gọi OpenAI; bài nghe mẫu cần bổ sung file nghe thật.'))
+        self.stdout.write(self.style.SUCCESS('Đã chuẩn bị demo_admin, demo_manager, demo_teacher, demo_student, demo_student2; bài nghe trắc nghiệm và từ vựng được giao. Không gọi OpenAI; bài nghe mẫu cần bổ sung file nghe thật.'))

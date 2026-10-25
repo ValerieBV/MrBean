@@ -4,6 +4,7 @@ app_name = 'assignments'
 urlpatterns = [
     path('', views.assignment_list, name='assignment_list'),
     path('new/', views.lesson_create, name='lesson_create'),
+    path('assigned/<int:pk>/reading-reference/', views.reading_reference, name='reading_reference'),
     path('assign/', views.assign, name='assign'),
     path('lesson/<int:pk>/', views.lesson_detail, name='lesson_detail'),
     path('lesson/<int:pk>/edit/', views.lesson_update, name='lesson_update'),

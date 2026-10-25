@@ -50,8 +50,11 @@ def enqueue_submission(*, task, submission_key, kind=None, text='', audio=None, 
         kind = rubric.get('skill', kind)
         if kind not in ('speaking', 'vocabulary', 'listening'):
             raise ValidationError('Loại bài không hợp lệ.')
-        if kind == 'speaking' and not text.strip() and not audio:
-            raise ValidationError('Cần transcript hoặc file ghi âm.')
+        if kind == 'speaking':
+            if text.strip() or not audio:
+                raise ValidationError('Bài đọc theo video chỉ nhận ghi âm; không nhận transcript học viên nhập.')
+            if rubric.get('mode') != 'repeat_video' or not rubric.get('reference_transcript') or not rubric.get('video_embed_url'):
+                raise ValidationError('Giáo viên cần cập nhật video và lời mẫu cho lượt giao này trước khi nộp.')
         if kind == 'vocabulary' and not text.strip() and not images:
             raise ValidationError('Cần văn bản hoặc ảnh bài từ vựng.')
         if audio and (kind != 'speaking' or not 0 < audio.size <= settings.AI_MAX_AUDIO_BYTES or Path(audio.name).suffix.lower() not in ('.wav', '.mp3', '.m4a', '.webm', '.mp4', '.ogg')):
@@ -114,14 +117,14 @@ def process_job(job_id, provider=None):
         if job.kind == 'vocabulary' and 'details' in raw:
             raw = {**raw, 'counts': [{'word': row['word'], 'count': row['observed']} for row in raw['details']]}
         result = validate_result(raw, job.kind, job.rubric_snapshot)
-        transcript = raw.get('transcript', job.text) if job.kind == 'speaking' else ''
+        transcript = raw.get('transcript', '') if job.kind == 'speaking' else ''
         if not isinstance(transcript, str) or len(transcript) > 20000:
             raise ValueError('invalid_transcript')
         finished = timezone.now()
         if finished >= job.ai_deadline:
             raise TimeoutError()
         if job.kind == 'speaking':
-            result['transcript_source'] = raw.get('transcript_source', 'submitted_text')
+            result['transcript_source'] = 'openai_transcription'
         GradingJob.objects.filter(pk=job_id, status='processing').update(
             status='ai_reviewed', result=result, suggested_score=result['score'],
             transcript=transcript, grading_method='openai', finished_at=finished)

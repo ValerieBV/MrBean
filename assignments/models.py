@@ -35,6 +35,7 @@ class Lesson(models.Model):
     audio_file = models.FileField(
         "File nghe", upload_to="assignments/audio/", blank=True, null=True
     )
+    reference_transcript = models.TextField('Lời mẫu chính xác của video', blank=True, help_text='Nội dung học viên phải đọc lại, không phải câu lệnh giao bài.')
     youtube_url = models.URLField("Link YouTube (bài nói)", blank=True)
     is_active = models.BooleanField("Đang mở", default=True)
     created_by = models.ForeignKey(

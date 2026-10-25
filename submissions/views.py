@@ -27,6 +27,13 @@ def do_task(request, task_id):
         assigned_at__lte=timezone.now()), pk=task_id)
     # Render only student-visible question fields; never serialize correct answers into HTML.
     rubric = task.assignment.rubric
+    from assignments.video import youtube_embed
+    from django.core.exceptions import ValidationError
+    try:
+        video_embed_url = youtube_embed(rubric.get('youtube_url','')) if rubric.get('skill')=='speaking' else ''
+    except (ValidationError, ValueError):
+        video_embed_url = ''
+    reading_ready = bool(rubric.get('mode')=='repeat_video' and rubric.get('reference_transcript') and video_embed_url)
     from .models import LessonProgress
     progress = LessonProgress.objects.filter(student=request.user, lesson=task.assignment.lesson).first()
     draft = progress.draft if progress and progress.draft_valid else {}
@@ -35,6 +42,7 @@ def do_task(request, task_id):
     questions = [{**{k: q[k] for k in ('id','question_text','option_a','option_b','option_c','option_d')}, 'has_image': q['id'] in image_ids} for q in rubric.get('questions', [])]
     return render(request, 'submissions/do_task.html', {'task': task, 'rubric': rubric,
         'questions': questions,
+        'video_embed_url':video_embed_url, 'reading_ready':reading_ready,
         'submission_key': uuid.uuid4().hex, 'draft_text': draft.get('text', '') if isinstance(draft, dict) else ''})
 
 
@@ -52,6 +60,8 @@ def autosave(request, task_id):
     if request.user.role != 'student':
         raise PermissionDenied
     task = get_object_or_404(tasks_for(request.user).filter(assignment__isnull=False, assigned_at__lte=timezone.now()), pk=task_id)
+    if task.assignment.rubric.get('skill') == 'speaking':
+        return JsonResponse({'error':'recording_only', 'message':'Bài đọc theo video chỉ nhận ghi âm.'}, status=400)
     try:
         data = json.loads(request.body)
         if not isinstance(data, dict) or not isinstance(data.get('text',''), str) or len(data.get('text',''))>20000:

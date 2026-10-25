@@ -15,22 +15,22 @@ from .models import GradingJob
 from .services import enqueue_submission, process_job, expire_jobs
 from .providers import validate_result, OpenAIGrader
 
-GOOD = {'content':8,'vocabulary':7,'grammar':6,'feedback':'Dùng thì quá khứ đúng; cần bổ sung ví dụ.','needs_manual':False}
+GOOD = {'transcript':'My hobby is reading.','feedback':'Transcript khớp lời mẫu. Giáo viên kiểm tra bản ghi.','needs_manual':False}
 
 
 class GradingTests(IntegratedFixture):
     def job(self,key='s1'):
-        return enqueue_submission(task=self.task,submission_key=key,text='My hobby is reading.')[0]
+        return enqueue_submission(task=self.task,submission_key=key,audio=self.audio())[0]
 
     def post(self,user,task=None,**extra):
         self.client.force_login(user)
-        data={'task_id':(task or self.task).pk,'submission_key':'api1','text':'I enjoy reading.',**extra}
-        return self.client.post('/ai/submissions/', data, content_type='application/json')
+        data={'task_id':(task or self.task).pk,'submission_key':'api1','audio':self.audio(),**extra}
+        return self.client.post('/ai/submissions/', data)
 
-    def test_transcript_success_and_single_claim(self):
+    def test_recording_transcript_success_and_single_claim(self):
         job=self.job(); provider=Mock();provider.grade.return_value=GOOD
         self.assertTrue(process_job(job.pk,provider)); self.assertFalse(process_job(job.pk,provider))
-        job.refresh_from_db();self.assertEqual(job.status,'ai_reviewed');self.assertEqual(job.suggested_score,7)
+        job.refresh_from_db();self.assertEqual(job.status,'ai_reviewed');self.assertEqual(job.suggested_score,10)
         self.assertEqual(job.transcript,'My hobby is reading.');self.assertIsNone(job.result['pronunciation'])
         provider.grade.assert_called_once()
 
@@ -47,7 +47,8 @@ class GradingTests(IntegratedFixture):
         response=self.post(self.student,kind='listening',reference_text='Give 10')
         self.assertEqual(response.status_code,201)
         job=GradingJob.objects.get();self.assertEqual(job.kind,'speaking')
-        self.assertEqual(job.rubric_snapshot['prompts'],['Introduce your hobbies.'])
+        self.assertEqual(job.rubric_snapshot['reference_transcript'],'My hobby is reading.')
+        self.assertEqual(job.rubric_snapshot['mode'],'repeat_video')
 
     def test_listening_uses_answer_key_without_ai(self):
         with patch('ai_core.services.OpenAIGrader') as api:
@@ -86,7 +87,7 @@ class GradingTests(IntegratedFixture):
             with self.assertRaises(ValueError):validate_result(dict(value,counts=counts),'vocabulary',rubric)
 
     def test_invalid_results_fall_back(self):
-        for index,raw in enumerate([dict(GOOD,grammar=float('nan')),dict(GOOD,grammar=11),dict(GOOD,content=True),dict(GOOD,needs_manual=True),{},[]]):
+        for index,raw in enumerate([dict(GOOD,transcript=''),dict(GOOD,transcript=None),dict(GOOD,feedback=''),dict(GOOD,needs_manual=True),{},[]]):
             job=self.job(str(index));provider=Mock();provider.grade.return_value=raw
             process_job(job.pk,provider);job.refresh_from_db();self.assertEqual(job.status,'manual')
 
@@ -132,15 +133,17 @@ class GradingTests(IntegratedFixture):
     def test_csrf_submission_and_review(self):
         browser=Client(enforce_csrf_checks=True);browser.force_login(self.student)
         browser.get(f'/hoc-tap/tasks/{self.task.pk}/')
-        data={'task_id':self.task.pk,'submission_key':'csrf','text':'Hi there.'}
-        self.assertEqual(browser.post('/ai/submissions/',data).status_code,403)
-        self.assertEqual(browser.post('/ai/submissions/',data,HTTP_X_CSRFTOKEN=browser.cookies['csrftoken'].value).status_code,201)
+        data={'task_id':self.task.pk,'submission_key':'csrf'}
+        self.assertEqual(browser.post('/ai/submissions/',dict(data,audio=self.audio())).status_code,403)
+        self.assertEqual(browser.post('/ai/submissions/',dict(data,audio=self.audio()),HTTP_X_CSRFTOKEN=browser.cookies['csrftoken'].value).status_code,201)
 
     def test_invalid_submission_and_oversized_audio(self):
         for text in ['', 'a'*20001]:
             with self.assertRaises(ValidationError):enqueue_submission(task=self.task,submission_key='invalid',text=text)
         with self.assertRaises(ValidationError):
             enqueue_submission(task=self.task,submission_key='file',audio=SimpleUploadedFile('bad.exe',b'bad'))
+        with override_settings(AI_MAX_AUDIO_BYTES=4), self.assertRaises(ValidationError):
+            enqueue_submission(task=self.task,submission_key='too-large',audio=self.audio())
 
     def test_image_validation_and_private_access(self):
         stream=io.BytesIO();Image.new('RGB',(20,20),'white').save(stream,'PNG')
@@ -166,15 +169,42 @@ class GradingTests(IntegratedFixture):
                 api.audio.transcriptions.create.assert_called_once()
                 self.assertFalse(api.responses.create.call_args.kwargs['store'])
                 self.assertNotIn('input_audio',str(api.responses.create.call_args))
+                payload=json.loads(api.responses.create.call_args.kwargs['input'][0]['content'][0]['text'])
+                self.assertEqual(payload['rubric']['reference_transcript'],'My hobby is reading.')
+                self.assertEqual(payload['comparison'],result['comparison'])
+                self.assertNotIn('prompt',api.audio.transcriptions.create.call_args.kwargs)
 
     @override_settings(OPENAI_API_KEY='test-not-real')
-    def test_submitted_transcript_skips_audio_call(self):
+    def test_adapter_rejects_legacy_typed_text_instead_of_skipping_transcription(self):
         job=self.job()
+        job.text='My hobby is reading.'
         with patch('openai.OpenAI') as factory:
-            api=factory.return_value.__enter__.return_value;api.with_options.return_value=api
-            api.responses.create.return_value=SimpleNamespace(output_text=json.dumps(GOOD))
-            result=OpenAIGrader().grade(job,120)
-            api.audio.transcriptions.create.assert_not_called();self.assertEqual(result['transcript_source'],'submitted_text')
+            with self.assertRaises(ValueError):OpenAIGrader().grade(job,120)
+            factory.assert_not_called()
+
+    def test_student_cannot_submit_typed_transcript_even_with_audio(self):
+        for with_audio in [False,True]:
+            data={'task_id':self.task.pk,'submission_key':'typed','text':'My hobby is reading.'}
+            if with_audio:data['audio']=self.audio()
+            self.client.force_login(self.student)
+            response=self.client.post('/ai/submissions/',data)
+            self.assertEqual(response.status_code,400)
+        self.assertFalse(GradingJob.objects.exists())
+
+    def test_missing_video_reference_blocks_new_submission_and_legacy_queue_falls_back(self):
+        assignment=self.assignments['speaking'];assignment.rubric={'skill':'speaking','prompts':['Introduce yourself.']};assignment.save()
+        with self.assertRaises(ValidationError):self.job()
+        legacy=GradingJob.objects.create(task=self.task,submission_key='legacy',kind='speaking',text='Hello',rubric_snapshot=assignment.rubric)
+        provider=Mock();provider.grade.return_value=GOOD
+        process_job(legacy.pk,provider);legacy.refresh_from_db();self.assertEqual(legacy.status,'manual')
+
+    def test_server_computes_reading_score_ignoring_model_score(self):
+        job=self.job();provider=Mock()
+        provider.grade.return_value=dict(GOOD,transcript='My hobby is swimming.',score=10,content=10)
+        process_job(job.pk,provider);job.refresh_from_db()
+        self.assertEqual(job.suggested_score,7.5)
+        self.assertEqual(job.result['comparison']['different_words'],1)
+        self.assertNotIn('content',job.result)
 
     def test_worker_once(self):
         job=self.job()

@@ -1,7 +1,7 @@
 {% extends 'base.html' %}{% load static %}
 {% block title %}Bài tập và kết quả của tôi{% endblock %}
 {% block content %}
-<h1 class="report-title">Bài tập và kết quả của tôi</h1><p class="report-subtle">Chỉ hiển thị bài được giao và kết quả của bạn. Bài nói chấm từ transcript; từ vựng chấm mức độ đủ lượt viết; bài nghe chấm theo đáp án.</p>
+<h1 class="report-title">Bài tập và kết quả của tôi</h1><p class="report-subtle">Chỉ hiển thị bài được giao và kết quả của bạn. Bài đọc theo video chỉ nộp ghi âm; hệ thống chuyển thành transcript để so lời mẫu; từ vựng chấm mức độ đủ lượt viết; bài nghe chấm theo đáp án.</p>
 {% include 'dashboard/_filters.html' %}
 <section class="report-panel"><h2>Bài tập được giao</h2><div class="report-scroll"><table class="report-table"><thead><tr><th>Bài tập</th><th>Lớp</th><th>Hạn nộp</th><th>Trạng thái</th><th>Điểm cuối</th><th>Thao tác</th></tr></thead><tbody id="tasks"></tbody></table></div><div id="tasksPager" class="report-pages"></div></section>
 <section class="report-panel"><h2>Lịch sử nộp và nhận xét</h2><div class="report-scroll"><table class="report-table"><thead><tr><th>Bài tập</th><th>Ngày nộp</th><th>Trạng thái</th><th>AI gợi ý</th><th>Điểm cuối</th><th>Kết quả</th></tr></thead><tbody id="history"></tbody></table></div><div id="historyPager" class="report-pages"></div></section>

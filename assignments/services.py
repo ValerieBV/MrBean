@@ -22,10 +22,14 @@ def lesson_rubric(lesson, repetitions=1):
             raise ValidationError('Chưa có từ vựng trong buổi học.')
         data.update(words=words, repetitions=repetitions)
     else:
-        prompts = list(lesson.speaking_tasks.values_list('sentence', flat=True))
-        if not prompts and not lesson.description.strip():
-            raise ValidationError('Chưa có yêu cầu nội dung bài nói.')
-        data['prompts'] = prompts
+        from .video import youtube_embed
+        from ai_core.reading import words, MAX_REFERENCE_WORDS
+        reference = lesson.reference_transcript.strip()
+        if len(reference) > 20000 or not 1 <= len(words(reference)) <= MAX_REFERENCE_WORDS:
+            raise ValidationError('Cần lời mẫu chính xác từ 1 đến 1500 từ cho bài đọc theo video.')
+        data.update(mode='repeat_video', reference_transcript=reference,
+                    video_embed_url=youtube_embed(lesson.youtube_url), youtube_url=lesson.youtube_url)
+
     return data
 
 
