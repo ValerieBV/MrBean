@@ -181,3 +181,8 @@ class DashboardTests(IntegratedFixture):
         self.assertEqual(response.status_code,302)
         self.student.refresh_from_db();self.assertFalse(self.student.is_active)
         self.assertEqual(LearningTask.objects.filter(learner=self.student).count(),3)
+
+    def test_review_numeric_value_not_localized_with_comma(self):
+        job=GradingJob.objects.create(task=self.task,submission_key='fraction',kind='speaking',status='ai_reviewed',suggested_score=7.33)
+        self.client.force_login(self.teacher)
+        self.assertContains(self.client.get(f'/hoc-tap/results/{job.pk}/'),'value="7.33"')
