@@ -35,7 +35,7 @@ git pull --ff-only origin codex/ai-dashboard-bv
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install -r requirements.txt
-Copy-Item .env.example .env
+if (!(Test-Path .env)) { Copy-Item .env.example .env }
 python manage.py migrate
 python manage.py createsuperuser
 python manage.py runserver
