@@ -30,3 +30,17 @@ thư viện giao diện từ CDN lúc mở trang.
 Trên tablet/điện thoại, menu chuyển sang nút mở/đóng; bảng cuộn trong khung riêng,
 thẻ thống kê xuống hàng và biểu mẫu giữ đủ nhãn/trạng thái lỗi. Menu tài khoản mở
 bằng chuột hoặc bàn phím; thao tác đăng xuất tiếp tục dùng POST và CSRF.
+
+## Căn lại theo ba ảnh tham chiếu
+
+Khung sidebar/thanh đầu trang được giữ cả trước và sau đăng nhập. Menu quản trị
+đặt theo thứ tự tài khoản, lớp học, miễn BTVN, thông báo và Django Admin; các chức
+năng mở rộng vẫn truy cập trong nhóm “Bài tập & báo cáo”. Footer chỉ nằm ở cuối sidebar.
+
+Đăng nhập dùng thẻ nâu ở giữa vùng nội dung, tiêu đề 1,75 rem, trường nhập có ô biểu
+tượng bên trái. Trang lớp rỗng dùng biểu tượng thư mục và thông báo trên nền kem;
+bộ lọc lớp nằm trong mục mở rộng. Trang miễn bài dùng các nút lọc trạng thái ngang,
+bảng tám cột và ô trống có biểu tượng inbox, đồng thời giữ thao tác duyệt/hủy và phân trang.
+
+Thông báo sau đăng nhập được hiển thị trong dải riêng dưới thanh đầu trang và có
+nút đóng. Nội dung phiên đăng nhập, phân quyền, dữ liệu lớp và quy tắc chấm không đổi.

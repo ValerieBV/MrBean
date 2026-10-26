@@ -20,7 +20,9 @@ def user_login_view(request):
     form = AuthenticationForm(request, data=request.POST or None)
     target = request.POST.get('next') or request.GET.get('next','')
     if request.method == 'POST' and form.is_valid():
-        login(request, form.get_user())
+        user = form.get_user()
+        login(request, user)
+        messages.success(request, f"Chào mừng {user.username} [{user.get_role_display()}] quay trở lại!")
         if target and url_has_allowed_host_and_scheme(target,{request.get_host()},require_https=request.is_secure()):
             return redirect(target)
         return redirect('dashboard:index')

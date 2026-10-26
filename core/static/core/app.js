@@ -9,7 +9,7 @@ document.addEventListener('keydown',event=>{
  if(!side?.classList.contains('is-open'))return;
  if(event.key==='Escape'){closeMenu();menu?.focus();}
  if(event.key==='Tab'){
-  const items=[...side.querySelectorAll('a[href],button:not([disabled])'),menu];
+  const items=[...side.querySelectorAll('a[href],button:not([disabled]),summary')].filter(item=>item.getClientRects().length);items.push(menu);
   if(event.shiftKey&&document.activeElement===items[0]){event.preventDefault();items.at(-1).focus();}
   else if(!event.shiftKey&&document.activeElement===items.at(-1)){event.preventDefault();items[0].focus();}
  }
@@ -29,3 +29,5 @@ if(skillSelect){
 const accountMenu=document.querySelector('.account-menu');
 document.addEventListener('click',event=>{if(accountMenu?.open&&!accountMenu.contains(event.target))accountMenu.open=false;});
 document.addEventListener('keydown',event=>{if(event.key==='Escape'&&accountMenu?.open){accountMenu.open=false;accountMenu.querySelector('summary').focus();}});
+
+for(const button of document.querySelectorAll('[data-dismiss-alert]'))button.addEventListener('click',()=>button.closest('.flash-alert').remove());

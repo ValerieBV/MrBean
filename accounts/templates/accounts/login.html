@@ -1,20 +1,29 @@
 {% extends 'base.html' %}
 {% block title %}Đăng nhập · MR BEAN ENGLISH{% endblock %}
 {% block anonymous_content %}
-<div class="auth-page">
+<div class="login-row">
     <section class="auth-box" aria-labelledby="login-title">
         <div class="auth-brand">
             <div class="auth-emblem">{% include 'core/icon.html' with name='cap' %}</div>
             <h1 id="login-title">MR BEAN ENGLISH</h1>
-            <p>Hệ thống quản lý bài tập & chấm điểm AI</p>
+            <p>Hệ thống Quản trị BTVN & Chấm điểm AI</p>
         </div>
-        {% if messages %}{% for message in messages %}<div class="alert {{ message.tags }}">{{ message }}</div>{% endfor %}{% endif %}
         <form method="post">
             {% csrf_token %}<input type="hidden" name="next" value="{{ next }}">
-            {% include 'core/fields.html' %}
-            <div class="form-actions"><button class="btn" type="submit">{% include 'core/icon.html' with name='logout' %}Đăng nhập →</button></div>
+            {{ form.non_field_errors }}
+            <div class="login-field">
+                <label for="id_username">Tên đăng nhập</label>
+                <div class="login-input-group"><span>{% include 'core/icon.html' with name='person' %}</span><input id="id_username" type="text" name="username" value="{{ form.username.value|default_if_none:'' }}" maxlength="150" autocomplete="username" required placeholder="Nhập username..." {% if form.username.errors %}aria-invalid="true" aria-describedby="username-errors"{% endif %}></div>
+                {% if form.username.errors %}<div id="username-errors">{{ form.username.errors }}</div>{% endif %}
+            </div>
+            <div class="login-field">
+                <label for="id_password">Mật khẩu</label>
+                <div class="login-input-group"><span>{% include 'core/icon.html' with name='key' %}</span><input id="id_password" type="password" name="password" autocomplete="current-password" required placeholder="Nhập mật khẩu..." {% if form.password.errors %}aria-invalid="true" aria-describedby="password-errors"{% endif %}></div>
+                {% if form.password.errors %}<div id="password-errors">{{ form.password.errors }}</div>{% endif %}
+            </div>
+            <button class="btn login-submit" type="submit">{% include 'core/icon.html' with name='logout' %}Đăng nhập hệ thống</button>
         </form>
-        <p class="auth-footer">Chưa có tài khoản hoặc quên mật khẩu?<br>Liên hệ <strong>quản trị viên trung tâm</strong> để được hỗ trợ.</p>
+        <p class="auth-footer">Hỗ trợ tài khoản:<br><strong>Liên hệ quản trị viên trung tâm</strong></p>
     </section>
 </div>
 {% endblock %}

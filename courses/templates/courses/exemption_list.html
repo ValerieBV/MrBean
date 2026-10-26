@@ -1,1 +1,40 @@
-{% extends 'base.html' %}{% block title %}Đơn miễn bài tập · Mr Bean{% endblock %}{% block content %}<div class="page-header"><div><div class="eyebrow">THEO DÕI YÊU CẦU</div><h1>Đơn miễn bài tập</h1><p>{% if user.role == 'student' %}Theo dõi quyết định của giáo viên. Bạn có thể hủy đơn đang chờ để tiếp tục nộp bài.{% else %}Xem xét yêu cầu đúng lớp và kiểm tra hạn mức trước khi duyệt.{% endif %}</p></div>{% if user.role == 'student' %}<a class="btn" href="{% url 'courses:class_list' %}">Chọn lớp để xin miễn</a>{% endif %}</div><section class="panel"><form class="filters" method="get"><div class="filter"><label for="exemption-status">Trạng thái đơn</label><select name="status" id="exemption-status"><option value="">Tất cả</option>{% for value,label in status_choices %}<option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div><button class="btn secondary" type="submit">Lọc đơn</button></form></section><section class="panel"><div class="table-wrap"><table><thead><tr><th>Bài xin miễn</th>{% if is_reporting_staff %}<th>Học viên</th>{% endif %}<th>Lý do</th><th>Trạng thái</th><th>Quyết định / Thao tác</th></tr></thead><tbody>{% for item in exemptions %}<tr><td><strong>{{ item.session_title }}</strong><small>{{ item.enrollment.classroom.class_code }} · {{ item.created_at|date:'d/m/Y H:i' }}</small>{% if not item.assignment_id %}<span class="badge yellow">Đơn cũ chưa liên kết bài</span>{% endif %}</td>{% if is_reporting_staff %}<td>{{ item.enrollment.student.get_full_name|default:item.enrollment.student.username }}</td>{% endif %}<td>{{ item.reason }}</td><td><span class="badge {{ item.status }}">{{ item.get_status_display }}</span></td><td>{% if item.status == 'pending' %}{% if user.is_superuser or user.role == 'admin' or user.role == 'teacher' %}<a class="btn secondary small" href="{% url 'courses:exemption_review' item.pk %}">Xem xét đơn</a>{% elif user.role == 'student' %}<form method="post" action="{% url 'courses:exemption_cancel' item.pk %}">{% csrf_token %}<button class="btn secondary small" type="submit">Hủy đơn</button></form>{% else %}<small>Chờ giáo viên xử lý</small>{% endif %}{% else %}{{ item.review_note|default:'—' }}<small>{{ item.reviewed_by.display_name|default:'' }} {{ item.reviewed_at|date:'d/m/Y H:i' }}</small>{% endif %}</td></tr>{% empty %}<tr><td colspan="5" class="empty">Chưa có đơn phù hợp với bộ lọc.</td></tr>{% endfor %}</tbody></table></div>{% include 'core/pagination.html' with page=exemptions %}</section>{% endblock %}
+{% extends 'base.html' %}
+{% block title %}Kiểm soát miễn BTVN · MR BEAN ENGLISH{% endblock %}
+{% block content %}
+<div class="page-header reference-page-header">
+    <div><h1>Kiểm soát miễn BTVN (chỉ miễn Speaking & Vocabulary)</h1><p>Danh sách đơn xin miễn BTVN{% if user.role == 'student' %} của bạn{% else %} của học viên{% endif %}. Bắt buộc hoàn thành bài tập Listening.</p></div>
+    {% if user.role == 'student' %}<a class="btn" href="{% url 'courses:class_list' %}">Chọn lớp để xin miễn</a>{% endif %}
+</div>
+<section class="panel exemption-filter" aria-label="Bộ lọc đơn miễn bài">
+    <strong>Bộ lọc trạng thái:</strong>
+    <div class="status-filters">
+        <a class="status-filter {% if not status_filter %}selected{% endif %}" href="{% url 'courses:exemption_list' %}" {% if not status_filter %}aria-current="page"{% endif %}>Tất cả</a>
+        <a class="status-filter {% if status_filter == 'pending' %}selected{% endif %}" href="?status=pending" {% if status_filter == 'pending' %}aria-current="page"{% endif %}>Chờ duyệt</a>
+        <a class="status-filter {% if status_filter == 'approved' %}selected{% endif %}" href="?status=approved" {% if status_filter == 'approved' %}aria-current="page"{% endif %}>✓ Đã duyệt</a>
+        <a class="status-filter {% if status_filter == 'rejected' %}selected{% endif %}" href="?status=rejected" {% if status_filter == 'rejected' %}aria-current="page"{% endif %}>✕ Bị từ chối</a>
+        {% if status_filter == 'cancelled' %}<a class="status-filter selected" href="?status=cancelled" aria-current="page">Đã hủy</a>{% else %}<a class="status-filter cancelled-filter" href="?status=cancelled">Đã hủy</a>{% endif %}
+    </div>
+</section>
+<section class="panel exemption-table-panel">
+    <div class="table-wrap">
+        <table class="exemption-table">
+            <thead><tr><th>Học viên</th><th>Lớp học</th><th>Buổi / Bài tập</th><th>Lý do</th><th>Trạng thái</th><th>Người duyệt</th><th>Ngày gửi</th><th>Thao tác</th></tr></thead>
+            <tbody>
+                {% for item in exemptions %}
+                <tr>
+                    <td><strong>{{ item.enrollment.student.display_name }}</strong><small>{% if item.enrollment.student.student_code %}<span class="badge role-tag">{{ item.enrollment.student.student_code }}</span>{% endif %} @{{ item.enrollment.student.username }}</small></td>
+                    <td><strong>{{ item.enrollment.classroom.class_code }}</strong><small>{{ item.enrollment.classroom.course.code }}</small></td>
+                    <td><span class="assignment-label">{{ item.session_title }}</span><small class="skill-label">{% if item.homework_type == 'speaking' %}{% include 'core/icon.html' with name='mic' %}Speaking{% elif item.homework_type == 'vocabulary' %}{% include 'core/icon.html' with name='book' %}Vocabulary{% else %}Listening · không được miễn{% endif %}</small>{% if not item.assignment_id %}<small>Đơn cũ chưa liên kết bài</small>{% endif %}</td>
+                    <td class="exemption-reason"><span title="{{ item.reason }}">{{ item.reason|truncatechars:80 }}</span>{% if item.review_note %}<small>Nhận xét: {{ item.review_note }}</small>{% endif %}</td>
+                    <td><span class="badge {{ item.status }}">{{ item.get_status_display }}</span></td>
+                    <td>{% if item.reviewed_by %}<strong>{{ item.reviewed_by.display_name }}</strong><small>{{ item.reviewed_at|date:'d/m H:i' }}</small>{% else %}—{% endif %}</td>
+                    <td class="date-cell">{{ item.created_at|date:'d/m/Y H:i' }}</td>
+                    <td>{% if item.status == 'pending' %}{% if user.is_superuser or user.role == 'admin' or user.role == 'teacher' %}<a class="btn small" href="{% url 'courses:exemption_review' item.pk %}">Xem xét đơn</a>{% elif user.role == 'student' %}<form method="post" action="{% url 'courses:exemption_cancel' item.pk %}">{% csrf_token %}<button class="btn secondary small" type="submit">Hủy đơn</button></form>{% else %}<small>Chờ giáo viên xử lý</small>{% endif %}{% else %}<span class="subtle">Đã xử lý</span>{% endif %}</td>
+                </tr>
+                {% empty %}<tr><td colspan="8" class="reference-table-empty">{% include 'core/icon.html' with name='inbox' %}<p>Không có đơn xin miễn nào.</p></td></tr>{% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% include 'core/pagination.html' with page=exemptions %}
+</section>
+{% endblock %}

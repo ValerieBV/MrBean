@@ -1,41 +1,83 @@
-{% load static %}<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#2A1A0E"><title>{% block title %}Mr Bean · Học tập{% endblock %}</title><link rel="preload" href="{% static 'core/fonts/BeVietnamPro-Regular.woff2' %}" as="font" type="font/woff2" crossorigin><link rel="preload" href="{% static 'core/fonts/BeVietnamPro-Bold.woff2' %}" as="font" type="font/woff2" crossorigin><link rel="stylesheet" href="{% static 'core/app.css' %}">{% block extra_css %}{% endblock %}</head><body>
+{% load static %}
+<!doctype html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="theme-color" content="#2A1A0E">
+    <title>{% block title %}MR BEAN ENGLISH{% endblock %}</title>
+    <link rel="preload" href="{% static 'core/fonts/BeVietnamPro-Regular.woff2' %}" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="{% static 'core/fonts/BeVietnamPro-Bold.woff2' %}" as="font" type="font/woff2" crossorigin>
+    <link rel="stylesheet" href="{% static 'core/app.css' %}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
 <a class="skip-link" href="#main-content">Chuyển tới nội dung</a>
-{% if user.is_authenticated %}<div class="shell"><aside id="sidebar" class="sidebar" aria-label="Điều hướng chính"><a class="brand" href="{% url 'dashboard:index' %}">{% include 'core/icon.html' with name='cap' %}<span>MR BEAN ENGLISH</span></a>
-<div class="nav-label">KHÔNG GIAN LÀM VIỆC</div><nav><a class="nav-link {% if request.resolver_match.app_name == 'dashboard' %}active{% endif %}" href="{% url 'dashboard:index' %}">{% include 'core/icon.html' with name='home' %}Tổng quan & báo cáo</a>
-{% if is_reporting_staff %}<a class="nav-link {% if request.resolver_match.url_name == 'assigned_list' or request.resolver_match.url_name == 'assigned_detail' or request.resolver_match.url_name == 'assigned_update' or request.resolver_match.url_name == 'assign' or request.resolver_match.url_name == 'reading_reference' %}active{% endif %}" href="{% url 'assignments:assigned_list' %}">{% include 'core/icon.html' with name='task' %}Bài tập đã giao</a><a class="nav-link {% if request.resolver_match.app_name == 'assignments' and request.resolver_match.url_name != 'assigned_list' and request.resolver_match.url_name != 'assigned_detail' and request.resolver_match.url_name != 'assigned_update' and request.resolver_match.url_name != 'assign' and request.resolver_match.url_name != 'reading_reference' %}active{% endif %}" href="{% url 'assignments:assignment_list' %}">{% include 'core/icon.html' with name='book' %}Ngân hàng bài tập</a>
-{% else %}<a class="nav-link {% if request.resolver_match.app_name == 'submissions' %}active{% endif %}" href="{% url 'submissions:student_home' %}">{% include 'core/icon.html' with name='task' %}Bài tập của tôi</a>{% endif %}
-<a class="nav-link {% if request.resolver_match.app_name == 'courses' and request.resolver_match.url_name != 'exemption_list' and request.resolver_match.url_name != 'exemption_review' and request.resolver_match.url_name != 'request_exemption' and request.resolver_match.url_name != 'course_list' and request.resolver_match.url_name != 'course_create' and request.resolver_match.url_name != 'course_update' %}active{% endif %}" href="{% url 'courses:class_list' %}">{% include 'core/icon.html' with name='class' %}{% if is_reporting_manager %}Quản lý lớp học{% elif user.role == 'teacher' %}Lớp đang giảng dạy{% else %}Lớp học của tôi{% endif %}</a>
-<a class="nav-link {% if request.resolver_match.url_name == 'exemption_list' or request.resolver_match.url_name == 'exemption_review' or request.resolver_match.url_name == 'request_exemption' %}active{% endif %}" href="{% url 'courses:exemption_list' %}">{% include 'core/icon.html' with name='shield' %}Đơn miễn bài tập</a>
-{% if is_reporting_manager %}<div class="nav-label">QUẢN TRỊ HỆ THỐNG</div><a class="nav-link {% if request.resolver_match.url_name == 'course_list' or request.resolver_match.url_name == 'course_create' or request.resolver_match.url_name == 'course_update' %}active{% endif %}" href="{% url 'courses:course_list' %}">{% include 'core/icon.html' with name='book' %}Danh mục khóa học</a><a class="nav-link {% if request.resolver_match.url_name == 'user_list' or request.resolver_match.url_name == 'user_create' or request.resolver_match.url_name == 'user_update' %}active{% endif %}" href="{% url 'accounts:user_list' %}">{% include 'core/icon.html' with name='users' %}Quản lý tài khoản</a>{% endif %}</nav>
-<div class="sidebar-bottom"><a class="nav-link {% if request.resolver_match.url_name == 'notification_list' %}active{% endif %}" href="{% url 'accounts:notification_list' %}">{% include 'core/icon.html' with name='bell' %}Thông báo{% if unread_notifications %}<span class="nav-count">{{ unread_notifications }}</span>{% endif %}</a><a class="nav-link {% if request.resolver_match.url_name == 'profile' or request.resolver_match.url_name == 'password_change' %}active{% endif %}" href="{% url 'accounts:profile' %}">{% include 'core/icon.html' with name='profile' %}Hồ sơ của tôi</a><div class="sidebar-note">© {% now 'Y' %} Mr Bean English Center<br>Hệ thống quản lý bài tập & chấm điểm AI</div></div></aside><button class="sidebar-shade" aria-label="Đóng điều hướng" tabindex="-1"></button>
-<div class="main-shell">
-<header class="topbar">
-    <div class="topbar-left">
-        <button class="menu-toggle" data-menu-toggle aria-expanded="false" aria-controls="sidebar" aria-label="Mở điều hướng">{% include 'core/icon.html' with name='menu' %}</button>
-        <div class="topbar-path">
-            <small><span class="topbar-institution">TRUNG TÂM TIẾNG ANH MR BEAN</span><span class="topbar-brand-mobile">MR BEAN ENGLISH</span></small>
-            <strong><span class="module-prefix">Phân hệ </span>{% if is_reporting_manager %}Quản trị & Vận hành{% elif user.role == 'teacher' %}Giáo viên & Chấm bài{% else %}Học viên & Luyện tập{% endif %}</strong>
-        </div>
-    </div>
-    <div class="account-bar">
-        <a class="notification-button" href="{% url 'accounts:notification_list' %}" aria-label="Thông báo{% if unread_notifications %}: {{ unread_notifications }} chưa đọc{% endif %}">
-            {% include 'core/icon.html' with name='bell' %}{% if unread_notifications %}<span class="badge-dot" aria-hidden="true"></span>{% endif %}
-        </a>
-        <details class="account-menu">
-            <summary class="user-dropdown-btn" aria-label="Tài khoản {{ user.display_name }}">
-                <span class="avatar">{{ user.username|first|upper }}</span>
-                <span class="account-copy"><strong>{{ user.display_name }}</strong><small>{{ user.get_role_display }}</small></span>
-                {% include 'core/icon.html' with name='chevron' %}
-            </summary>
-            <div class="account-dropdown">
-                <div><small>Đang đăng nhập:</small><strong>@{{ user.username }}</strong></div>
-                <a href="{% url 'accounts:profile' %}">{% include 'core/icon.html' with name='profile' %}Hồ sơ của tôi</a>
-                <a href="{% url 'accounts:password_change' %}">{% include 'core/icon.html' with name='key' %}Đổi mật khẩu</a>
-                <a href="{% url 'accounts:notification_list' %}">{% include 'core/icon.html' with name='bell' %}Thông báo</a>
-                <form method="post" action="{% url 'accounts:logout' %}">{% csrf_token %}<button class="logout" type="submit">{% include 'core/icon.html' with name='logout' %}Đăng xuất</button></form>
+<div class="shell">
+    <aside id="sidebar" class="sidebar" aria-label="Điều hướng chính">
+        <a class="brand" href="{% if user.is_authenticated %}{% url 'dashboard:index' %}{% else %}{% url 'accounts:login' %}{% endif %}">{% include 'core/icon.html' with name='cap' %}<span>MR BEAN<br>ENGLISH</span></a>
+        <nav class="sidebar-menu">
+            {% if user.is_authenticated %}
+                {% if is_reporting_manager %}
+                <a class="nav-link {% if request.resolver_match.url_name == 'user_list' or request.resolver_match.url_name == 'user_create' or request.resolver_match.url_name == 'user_update' or request.resolver_match.url_name == 'password_reset' or request.resolver_match.url_name == 'user_delete' %}active{% endif %}" href="{% url 'accounts:user_list' %}">{% include 'core/icon.html' with name='users' %}<span>Quản lý tài khoản</span></a>
+                {% endif %}
+                <a class="nav-link {% if request.resolver_match.app_name == 'courses' and request.resolver_match.url_name != 'exemption_list' and request.resolver_match.url_name != 'exemption_review' and request.resolver_match.url_name != 'request_exemption' and request.resolver_match.url_name != 'course_list' and request.resolver_match.url_name != 'course_create' and request.resolver_match.url_name != 'course_update' and request.resolver_match.url_name != 'course_delete' %}active{% endif %}" href="{% url 'courses:class_list' %}">{% include 'core/icon.html' with name='class' %}<span>{% if is_reporting_manager %}Quản lý lớp học{% elif user.role == 'teacher' %}Lớp học đang dạy{% else %}Khóa học của tôi{% endif %}</span></a>
+                <a class="nav-link {% if request.resolver_match.url_name == 'exemption_list' or request.resolver_match.url_name == 'exemption_review' or request.resolver_match.url_name == 'request_exemption' %}active{% endif %}" href="{% url 'courses:exemption_list' %}">{% include 'core/icon.html' with name='shield' %}<span>Kiểm soát miễn BTVN</span></a>
+            {% endif %}
+            <a class="nav-link {% if request.resolver_match.url_name == 'notification_list' %}active{% endif %}" href="{% url 'accounts:notification_list' %}">{% include 'core/icon.html' with name='bell' %}<span>Thông báo hệ thống</span>{% if unread_notifications %}<span class="nav-count">{{ unread_notifications }}</span>{% endif %}</a>
+            {% if user.is_authenticated %}
+                {% if user.is_staff %}<a class="nav-link" href="{% url 'admin:index' %}">{% include 'core/icon.html' with name='settings' %}<span>Django Admin</span></a>{% endif %}
+                <details class="secondary-nav" {% if request.resolver_match.app_name == 'dashboard' or request.resolver_match.app_name == 'assignments' or request.resolver_match.app_name == 'submissions' or request.resolver_match.url_name == 'course_list' or request.resolver_match.url_name == 'course_create' or request.resolver_match.url_name == 'course_update' %}open{% endif %}>
+                    <summary class="nav-link">{% include 'core/icon.html' with name='score' %}<span>Bài tập & báo cáo</span>{% include 'core/icon.html' with name='chevron' %}</summary>
+                    <div class="secondary-nav-links">
+                        <a class="nav-link {% if request.resolver_match.app_name == 'dashboard' %}active{% endif %}" href="{% url 'dashboard:index' %}">{% include 'core/icon.html' with name='home' %}<span>Tổng quan & báo cáo</span></a>
+                        {% if is_reporting_staff %}
+                        <a class="nav-link {% if request.resolver_match.url_name == 'assigned_list' or request.resolver_match.url_name == 'assigned_detail' or request.resolver_match.url_name == 'assigned_update' or request.resolver_match.url_name == 'assign' or request.resolver_match.url_name == 'reading_reference' %}active{% endif %}" href="{% url 'assignments:assigned_list' %}">{% include 'core/icon.html' with name='task' %}<span>Bài tập đã giao</span></a>
+                        <a class="nav-link {% if request.resolver_match.app_name == 'assignments' and request.resolver_match.url_name != 'assigned_list' and request.resolver_match.url_name != 'assigned_detail' and request.resolver_match.url_name != 'assigned_update' and request.resolver_match.url_name != 'assign' and request.resolver_match.url_name != 'reading_reference' %}active{% endif %}" href="{% url 'assignments:assignment_list' %}">{% include 'core/icon.html' with name='book' %}<span>Ngân hàng bài tập</span></a>
+                        {% else %}
+                        <a class="nav-link {% if request.resolver_match.app_name == 'submissions' %}active{% endif %}" href="{% url 'submissions:student_home' %}">{% include 'core/icon.html' with name='task' %}<span>Bài tập của tôi</span></a>
+                        {% endif %}
+                        {% if is_reporting_manager %}<a class="nav-link {% if request.resolver_match.url_name == 'course_list' or request.resolver_match.url_name == 'course_create' or request.resolver_match.url_name == 'course_update' %}active{% endif %}" href="{% url 'courses:course_list' %}">{% include 'core/icon.html' with name='book' %}<span>Danh mục khóa học</span></a>{% endif %}
+                    </div>
+                </details>
+            {% endif %}
+        </nav>
+        <div class="sidebar-note">© {% now 'Y' %} Mr Bean English Center<br><span>Hệ thống Quản trị & Vận hành</span></div>
+    </aside>
+    <button class="sidebar-shade" aria-label="Đóng điều hướng" tabindex="-1"></button>
+    <div class="main-shell">
+        <header class="topbar">
+            <div class="topbar-left">
+                <button class="menu-toggle" data-menu-toggle aria-expanded="false" aria-controls="sidebar" aria-label="Mở điều hướng">{% include 'core/icon.html' with name='menu' %}</button>
+                <div class="topbar-path">
+                    <small><span class="topbar-institution">TRUNG TÂM TIẾNG ANH MR BEAN</span><span class="topbar-brand-mobile">MR BEAN ENGLISH</span></small>
+                    <strong><span class="module-prefix">Phân hệ </span>{% if not user.is_authenticated or is_reporting_manager %}Quản trị & Vận hành{% elif user.role == 'teacher' %}Giáo viên & Chấm bài{% else %}Học viên & Luyện tập{% endif %}</strong>
+                </div>
             </div>
-        </details>
+            <div class="account-bar">
+                <a class="notification-button" href="{% url 'accounts:notification_list' %}" aria-label="Thông báo{% if unread_notifications %}: {{ unread_notifications }} chưa đọc{% endif %}">{% include 'core/icon.html' with name='bell' %}{% if unread_notifications %}<span class="badge-dot" aria-hidden="true"></span>{% endif %}</a>
+                <details class="account-menu">
+                    <summary class="user-dropdown-btn" aria-label="{% if user.is_authenticated %}Tài khoản {{ user.display_name }}{% else %}Mở menu tài khoản{% endif %}">
+                        <span class="avatar" aria-hidden="true">{% if user.is_authenticated %}{{ user.username|first|upper }}{% endif %}</span>
+                        {% if user.is_authenticated %}<span class="account-copy"><strong>{{ user.display_name }}</strong><small>{{ user.get_role_display }}</small></span>{% endif %}
+                        {% include 'core/icon.html' with name='chevron' %}
+                    </summary>
+                    <div class="account-dropdown">
+                        {% if user.is_authenticated %}
+                        <div><small>Đang đăng nhập:</small><strong>@{{ user.username }}</strong></div>
+                        <a href="{% url 'accounts:profile' %}">{% include 'core/icon.html' with name='profile' %}Hồ sơ của tôi</a>
+                        <a href="{% url 'accounts:password_change' %}">{% include 'core/icon.html' with name='key' %}Đổi mật khẩu</a>
+                        <a href="{% url 'accounts:notification_list' %}">{% include 'core/icon.html' with name='bell' %}Thông báo</a>
+                        <form method="post" action="{% url 'accounts:logout' %}">{% csrf_token %}<button class="logout" type="submit">{% include 'core/icon.html' with name='logout' %}Đăng xuất</button></form>
+                        {% else %}<a href="{% url 'accounts:login' %}">{% include 'core/icon.html' with name='logout' %}Đăng nhập hệ thống</a>{% endif %}
+                    </div>
+                </details>
+            </div>
+        </header>
+        <div class="messages-slot" aria-live="polite">{% if messages %}{% for message in messages %}<div class="alert {{ message.tags }} flash-alert"><span class="flash-message">{% include 'core/icon.html' with name='info' %}{{ message }}</span><button type="button" class="alert-close" data-dismiss-alert aria-label="Đóng thông báo">{% include 'core/icon.html' with name='close' %}</button></div>{% endfor %}{% endif %}</div>
+        <main id="main-content" class="page">{% if user.is_authenticated %}{% block content %}{% endblock %}{% else %}{% block anonymous_content %}{% endblock %}{% endif %}</main>
     </div>
-</header>
-<main id="main-content" class="page">{% if messages %}<div class="message-list" role="status">{% for message in messages %}<div class="alert {{ message.tags }}">{{ message }}</div>{% endfor %}</div>{% endif %}{% block content %}{% endblock %}<footer class="footer"><span>© {% now 'Y' %} Mr Bean English Center</span><span>Hệ thống quản lý bài tập & chấm điểm AI</span></footer></main></div></div>
-{% else %}<main id="main-content">{% block anonymous_content %}{% endblock %}</main>{% endif %}<script src="{% static 'core/app.js' %}" defer></script>{% block extra_js %}{% endblock %}</body></html>
+</div>
+<script src="{% static 'core/app.js' %}" defer></script>{% block extra_js %}{% endblock %}
+</body>
+</html>
