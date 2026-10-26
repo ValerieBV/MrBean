@@ -1,0 +1,69 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Học tập{% endblock %} · Mr Bean English</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family:'Roboto',sans-serif; background:#f5f6f8; }
+        h1,h2,h3,.font-title { font-family:'Montserrat',sans-serif; }
+        .tab-active { color:#fff; background:#c0392b; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+    
+    <div class="text-white text-sm" style="background:#1f3a93">
+        <div class="max-w-6xl mx-auto px-4 py-2 flex items-center justify-between flex-wrap gap-y-1">
+            <div class="flex items-center space-x-2 flex-wrap">
+                <i class="fa-solid fa-graduation-cap text-amber-300"></i>
+                <span class="font-semibold">MR BEAN ENGLISH</span>
+                {% if student_info %}
+                <span class="opacity-80 hidden md:inline">·</span>
+                <span class="opacity-90 hidden md:inline">{{ student_info.chung_chi }} · {{ student_info.khoa }} · {{ student_info.co_so }} · {{ student_info.ma_hv }} · {{ student_info.ho_ten }}</span>
+                {% endif %}
+            </div>
+            <div class="flex items-center space-x-3">
+                <a href="{% url 'submissions:dashboard' %}" class="hover:underline"><i class="fa-regular fa-user"></i> {{ student_info.ho_ten }}</a>
+                <a href="{% url 'logout' %}" onclick="event.preventDefault();document.getElementById('lf').submit();" class="hover:underline"><i class="fa-solid fa-right-from-bracket"></i> Thoát</a>
+                <form id="lf" method="post" action="{% url 'logout' %}" class="hidden">{% csrf_token %}</form>
+            </div>
+        </div>
+    </div>
+
+    {% if current_class %}
+    <div class="bg-white border-b">
+        <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+            <h1 class="text-lg md:text-xl font-bold font-title" style="color:#1f7a3d">
+                [{{ current_class.cert }}] {{ current_class.name }} <span class="text-gray-400 font-normal">[{{ current_class.code }}]</span>
+            </h1>
+            <a href="{% url 'submissions:dashboard' %}" class="text-xs text-gray-500 hover:text-amber-700"><i class="fa-solid fa-angle-left"></i> Đổi lớp</a>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if current_class %}
+    <div class="shadow" style="background:#e74c3c">
+        <div class="max-w-6xl mx-auto px-4 flex items-center space-x-1 text-sm font-semibold text-white/90">
+            <a href="{% url 'submissions:student_home' %}" class="px-4 py-3 hover:bg-black/10"><i class="fa-solid fa-house"></i></a>
+            <a href="{% url 'submissions:student_skill' 'listening' %}" class="px-4 py-3 hover:bg-black/10 {% block tab_listening %}{% endblock %}">LISTENING</a>
+            <a href="{% url 'submissions:student_skill' 'speaking' %}" class="px-4 py-3 hover:bg-black/10 {% block tab_speaking %}{% endblock %}">SPEAKING</a>
+            <a href="{% url 'submissions:student_skill' 'vocabulary' %}" class="px-4 py-3 hover:bg-black/10 {% block tab_vocabulary %}{% endblock %}">VOCABULARY</a>
+        </div>
+    </div>
+    {% endif %}
+
+    <main class="flex-1 max-w-6xl mx-auto w-full px-4 py-6">
+        {% if messages %}
+            {% for m in messages %}
+            <div class="mb-4 px-4 py-3 rounded-lg text-sm {% if m.tags == 'error' %}bg-red-100 text-red-700{% else %}bg-green-100 text-green-700{% endif %}">{{ m }}</div>
+            {% endfor %}
+        {% endif %}
+        {% block content %}{% endblock %}
+    </main>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,36 @@
+{% extends 'base_student.html' %}
+{% block title %}Lớp học của tôi{% endblock %}
+{% block content %}
+<div class="bg-white rounded-xl shadow-sm border p-5 mb-6">
+    <div class="flex items-center space-x-4">
+        <div class="w-14 h-14 rounded-full grid place-items-center text-white text-xl font-bold" style="background:#1f3a93">
+            {{ student_info.ho_ten|slice:":1"|upper }}
+        </div>
+        <div>
+            <h2 class="text-xl font-bold text-gray-800 font-title">Chào mừng quay trở lại, {{ student_info.ho_ten }}! 👋</h2>
+            <p class="text-sm text-gray-500">
+                Mã học viên: <b>{{ student_info.ma_hv }}</b> ·
+                {{ student_info.chung_chi }} · {{ student_info.khoa }} · {{ student_info.co_so }}
+            </p>
+        </div>
+    </div>
+</div>
+
+<h3 class="text-lg font-bold mb-1 font-title" style="color:#d35400">Các lớp đã được ghi danh</h3>
+<p class="text-sm text-gray-500 mb-4">Chọn lớp để vào làm bài tập về nhà.</p>
+
+<div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+    {% for cls in classes %}
+    <a href="{% url 'submissions:enter_class' cls.code %}" class="bg-white rounded-xl shadow-sm border overflow-hidden hover:shadow-md transition block">
+        <div class="h-28 grid place-items-center text-white text-3xl" style="background:{{ cls.color }}">
+            <i class="fa-solid fa-book-open-reader"></i>
+        </div>
+        <div class="p-4">
+            <div class="font-semibold text-gray-800">[{{ cls.code }}] {{ cls.name }}</div>
+            <div class="text-xs text-gray-500 mt-1">{{ cls.term }}</div>
+            <div class="mt-3 text-sm font-semibold" style="color:#d97736">Vào học <i class="fa-solid fa-angle-right"></i></div>
+        </div>
+    </a>
+    {% endfor %}
+</div>
+{% endblock %}

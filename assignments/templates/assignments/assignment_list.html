@@ -1,0 +1,37 @@
+{% extends 'base_admin.html' %}
+{% block title %}Ngân hàng bài tập{% endblock %}
+{% block nav_bank %}active-menu{% endblock %}
+{% block content %}
+<div class="mb-8">
+    <h2 class="text-2xl md:text-3xl font-bold text-gray-900 mb-1 tracking-tight">NGÂN HÀNG BÀI TẬP</h2>
+    <p class="text-gray-600 text-sm">Quản lý bài tập theo 3 kỹ năng, mỗi kỹ năng chia theo từng Buổi.</p>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+    {% for c in cards %}
+    <div class="bg-white rounded-xl p-6 shadow-sm border border-amber-900/5 flex flex-col justify-between hover:shadow-md transition">
+        <div>
+            <div class="flex items-center space-x-3 mb-3">
+                <span class="w-10 h-10 rounded-lg btn-brand text-white grid place-items-center">
+                    {% if c.skill == 'listening' %}<i class="fa-solid fa-headphones"></i>
+                    {% elif c.skill == 'speaking' %}<i class="fa-solid fa-microphone"></i>
+                    {% else %}<i class="fa-solid fa-book"></i>{% endif %}
+                </span>
+                <h3 class="text-xl font-bold text-amber-800 font-title">{{ c.label }}</h3>
+            </div>
+            <p class="text-gray-600 text-sm leading-relaxed mb-6">
+                {% if c.skill == 'listening' %}Bài nghe part 1-2 (ABCD) &amp; part 3-4 (điền đáp án).
+                {% elif c.skill == 'speaking' %}Luyện nói theo video YouTube, học viên ghi âm lại.
+                {% else %}Kho từ vựng theo buổi, học viên xem và đánh dấu hoàn thành.{% endif %}
+            </p>
+        </div>
+        <div class="flex items-center justify-between pt-4 border-t border-gray-100">
+            <span class="text-sm font-medium text-gray-700">Tổng: <b>{{ c.count }}</b> buổi</span>
+            <a href="{% url 'skill_lessons' c.skill %}" class="text-amber-700 hover:text-amber-900 font-semibold text-sm flex items-center space-x-1">
+                <span>Truy cập</span><i class="fa-solid fa-angle-right text-xs"></i>
+            </a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

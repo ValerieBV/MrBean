@@ -1,0 +1,99 @@
+{% extends 'base_student.html' %}
+{% block title %}{{ lesson.title }}{% endblock %}
+{% block tab_listening %}tab-active{% endblock %}
+{% block content %}
+<div class="mb-4">
+    <a href="{% url 'submissions:student_skill' 'listening' %}" class="text-amber-700 text-sm hover:underline"><i class="fa-solid fa-angle-left"></i> Listening</a>
+    <h2 class="text-xl font-bold text-gray-800 mt-1 font-title">Buổi {{ lesson.order }}: {{ lesson.title }}</h2>
+    <p class="text-gray-500 text-sm">{{ lesson.get_listening_type_display }}</p>
+</div>
+
+{% if lesson.audio_file %}
+<div class="bg-white rounded-xl shadow-sm border p-4 mb-5 sticky top-2 z-10">
+    <p class="text-sm font-medium mb-2"><i class="fa-solid fa-headphones" style="color:#2980b9"></i> Nghe audio:</p>
+    <audio controls src="{{ lesson.audio_file.url }}" class="w-full"></audio>
+</div>
+{% endif %}
+
+<form method="post" action="{% url 'submissions:submit_lesson' lesson.pk %}" id="work-form">
+    {% csrf_token %}
+    <div class="space-y-4">
+        {% for q in lesson.questions.all %}
+        <div class="bg-white rounded-xl shadow-sm border p-5">
+            <p class="font-semibold text-gray-800 mb-2">Câu {{ q.order }}. {{ q.question_text }}</p>
+            {% if q.image %}<img src="{{ q.image.url }}" class="max-h-56 rounded border mb-3">{% endif %}
+
+            {% if lesson.listening_type == 'part12' %}
+                <div class="space-y-2">
+                    {% for opt in "ABCD" %}
+                    {% with letter=opt|stringformat:"s" %}
+                    <label class="flex items-center space-x-2 cursor-pointer">
+                        <input type="radio" name="q_{{ q.id }}_opt" value="{{ letter }}" class="ans-input" data-q="{{ q.id }}">
+                        <span class="font-medium">{{ letter }}.</span>
+                        <span>{% if letter == 'A' %}{{ q.option_a }}{% elif letter == 'B' %}{{ q.option_b }}{% elif letter == 'C' %}{{ q.option_c }}{% else %}{{ q.option_d }}{% endif %}</span>
+                    </label>
+                    {% endwith %}
+                    {% endfor %}
+                </div>
+            {% else %}
+                <input type="text" name="q_{{ q.id }}_fill" placeholder="Nhập đáp án..." class="ans-input w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-amber-500" data-q="{{ q.id }}">
+            {% endif %}
+        </div>
+        {% empty %}
+        <p class="text-gray-400">Buổi này chưa có câu hỏi.</p>
+        {% endfor %}
+    </div>
+
+    <div class="mt-5 flex items-center space-x-4">
+        <button type="submit" class="text-white px-6 py-3 rounded-lg font-semibold" style="background:#2980b9"><i class="fa-solid fa-paper-plane"></i> Nộp bài</button>
+        <span id="save-status" class="text-xs text-gray-400"><i class="fa-solid fa-cloud"></i> Tự động lưu đã bật</span>
+    </div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const LESSON_ID = {{ lesson.pk }};
+const LS_KEY = 'mrbean_lesson_' + LESSON_ID;
+const draftServer = {{ draft|default:"{}"|safe }};
+const status = document.getElementById('save-status');
+
+function restore() {
+    let data = {};
+    try { data = JSON.parse(localStorage.getItem(LS_KEY)) || {}; } catch(e){}
+    if (Object.keys(data).length === 0) data = draftServer || {};
+    document.querySelectorAll('.ans-input').forEach(inp => {
+        const key = inp.name;
+        if (data[key] === undefined) return;
+        if (inp.type === 'radio') { if (inp.value === data[key]) inp.checked = true; }
+        else inp.value = data[key];
+    });
+}
+function collect() {
+    const data = {};
+    document.querySelectorAll('.ans-input').forEach(inp => {
+        if (inp.type === 'radio') { if (inp.checked) data[inp.name] = inp.value; }
+        else if (inp.value) data[inp.name] = inp.value;
+    });
+    return data;
+}
+let timer = null;
+function save() {
+    const data = collect();
+    localStorage.setItem(LS_KEY, JSON.stringify(data));
+    status.textContent = 'Đang lưu...';
+    fetch(`/hoc-tap/lesson/${LESSON_ID}/autosave/`, {
+        method: 'POST',
+        headers: {'Content-Type':'application/json','X-CSRFToken':'{{ csrf_token }}'},
+        body: JSON.stringify(data)
+    }).then(r=>r.json()).then(d=>{ if(d.ok) status.textContent='Đã lưu lúc '+d.saved_at; })
+      .catch(()=>{ status.textContent='Mất mạng — đã lưu tạm trên máy'; });
+}
+document.querySelectorAll('.ans-input').forEach(inp => inp.addEventListener('input', () => {
+    clearTimeout(timer); timer = setTimeout(save, 1200);
+}));
+setInterval(save, 30000);
+document.getElementById('work-form').addEventListener('submit', () => localStorage.removeItem(LS_KEY));
+restore();
+</script>
+{% endblock %}
