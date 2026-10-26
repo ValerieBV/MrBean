@@ -1,1 +1,20 @@
-{% extends 'base.html' %}{% block title %}Đăng nhập · Mr Bean{% endblock %}{% block anonymous_content %}<div class="auth-page"><section class="auth-story"><a class="brand" href="{% url 'accounts:login' %}"><span class="brand-mark">mb</span><span>Mr Bean<small>LEARNING SPACE</small></span></a><div class="eyebrow">MỖI NGÀY MỘT BƯỚC TIẾN</div><h1>Học hôm nay.<br>Tự tin ngày mai.</h1><p>Một không gian để kết nối lớp học, luyện tập và theo dõi từng bước tiến bộ của bạn.</p><div class="auth-tag">Listening &nbsp; · &nbsp; Speaking &nbsp; · &nbsp; Vocabulary</div></section><section class="auth-form"><div class="auth-box"><div class="eyebrow">CHÀO MỪNG TRỞ LẠI</div><h2>Đăng nhập tài khoản</h2><p>Tiếp tục hành trình học tập cùng Mr Bean.</p>{% if messages %}{% for message in messages %}<div class="alert {{ message.tags }}">{{ message }}</div>{% endfor %}{% endif %}<form method="post">{% csrf_token %}<input type="hidden" name="next" value="{{ next }}">{% include 'core/fields.html' %}<div class="form-actions"><button class="btn" type="submit">Đăng nhập →</button></div></form><div class="auth-footer">Chưa có tài khoản hoặc quên mật khẩu?<br>Liên hệ quản trị viên trung tâm để được hỗ trợ.</div></div></section></div>{% endblock %}
+{% extends 'base.html' %}
+{% block title %}Đăng nhập · MR BEAN ENGLISH{% endblock %}
+{% block anonymous_content %}
+<div class="auth-page">
+    <section class="auth-box" aria-labelledby="login-title">
+        <div class="auth-brand">
+            <div class="auth-emblem">{% include 'core/icon.html' with name='cap' %}</div>
+            <h1 id="login-title">MR BEAN ENGLISH</h1>
+            <p>Hệ thống quản lý bài tập & chấm điểm AI</p>
+        </div>
+        {% if messages %}{% for message in messages %}<div class="alert {{ message.tags }}">{{ message }}</div>{% endfor %}{% endif %}
+        <form method="post">
+            {% csrf_token %}<input type="hidden" name="next" value="{{ next }}">
+            {% include 'core/fields.html' %}
+            <div class="form-actions"><button class="btn" type="submit">{% include 'core/icon.html' with name='logout' %}Đăng nhập →</button></div>
+        </form>
+        <p class="auth-footer">Chưa có tài khoản hoặc quên mật khẩu?<br>Liên hệ <strong>quản trị viên trung tâm</strong> để được hỗ trợ.</p>
+    </section>
+</div>
+{% endblock %}

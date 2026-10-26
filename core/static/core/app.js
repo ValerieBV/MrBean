@@ -14,7 +14,7 @@ document.addEventListener('keydown',event=>{
   else if(!event.shiftKey&&document.activeElement===items.at(-1)){event.preventDefault();items[0].focus();}
  }
 });
-window.matchMedia('(min-width:801px)').addEventListener('change',event=>{if(event.matches)closeMenu();});
+window.matchMedia('(min-width:992px)').addEventListener('change',event=>{if(event.matches)closeMenu();});
 for(const box of document.querySelectorAll('.table-wrap,.report-scroll')){
  box.setAttribute('role','region');box.setAttribute('aria-label','Bảng dữ liệu, có thể cuộn ngang');
  const update=()=>{if(box.scrollWidth>box.clientWidth+1)box.setAttribute('tabindex','0');else box.removeAttribute('tabindex');};
@@ -25,3 +25,7 @@ if(skillSelect){
  const toggleFields=()=>{for(const [name,skill]of Object.entries({listening_type:'listening',audio_file:'listening',video_file:'speaking',youtube_url:'speaking',reference_transcript:'speaking'})){const box=document.querySelector('[data-field="'+name+'"]');if(box)box.hidden=skillSelect.value!==skill&&!box.dataset.hasErrors;}};
  skillSelect.addEventListener('change',toggleFields);toggleFields();
 }
+// The account menu follows the reference topbar and also works without Bootstrap JS.
+const accountMenu=document.querySelector('.account-menu');
+document.addEventListener('click',event=>{if(accountMenu?.open&&!accountMenu.contains(event.target))accountMenu.open=false;});
+document.addEventListener('keydown',event=>{if(event.key==='Escape'&&accountMenu?.open){accountMenu.open=false;accountMenu.querySelector('summary').focus();}});

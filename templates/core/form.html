@@ -1,1 +1,11 @@
-{% extends 'base.html' %}{% block title %}{{ title }} · Mr Bean{% endblock %}{% block content %}<div class="page-header"><div><div class="eyebrow">THÔNG TIN HỆ THỐNG</div><h1>{{ title }}</h1><p>Điền đầy đủ thông tin và kiểm tra trước khi lưu.</p></div></div><section class="panel form-panel"><form method="post" enctype="multipart/form-data">{% csrf_token %}{% include 'core/fields.html' %}<div class="form-actions"><button type="submit" class="btn">Lưu thay đổi</button><a class="btn secondary" href="{{ back_url }}">Quay lại</a></div></form></section>{% endblock %}
+{% extends 'base.html' %}
+{% block title %}{{ title }} · MR BEAN ENGLISH{% endblock %}
+{% block content %}
+<section class="panel form-panel">
+    <header class="form-heading"><h1>{% include 'core/icon.html' with name='edit' %}{{ title }}</h1><p>Điền đầy đủ thông tin và kiểm tra trước khi lưu.</p></header>
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}{% include 'core/fields.html' %}
+        <div class="form-actions"><a class="btn outline" href="{{ back_url }}">← Quay lại</a><button type="submit" class="btn">Lưu thay đổi</button></div>
+    </form>
+</section>
+{% endblock %}
