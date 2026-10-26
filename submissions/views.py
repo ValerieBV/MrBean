@@ -87,6 +87,7 @@ def do_task(request, task_id):
 
 @login_required
 def result(request, job_id):
+    from ai_core.reporting import report_job
     job = get_object_or_404(GradingJob.objects.select_related('task__learner','task__assignment__classroom').filter(
         task__in=tasks_for(request.user)), pk=job_id)
     can_review = (request.user.is_superuser or request.user.role in ('admin','teacher')) and job.status in ('manual','ai_reviewed')
@@ -96,7 +97,7 @@ def result(request, job_id):
     questions = {q['id']:q for q in job.rubric_snapshot.get('questions',[])}
     listening_details = [{**row,'question_text':questions.get(row.get('question_id'),{}).get('question_text','')}
         for row in job.result.get('details',[]) if isinstance(row,dict)] if job.kind=='listening' else []
-    return render(request, 'submissions/result.html', {'job': job, 'can_review': can_review,
+    return render(request, 'submissions/result.html', {'job': job, 'can_review': can_review, 'published':report_job(job),
         'reference_video_url':video_url, 'listening_details':listening_details})
 
 

@@ -13,7 +13,10 @@ from .permissions import staff_required, tasks_for, is_manager
 from .services import enqueue_submission
 
 
-def serialize(job):
+def serialize(job, *, include_ai=True):
+    if not include_ai:
+        from .reporting import report_job
+        return report_job(job)
     return {
         'id': job.pk, 'submission_key': job.submission_key, 'task_id': job.task_id,
         'learner_id': job.task.learner_id, 'learner_name': job.task.learner.get_full_name() or job.task.learner.username,
@@ -49,7 +52,7 @@ def submit(request, task_id=None):
             answers=answers, images=request.FILES.getlist('images'), reference_version=data.get('reference_version'))
     except (ValueError, TypeError, ValidationError) as exc:
         return JsonResponse({'error': 'invalid_submission', 'message': '; '.join(exc.messages) if isinstance(exc, ValidationError) else 'Dữ liệu không hợp lệ.'}, status=400)
-    return JsonResponse(serialize(job), status=201 if created else 200)
+    return JsonResponse(serialize(job, include_ai=False), status=201 if created else 200)
 
 
 @require_GET
@@ -57,7 +60,8 @@ def detail(request, job_id):
     if not request.user.is_authenticated:
         return JsonResponse({'error': 'authentication_required'}, status=401)
     job = get_object_or_404(GradingJob.objects.select_related('task__learner').filter(task__in=tasks_for(request.user)), pk=job_id)
-    response = JsonResponse(serialize(job))
+    include_ai = request.user.is_superuser or request.user.role in ('admin', 'teacher')
+    response = JsonResponse(serialize(job, include_ai=include_ai))
     response['Cache-Control'] = 'private, no-store'
     return response
 

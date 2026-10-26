@@ -1,1 +1,20 @@
-{% extends 'base.html' %}{% load static %}{% block title %}Bài tập và kết quả của tôi · Mr Bean{% endblock %}{% block page_class %}integration-content{% endblock %}{% block content %}<div class="page-header"><div><div class="eyebrow">KHÔNG GIAN HỌC VIÊN</div><h1>Bài tập và kết quả của tôi</h1><p>Chào {{ user.get_full_name|default:user.username }}, cùng xem hôm nay bạn cần hoàn thành những gì.</p></div><div class="actions"><a id="exportLink" class="btn export" href="{% url 'dashboard:export' %}">↓ Tải kết quả CSV</a><a class="btn" href="{% url 'submissions:student_home' %}">Vào luyện tập →</a></div></div>{% include 'dashboard/_filters.html' %}<section class="panel"><div class="panel-head"><div><h2>Bài tập được giao</h2><p>Bài sau mở khi bạn đã nộp hoặc được miễn các bài trước cùng kỹ năng. Chọn “Cả lịch sử” để xem bài của lớp đã kết thúc.</p></div><small id="exemptCount"></small></div><div class="table-wrap"><table><thead><tr><th>Bài tập</th><th>Lớp</th><th>Hạn nộp</th><th>Trạng thái</th><th>Điểm chính thức</th><th>Thao tác</th></tr></thead><tbody id="tasks"><tr><td colspan="6" class="empty">Đang tải bài tập của bạn…</td></tr></tbody></table></div><div id="tasksPager" class="pager"></div></section><section class="panel"><div class="panel-head"><div><h2>Lịch sử nộp và nhận xét</h2><p>Điểm AI là gợi ý. Điểm chính thức của bài đọc và từ vựng được công bố sau khi giáo viên xác nhận.</p></div><a href="{% url 'courses:exemption_list' %}" class="text-link">Đơn miễn bài của tôi →</a></div><div class="table-wrap"><table><thead><tr><th>Bài tập</th><th>Ngày nộp</th><th>Trạng thái</th><th>AI gợi ý /10</th><th>Điểm chính thức</th><th>Kết quả</th></tr></thead><tbody id="history"><tr><td colspan="6" class="empty">Đang tải lịch sử…</td></tr></tbody></table></div><div id="historyPager" class="pager"></div></section>{% endblock %}{% block extra_js %}<script src="{% static 'dashboard/reports.js' %}" defer></script>{% endblock %}
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Bài tập và kết quả của tôi · Mr Bean{% endblock %}
+{% block page_class %}integration-content{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div><div class="eyebrow">KHÔNG GIAN HỌC VIÊN</div><h1>Bài tập và kết quả của tôi</h1><p>Chào {{ user.get_full_name|default:user.username }}, cùng xem hôm nay bạn cần hoàn thành những gì.</p></div>
+    <div class="actions"><a id="exportLink" class="btn export" href="{% url 'dashboard:export' %}">↓ Tải kết quả CSV</a><a class="btn" href="{% url 'submissions:student_home' %}">Vào luyện tập →</a></div>
+</div>
+{% include 'dashboard/_filters.html' %}
+<section class="panel">
+    <div class="panel-head"><div><h2>Bài tập được giao</h2><p>Bài sau mở khi bạn đã nộp hoặc được miễn các bài trước cùng kỹ năng. Chọn “Cả lịch sử” để xem bài của lớp đã kết thúc.</p></div><small id="exemptCount"></small></div>
+    <div class="table-wrap"><table><thead><tr><th>Bài tập</th><th>Lớp</th><th>Hạn nộp</th><th>Trạng thái</th><th>Điểm cuối cùng</th><th>Thao tác</th></tr></thead><tbody id="tasks"><tr><td colspan="6" class="empty">Đang tải bài tập của bạn…</td></tr></tbody></table></div><div id="tasksPager" class="pager"></div>
+</section>
+<section class="panel">
+    <div class="panel-head"><div><h2>Lịch sử nộp và nhận xét</h2><p>Bài đọc và từ vựng hiển thị điểm sau khi giáo viên xác nhận. Bài nghe có điểm theo đáp án đã được giáo viên thiết lập.</p></div><a href="{% url 'courses:exemption_list' %}" class="text-link">Đơn miễn bài của tôi →</a></div>
+    <div class="table-wrap"><table><thead><tr><th>Bài tập</th><th>Ngày nộp</th><th>Trạng thái</th><th>Điểm cuối cùng</th><th>Kết quả</th></tr></thead><tbody id="history"><tr><td colspan="5" class="empty">Đang tải lịch sử…</td></tr></tbody></table></div><div id="historyPager" class="pager"></div>
+</section>
+{% endblock %}
+{% block extra_js %}<script src="{% static 'dashboard/reports.js' %}" defer></script>{% endblock %}

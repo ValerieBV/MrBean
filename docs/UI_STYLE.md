@@ -81,3 +81,17 @@ Một số màu chữ nhỏ của nguồn chưa đủ tương phản WCAG AA. Đ
 đúng mẫu, bộ màu tăng tương phản chỉ bật theo thiết lập hệ điều hành
 `prefers-contrast: more`; kiểm tra Axe trong workflow trình duyệt áp dụng rõ chế
 độ này. Ảnh so sánh và ảnh giao diện mặc định dùng `no-preference`.
+
+## Điểm trên dashboard và báo cáo
+
+Phần tổng quan quản lý/admin chỉ giữ tỷ lệ nộp và số bài chờ giáo viên; bỏ hai ô
+điểm theo ảnh yêu cầu. Giáo viên/học viên có một ô điểm cuối cùng, tính trung bình
+từ các điểm đã công bố. Số ô thay đổi theo vai trò và tự chia đều chiều rộng.
+
+Mọi bảng báo cáo, lịch sử nộp và CSV chỉ có điểm cuối cùng. Bài đang xử lý/chờ giáo
+viên không lấy điểm gợi ý thay thế. Nếu nộp lại, thống kê vẫn giữ điểm đã xác nhận
+gần nhất cho đến khi lần mới được chấm; lịch sử lần mới hiển thị chưa có điểm.
+
+API dashboard dùng danh sách trường công khai, không gửi điểm gợi ý hay kết quả
+thô của mô hình. Trang/API kết quả học viên chỉ công bố điểm và nhận xét chính thức.
+Quy trình AI nội bộ và quyền xác nhận điểm của giáo viên/admin vẫn được giữ nguyên.

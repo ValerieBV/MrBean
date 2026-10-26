@@ -6,7 +6,7 @@ from django.utils import timezone
 from django.utils.dateparse import parse_date
 from ai_core.models import GradingJob
 from ai_core.permissions import tasks_for, classes_for, is_manager
-from ai_core.views import serialize
+from ai_core.reporting import report_job
 from courses.models import Enrollment, ExemptionRequest
 from .models import LearningTask
 
@@ -46,7 +46,6 @@ def annotated_tasks(user, filters=None, now=None):
     tasks = filtered_tasks(user, filters or {}, now)
     latest = GradingJob.objects.filter(task_id=OuterRef('pk'), submitted_at__lte=now).order_by('-submitted_at','-pk')
     grade = latest.filter(status='graded')
-    ai = latest.filter(suggested_score__isnull=False)
     earlier = LearningTask.objects.filter(learner_id=OuterRef('learner_id'),
         assignment__classroom_id=OuterRef('assignment__classroom_id'), assignment__is_active=True,
         assignment__lesson__skill=OuterRef('assignment__lesson__skill'), assignment__lesson__program=OuterRef('assignment__lesson__program'),
@@ -55,7 +54,7 @@ def annotated_tasks(user, filters=None, now=None):
     return tasks.annotate(latest_status=Subquery(latest.values('status')[:1]),
         latest_job_id=Subquery(latest.values('pk')[:1]), latest_at=Subquery(latest.values('submitted_at')[:1]),
         confirmed_score=Subquery(grade.values('final_score')[:1]), confirmed_job_id=Subquery(grade.values('pk')[:1]),
-        ai_score=Subquery(ai.values('suggested_score')[:1]), earlier_unfinished=Exists(earlier),
+        earlier_unfinished=Exists(earlier),
         pending_exemption_id=Subquery(ExemptionRequest.objects.filter(assignment_id=OuterRef('assignment_id'),
             enrollment__student_id=OuterRef('learner_id'), status='pending').values('pk')[:1])).select_related(
         'learner', 'assignment__classroom', 'assignment__lesson', 'exemption').order_by('learner__username','pk')
@@ -78,7 +77,7 @@ def metrics_for(user, now=None, filters=None):
     now, filters = now or timezone.now(), filters or {}
     tasks = annotated_tasks(user, filters, now)
     eligible = tasks.filter(exemption__isnull=True)
-    totals = eligible.aggregate(average_score=Avg('confirmed_score'), average_ai_suggestion=Avg('ai_score'))
+    totals = eligible.aggregate(average_score=Avg('confirmed_score'))
     all_tasks = list(tasks)
     assigned = submitted = exempt = pending_exemptions = 0
     learners = {}
@@ -113,7 +112,7 @@ def metrics_for(user, now=None, filters=None):
         task_rows.append(dict(id=task.pk, title=task.title, learner_name=row['learner_name'],
             classroom=task.assignment.classroom.class_code if task.assignment_id else 'Bài cũ',
             skill=task.assignment.rubric.get('skill','') if task.assignment_id else '', due_at=task.due_at.isoformat(),
-            latest_status=state, final_score=task.confirmed_score, suggested_score=task.ai_score,
+            latest_status=state, final_score=task.confirmed_score,
             is_late=task.due_at < now and not done and not excused, blocked_reason=blocked,
             submit_url=f'/hoc-tap/tasks/{task.pk}/' if task.assignment_id else None,
             result_url=f'/hoc-tap/results/{task.latest_job_id}/' if task.latest_job_id else None))
@@ -142,8 +141,8 @@ def metrics_for(user, now=None, filters=None):
         'class_count':classes_for(user).count(), 'learner_count':len(learners),
         'learner_progress':list(progress_page), 'progress_pagination':progress_meta,
         'tasks':list(task_page), 'tasks_pagination':task_meta,
-        'graded_report':[serialize(j) for j in graded_page], 'graded_count':grade_meta['total'], 'grades_pagination':grade_meta,
-        'history':[serialize(j) for j in history_page], 'history_pagination':history_meta,
-        'review_queue':[serialize(j) for j in queue_page] if staff else [],
+        'graded_report':[report_job(j) for j in graded_page], 'graded_count':grade_meta['total'], 'grades_pagination':grade_meta,
+        'history':[report_job(j) for j in history_page], 'history_pagination':history_meta,
+        'review_queue':[report_job(j) for j in queue_page] if staff else [],
         'review_queue_count':queue_meta['total'] if staff else 0, 'queue_pagination':queue_meta,
         'at_risk_learners':risks}

@@ -111,14 +111,17 @@ AI thành công → **AI đã nhận xét** và thông báo cho giáo viên. AI 
 ảnh/transcript không chắc chắn hoặc quá 300 giây → **Chờ giáo viên**. Watchdog chạy
 độc lập với worker, kiểm tra mỗi giây; kết quả AI trả muộn không ghi đè trạng thái đã xử lý.
 
-Giáo viên mở **Tổng quan → Bài cần chấm và duyệt AI**, nghe bản ghi/xem ảnh, đối chiếu
+Giáo viên mở **Tổng quan → Bài chờ chấm điểm**, nghe bản ghi/xem ảnh, đối chiếu
 lời mẫu và transcript, nhập điểm 0–10 cùng nhận xét, bấm **Xác nhận điểm**.
 Chỉ giáo viên lớp hiện tại hoặc admin được xác nhận; quản lý chỉ theo dõi.
 Điểm không được xác nhận hai lần trên cùng lần nộp.
 
-Học viên nhận thông báo nội bộ có liên kết đến kết quả. Kết quả lưu điểm AI tham khảo,
-điểm chính thức, nhận xét, chứng cứ và đề đã dùng. File được tải qua endpoint kiểm tra
-quyền; không mở công khai thư mục media.
+Học viên nhận thông báo nội bộ có liên kết đến kết quả. Báo cáo/dashboard và file CSV
+chỉ hiển thị điểm cuối cùng; học viên xem điểm và nhận xét đã được giáo viên xác nhận.
+Điểm gợi ý và nhận xét tự động được lưu nội bộ để hỗ trợ giáo viên chấm, không công bố
+trong báo cáo hay API kết quả của học viên. Bài chưa được xác nhận hiển thị chờ chấm.
+Bài nghe tiếp tục có điểm cuối cùng theo đáp án giáo viên đã thiết lập.
+File chứng cứ được tải qua endpoint kiểm tra quyền; không mở công khai thư mục media.
 
 ## 5. Xin miễn và duyệt
 
