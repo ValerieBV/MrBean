@@ -14,6 +14,7 @@ from ai_core.models import GradingJob
 from .forms import MessageForm, ContactForm
 from .models import Conversation
 from .permissions import conversations_for, is_student
+from .readiness import require_support_tables
 from . import services
 
 
@@ -36,21 +37,31 @@ def own_job(request, pk):
 
 
 @login_required
+def knowledge_list(request):
+    # Learners enter knowledge Q&A from a published result, never a global chat.
+    if is_student(request.user):
+        return redirect('submissions:student_home')
+    return thread_list(request, Conversation.KNOWLEDGE)
+
+
+@login_required
+@require_support_tables
 def thread_list(request, kind):
-    rows=conversations_for(request.user).filter(kind=kind).annotate(message_count=Count('messages')).order_by('-updated_at','-pk')
+    rows=conversations_for(request.user).filter(kind=kind).order_by('-updated_at','-pk')
+    summary=rows.aggregate(total=Count('pk'), waiting=Count('pk',filter=Q(status=Conversation.WAITING)),
+        answered=Count('pk',filter=Q(status=Conversation.ANSWERED)),closed=Count('pk',filter=Q(status=Conversation.CLOSED)))
     status=request.GET.get('status','')
     query=request.GET.get('q','').strip()[:100]
     if status in dict(Conversation.STATUS_CHOICES):rows=rows.filter(status=status)
     if query:rows=rows.filter(Q(subject__icontains=query)|Q(student__username__icontains=query)|Q(student__first_name__icontains=query))
-    results=GradingJob.objects.filter(task__learner=request.user,status='graded').select_related('task').order_by('-submitted_at') if is_student(request.user) and kind==Conversation.KNOWLEDGE else []
-    result_page=Paginator(results,10).get_page(request.GET.get('results_page'))
     return private_render(request,'support/list.html',{'threads':Paginator(rows,20).get_page(request.GET.get('page')),
         'kind':kind,'status_filter':status,'query':query,'statuses':[c for c in Conversation.STATUS_CHOICES
-            if c[0]!='ai' or (kind==Conversation.KNOWLEDGE and is_student(request.user))],
-        'is_learner':is_student(request.user),'results':result_page,'support_is_contact':kind==Conversation.CONTACT})
+            if c[0]!='ai'], 'summary':summary,
+        'is_learner':is_student(request.user),'support_is_contact':kind==Conversation.CONTACT})
 
 
 @login_required
+@require_support_tables
 def start(request, job_id):
     learner_required(request)
     job=own_job(request,job_id)
@@ -69,6 +80,7 @@ def start(request, job_id):
 
 
 @login_required
+@require_support_tables
 def contact_new(request):
     learner_required(request)
     initial={}
@@ -107,6 +119,7 @@ def detail_context(request,thread,form=None):
 
 
 @login_required
+@require_support_tables
 def detail(request, pk):
     thread=get_object_or_404(conversations_for(request.user),pk=pk)
     return private_render(request,'support/detail.html',detail_context(request,thread))
@@ -114,6 +127,7 @@ def detail(request, pk):
 
 @login_required
 @require_POST
+@require_support_tables
 def reply(request, pk):
     thread=get_object_or_404(conversations_for(request.user),pk=pk)
     form=MessageForm(request.POST)
@@ -132,6 +146,7 @@ def reply(request, pk):
 
 @login_required
 @require_POST
+@require_support_tables
 def handoff(request, pk):
     learner_required(request)
     thread=get_object_or_404(conversations_for(request.user),pk=pk)
@@ -144,6 +159,7 @@ def handoff(request, pk):
 
 @login_required
 @require_POST
+@require_support_tables
 def retry(request, pk):
     learner_required(request)
     thread=get_object_or_404(conversations_for(request.user),pk=pk)
@@ -156,6 +172,7 @@ def retry(request, pk):
 
 @login_required
 @require_POST
+@require_support_tables
 def close(request, pk):
     thread=get_object_or_404(conversations_for(request.user),pk=pk)
     services.set_closed(thread,request.user,closed=request.POST.get('action')!='reopen')

@@ -316,11 +316,76 @@ class SupportTests(IntegratedFixture):
         self.assertEqual(self.client.get(reverse('support:contact_new')).status_code,403)
         self.assertEqual(self.client.get(reverse('support:start',args=[self.job.pk])).status_code,403)
 
-    def test_both_inboxes_render_for_each_role(self):
-        for user in [self.student,self.teacher,self.manager,self.admin]:
+    def test_staff_inboxes_render_and_student_uses_results_for_knowledge(self):
+        self.client.force_login(self.student)
+        self.assertRedirects(self.client.get(reverse('support:knowledge_list')),reverse('submissions:student_home'))
+        self.assertEqual(self.client.get(reverse('support:contact_list')).status_code,200)
+        for user in [self.teacher,self.manager,self.admin]:
             self.client.force_login(user)
             for name in ['knowledge_list','contact_list']:
                 self.assertEqual(self.client.get(reverse('support:'+name)).status_code,200)
+
+    def test_contact_filters_and_summary_are_scoped_to_the_recipient(self):
+        own=self.contact()
+        services.staff_message(own,self.manager,'Trung tâm đã ghi nhận lịch học.',uuid.uuid4())
+        self.contact(target=f'teacher:{self.classroom.pk}')
+        self.client.force_login(self.manager)
+        response=self.client.get(reverse('support:contact_list'),{'status':'waiting'})
+        self.assertEqual(response.context['summary'],{'total':1,'waiting':0,'answered':1,'closed':0})
+        self.assertEqual(response.context['threads'].paginator.count,0)
+        response=self.client.get(reverse('support:contact_list'),{'q':'kiểm tra lịch','status':'answered'})
+        self.assertEqual(list(response.context['threads']),[own])
+
+    def test_student_contact_inbox_has_no_link_to_global_ai_chat(self):
+        self.client.force_login(self.student)
+        response=self.client.get(reverse('support:contact_list'))
+        self.assertContains(response,'Tạo liên hệ mới')
+        self.assertNotContains(response,'href="'+reverse('support:knowledge_list')+'"')
+        response=self.client.get(self.thread.get_absolute_url())
+        self.assertContains(response,'href="'+reverse('submissions:result',args=[self.job.pk])+'">Quay lại kết quả bài tập')
+
+    def test_teacher_opens_escalated_questions_from_contact_inbox(self):
+        self.question();services.escalate(self.thread,self.student)
+        self.client.force_login(self.teacher)
+        response=self.client.get(reverse('support:contact_list'))
+        self.assertContains(response,'Câu hỏi từ bài tập')
+        response=self.client.get(reverse('support:knowledge_list'))
+        self.assertContains(response,self.thread.subject)
+        self.assertEqual(response.context['summary']['waiting'],1)
+
+    def test_missing_support_tables_show_role_appropriate_page_and_recover(self):
+        for user in [self.student,self.teacher,self.manager,self.admin]:
+            self.client.force_login(user)
+            with patch('support.readiness.support_schema_ready',return_value=False):
+                response=self.client.get(reverse('support:contact_list'))
+            self.assertContains(response,'CHỨC NĂNG HỖ TRỢ ĐANG ĐƯỢC CẬP NHẬT',status_code=503)
+            self.assertEqual(response['Cache-Control'],'private, no-store')
+            self.assertEqual(response['Retry-After'],'60')
+            if user==self.admin:self.assertContains(response,'python manage.py migrate',status_code=503)
+            else:self.assertNotContains(response,'manage.py',status_code=503)
+            # No cached failure: after migration the very next request works.
+            self.assertEqual(self.client.get(reverse('support:contact_list')).status_code,200)
+
+    def test_missing_tables_block_all_contact_writes_without_false_success(self):
+        self.client.force_login(self.student)
+        before=Conversation.objects.count()
+        with patch('support.readiness.support_schema_ready',return_value=False), patch('support.services.OpenAITutor') as api:
+            for name,kwargs in [('contact_new',{}),('start',{'job_id':self.job.pk}),
+                                ('reply',{'pk':self.thread.pk}),('handoff',{'pk':self.thread.pk}),
+                                ('retry',{'pk':self.thread.pk}),('close',{'pk':self.thread.pk})]:
+                response=self.client.post(reverse('support:'+name,kwargs=kwargs),{'body':'Nội dung cần được giữ lại.'})
+                self.assertContains(response,'Nội dung vừa gửi chưa được lưu',status_code=503)
+            api.assert_not_called()
+        self.assertEqual(Conversation.objects.count(),before)
+        self.assertFalse(Message.objects.exists())
+
+    def test_contact_form_explains_when_no_recipient_is_available(self):
+        from accounts.models import CustomUser
+        CustomUser.objects.exclude(pk=self.student.pk).update(is_active=False)
+        self.client.force_login(self.student)
+        response=self.client.get(reverse('support:contact_new'))
+        self.assertContains(response,'Hiện chưa có giáo viên hoặc quản lý hoạt động')
+        self.assertEqual(len(response.context['form'].fields['target'].choices),1)
 
     def test_django_admin_cannot_bypass_private_ai_history(self):
         self.admin.is_superuser=True;self.admin.save()

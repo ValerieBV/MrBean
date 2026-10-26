@@ -1,10 +1,28 @@
 {% extends 'base.html' %}{% load static %}
 {% block title %}Tạo liên hệ · Mr Bean{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'support/conversation.css' %}">{% endblock %}
 {% block page_class %}support-content{% endblock %}
 {% block content %}
-<div class="row justify-content-center"><div class="col-md-10 col-lg-7">
-    <div class="mb-4"><h1 class="page-title-h1">LIÊN HỆ & PHẢN ÁNH</h1><p class="small text-secondary">Chọn giáo viên phụ trách lớp hoặc quản lý. Nội dung được gửi trực tiếp cho người phụ trách và không chuyển sang AI.</p></div>
-    <div class="data-card-wrapper"><form method="post" data-support-form>{% csrf_token %}{% include 'core/bootstrap_fields.html' %}<div class="d-flex flex-wrap justify-content-between gap-2 mt-4"><a class="btn-action-edit" href="{% url 'support:contact_list' %}">Quay lại</a><button class="btn-cta-orange" type="submit">Gửi liên hệ</button></div><p class="small text-secondary mt-3 mb-0" data-support-status role="status"></p></form></div>
-</div></div>
+<div class="support-page-heading"><div><h1 class="page-title-h1">TẠO LIÊN HỆ MỚI</h1><p class="small text-secondary mb-0">Gửi thắc mắc hoặc phản ánh trực tiếp đến người phụ trách.</p></div><a class="btn-action-edit" href="{% url 'support:contact_list' %}"><i class="bi bi-arrow-left" aria-hidden="true"></i> Danh sách liên hệ</a></div>
+<div class="support-contact-layout">
+    <section class="data-card-wrapper">
+        <h2 class="section-title-h2 mb-3">NỘI DUNG LIÊN HỆ</h2>
+        {% if form.fields.target.choices|length == 1 %}<div class="alert alert-warning small" role="status">Hiện chưa có giáo viên hoặc quản lý hoạt động để tiếp nhận. Vui lòng liên hệ trực tiếp trung tâm để được hỗ trợ.</div>{% endif %}
+        <form method="post" data-support-form>{% csrf_token %}
+            {% include 'core/bootstrap_fields.html' %}
+            <div class="d-flex flex-wrap justify-content-between gap-2 mt-4"><a class="btn-action-edit" href="{% url 'support:contact_list' %}">Hủy</a><button class="btn-cta-orange" type="submit" {% if form.fields.target.choices|length == 1 %}disabled{% endif %}><i class="bi bi-send-fill" aria-hidden="true"></i>Gửi liên hệ</button></div>
+            <p class="small text-secondary mt-3 mb-0" data-support-status role="status"></p>
+        </form>
+    </section>
+    <aside class="data-card-wrapper support-contact-guide">
+        <div class="support-guide-icon"><i class="bi bi-person-lines-fill" aria-hidden="true"></i></div>
+        <h2 class="section-title-h2 mb-3">NGƯỜI TIẾP NHẬN</h2>
+        <p class="small"><strong>Giáo viên phụ trách:</strong> thắc mắc về kết quả, bài tập hoặc lịch học của lớp.</p>
+        <p class="small"><strong>Quản lý:</strong> vấn đề kỹ thuật, tổ chức lớp và các phản ánh cần trung tâm hỗ trợ.</p>
+        <hr>
+        <p class="small text-secondary">Nội dung được gửi trực tiếp cho người bạn chọn, không chuyển sang AI. Phản hồi được lưu trong cuộc trao đổi và có thông báo trên hệ thống.</p>
+        <p class="small text-secondary mb-0">Nếu chỉ cần giải thích kiến thức, hãy mở trang kết quả của bài tập và chọn “Hỏi AI về kiến thức bài này”.</p>
+    </aside>
+</div>
 {% endblock %}
 {% block extra_js %}<script src="{% static 'support/forms.js' %}" defer></script>{% endblock %}

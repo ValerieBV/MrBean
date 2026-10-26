@@ -85,10 +85,9 @@
                 </li>
                 {% endif %}
                 {% if user.is_authenticated %}
-                <li class="sidebar-menu-item {% if request.resolver_match.app_name == 'support' and not support_is_contact %}active{% endif %}"><a href="{% url 'support:knowledge_list' %}"><i class="bi bi-chat-dots-fill" aria-hidden="true"></i><span>{% if user.role == 'student' %}HỎI ĐÁP KIẾN THỨC{% else %}CÂU HỎI HỌC VIÊN{% endif %}</span></a></li>
-                <li class="sidebar-menu-item {% if request.resolver_match.app_name == 'support' and support_is_contact %}active{% endif %}"><a href="{% url 'support:contact_list' %}"><i class="bi bi-envelope-fill" aria-hidden="true"></i><span>LIÊN HỆ & PHẢN ÁNH</span></a></li>
+                <li class="sidebar-menu-item {% if request.resolver_match.app_name == 'support' %}{% if support_is_contact or user.role != 'student' %}active{% endif %}{% endif %}"><a href="{% url 'support:contact_list' %}"><i class="bi bi-envelope-fill" aria-hidden="true"></i><span>LIÊN HỆ & PHẢN ÁNH</span></a></li>
                 <li class="sidebar-menu-item integration-menu">
-                    <details {% if request.resolver_match.app_name == 'dashboard' or request.resolver_match.app_name == 'assignments' or request.resolver_match.app_name == 'submissions' or request.resolver_match.url_name == 'course_list' %}open{% endif %}>
+                    <details {% if request.resolver_match.app_name == 'dashboard' or request.resolver_match.app_name == 'assignments' or request.resolver_match.app_name == 'submissions' or request.resolver_match.url_name == 'course_list' %}open{% elif user.role == 'student' and request.resolver_match.app_name == 'support' and not support_is_contact %}open{% endif %}>
                         <summary><i aria-hidden="true" class="bi bi-grid-fill"></i><span>BÀI TẬP & BÁO CÁO</span></summary>
                         <ul>
                             <li class="sidebar-menu-item {% if request.resolver_match.app_name == 'dashboard' %}active{% endif %}"><a href="{% url 'dashboard:index' %}"><i aria-hidden="true" class="bi bi-bar-chart-fill"></i><span>BÁO CÁO HỌC TẬP</span></a></li>
@@ -96,7 +95,7 @@
                             <li class="sidebar-menu-item {% if request.resolver_match.app_name == 'assignments' and request.resolver_match.url_name != 'assigned_list' and request.resolver_match.url_name != 'assigned_detail' and request.resolver_match.url_name != 'assigned_update' and request.resolver_match.url_name != 'assign' and request.resolver_match.url_name != 'reading_reference' %}active{% endif %}"><a href="{% url 'assignments:assignment_list' %}"><i aria-hidden="true" class="bi bi-journal-text"></i><span>NGÂN HÀNG BÀI TẬP</span></a></li>
                             <li class="sidebar-menu-item {% if request.resolver_match.url_name == 'assigned_list' %}active{% endif %}"><a href="{% url 'assignments:assigned_list' %}"><i aria-hidden="true" class="bi bi-list-task"></i><span>BÀI TẬP ĐÃ GIAO</span></a></li>
                             {% else %}
-                            <li class="sidebar-menu-item {% if request.resolver_match.app_name == 'submissions' %}active{% endif %}"><a href="{% url 'submissions:student_home' %}"><i aria-hidden="true" class="bi bi-pencil-square"></i><span>BÀI TẬP CỦA TÔI</span></a></li>
+                            <li class="sidebar-menu-item {% if request.resolver_match.app_name == 'submissions' %}active{% elif user.role == 'student' and request.resolver_match.app_name == 'support' and not support_is_contact %}active{% endif %}"><a href="{% url 'submissions:student_home' %}"><i aria-hidden="true" class="bi bi-pencil-square"></i><span>BÀI TẬP CỦA TÔI</span></a></li>
                             <li class="sidebar-menu-item {% if request.resolver_match.url_name == 'exemption_list' %}active{% endif %}"><a href="{% url 'courses:exemption_list' %}"><i aria-hidden="true" class="bi bi-shield-check"></i><span>ĐƠN XIN MIỄN CỦA TÔI</span></a></li>
                             {% endif %}
                             {% if is_reporting_manager %}

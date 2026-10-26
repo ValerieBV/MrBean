@@ -1,0 +1,14 @@
+{% extends 'base.html' %}{% load static %}
+{% block title %}Đang cập nhật hỗ trợ · Mr Bean{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'support/conversation.css' %}">{% endblock %}
+{% block page_class %}support-content{% endblock %}
+{% block content %}
+<section class="data-card-wrapper support-unavailable">
+    <div class="support-guide-icon"><i class="bi bi-tools" aria-hidden="true"></i></div>
+    <h1 class="page-title-h1">CHỨC NĂNG HỖ TRỢ ĐANG ĐƯỢC CẬP NHẬT</h1>
+    <p class="text-secondary">Hiện chưa thể tiếp nhận trao đổi mới. Bạn vẫn có thể xem lớp học, làm bài và xem kết quả. Vui lòng quay lại sau hoặc liên hệ trực tiếp trung tâm nếu cần hỗ trợ ngay.</p>
+    {% if request.method == 'POST' %}<p class="alert alert-warning small">Nội dung vừa gửi chưa được lưu. Vui lòng giữ lại nội dung để gửi lại khi chức năng hoạt động.</p>{% endif %}
+    {% if can_configure_support %}<div class="support-note d-block text-start"><strong>Dành cho người vận hành hệ thống</strong><p class="small mt-2 mb-2">Database chưa có đủ bảng hội thoại. Trong môi trường ảo của dự án trên nhánh hiện tại, chạy lệnh sau rồi tải lại trang:</p><pre class="mb-0"><code>python manage.py migrate</code></pre></div>{% endif %}
+    <div class="d-flex justify-content-center flex-wrap gap-3 mt-4"><a class="btn-cta-orange" href="{% url 'courses:class_list' %}">Về lớp học</a><a class="btn-action-edit" href="{% url 'dashboard:index' %}">Xem báo cáo học tập</a></div>
+</section>
+{% endblock %}

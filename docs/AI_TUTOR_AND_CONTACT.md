@@ -3,6 +3,8 @@
 ## Học viên
 
 Sau khi bài đã có kết quả, mở trang kết quả và chọn **Hỏi AI về kiến thức bài này**.
+Hỏi đáp không có mục riêng trên thanh bên. Muốn mở lại cuộc trao đổi, quay lại
+kết quả của đúng bài tập và chọn nút hỏi AI; lịch sử đã có được giữ nguyên.
 AI giải thích từ vựng, ngữ pháp, cách hiểu nội dung đọc/nghe dựa trên bài đã chấm
 và nhận xét giáo viên. Mỗi lần nộp có một cuộc hỏi đáp riêng; vào lại sẽ giữ lịch sử.
 Điểm công bố không thay đổi vì cuộc hỏi đáp.
@@ -24,8 +26,9 @@ hướng dẫn liên hệ quản lý thay vì gửi cho một giáo viên không
 
 ## Giáo viên, quản lý và admin
 
-- Giáo viên mở **Câu hỏi học viên** để xem câu học viên đã chuyển cho mình; nhập
-  phản hồi trong cuộc trao đổi. Nội dung AI có nhãn riêng, không phải lời giáo viên.
+- Giáo viên mở **Liên hệ & phản ánh**, chọn **Câu hỏi từ bài tập** để xem câu học
+  viên đã chuyển cho mình; nhập phản hồi trong cuộc trao đổi. Nội dung AI có nhãn
+  riêng, không phải lời giáo viên.
 - **Liên hệ & phản ánh** hiển thị tin được gửi trực tiếp tới người đang đăng nhập.
   Quản lý không đọc các cuộc AI riêng tư hoặc liên hệ gửi giáo viên khác.
 - Admin được hỗ trợ các cuộc đã chuyển người phụ trách và liên hệ trực tiếp.
@@ -75,6 +78,14 @@ Khởi động lại web server. Các worker chấm bài/watchdog hiện tại t
 cũ. Không cần thêm thư viện ngoài requirements hiện có. Migration `support.0001`
 chỉ thêm ba bảng cuộc trao đổi, tin nhắn và lượt hỏi AI; không sửa dữ liệu điểm cũ.
 `.env` được bỏ qua trong Git; không đưa key vào mã nguồn hoặc nội dung hỏi đáp.
+
+Nếu database của phiên bản cũ chưa có `support_conversation` (hoặc các bảng hỗ trợ
+khác), mở mục liên hệ trước khi migrate có thể gây lỗi thiếu bảng. Chạy
+`python manage.py migrate` trong đúng môi trường và database đang dùng, rồi tải
+lại trang. Không xóa database và không cần chạy makemigrations. Phiên bản hiện
+tại hiển thị thông báo tạm ngừng phù hợp với từng vai trò thay cho trang lỗi;
+trang tự hoạt động ở yêu cầu tiếp theo sau migration, không tự thay đổi schema
+khi người dùng truy cập. Người học không thấy lệnh hay thông tin database.
 
 ## Kiểm thử
 

@@ -29,7 +29,8 @@ class ContactForm(MessageForm):
     subject = forms.CharField(label='Tiêu đề', min_length=3, max_length=180)
     category = forms.ChoiceField(label='Nội dung cần liên hệ', choices=[c for c in Conversation.CATEGORY_CHOICES if c[0]!='knowledge'])
     target = forms.ChoiceField(label='Gửi đến')
-    job = forms.ModelChoiceField(label='Kết quả liên quan (nếu có)', required=False, queryset=GradingJob.objects.none())
+    job = forms.ModelChoiceField(label='Kết quả liên quan (nếu có)', required=False,
+                                 empty_label='Không đính kèm kết quả', queryset=GradingJob.objects.none())
 
     def __init__(self, *args, student, **kwargs):
         super().__init__(*args, **kwargs)
@@ -40,6 +41,10 @@ class ContactForm(MessageForm):
         choices += [(f'management:{u.pk}', f'{u.get_role_display()} — {u.display_name}') for u in
                     CustomUser.objects.filter(Q(role__in=['admin','manager'])|Q(is_superuser=True), is_active=True).order_by('username')]
         self.fields['target'].choices = choices
+        self.fields['subject'].widget.attrs['placeholder'] = 'Ví dụ: Cần kiểm tra kết quả bài tập buổi 3'
+        self.fields['body'].widget.attrs['placeholder'] = 'Mô tả nội dung cần hỗ trợ và thông tin liên quan…'
+        self.fields['target'].help_text = 'Chọn giáo viên của lớp bạn hoặc quản lý trung tâm.'
+        self.fields['job'].help_text = 'Chỉ chọn nếu liên hệ có liên quan đến một bài đã có kết quả.'
         self.fields['job'].queryset = GradingJob.objects.filter(task__learner=student, status='graded').select_related('task').order_by('-submitted_at')
         self.fields['job'].label_from_instance = lambda j: f'{j.task.title} · {timezone.localtime(j.submitted_at):%d/%m/%Y}'
         self.order_fields(['subject','category','target','job','body','client_key'])

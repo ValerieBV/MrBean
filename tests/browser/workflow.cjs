@@ -51,6 +51,7 @@ await teacher.goto(base+'/dashboard/');await teacher.waitForFunction(()=>documen
 await student.goto(base+'/dashboard/');await student.waitForFunction(()=>document.getElementById('rate').textContent!=='—');assert.equal(await student.locator('#rate').innerText(),'100%');await student.screenshot({path:'screenshots/student-desktop.png',fullPage:true});
 for(const [role,p]of [['admin',admin],['teacher',teacher],['student',student]]){
  await p.goto(base+'/dashboard/');await p.waitForFunction(()=>document.getElementById('rate').textContent!=='—');
+ assert.equal(await p.locator('.app-sidebar a[href="/ho-tro/hoi-dap/"]').count(),0,role+' has no global knowledge chat in sidebar');
  assert.equal(await p.locator('#aiScore').count(),0,role+' has no AI score card');assert.equal(await p.locator('.dashboard-stats .stat').count(),role==='admin'?2:3);assert.equal(await p.locator('#score').count(),role==='admin'?0:1);assert(!/AI gợi ý|duyệt AI/.test(await p.locator('#main-content').innerText()),role+' report only publishes final scores');
  const metricResponse=await p.request.get(base+'/dashboard/metrics/');const metricData=await metricResponse.json();assert(!('average_ai_suggestion' in metricData));assert(metricData.history.every(x=>!('suggested_score' in x)&&!('result' in x)));const csv=await p.request.get(base+'/dashboard/export/');assert(!(await csv.text()).split('\n')[0].includes('AI'));
  const links=await p.locator('.app-sidebar a').evaluateAll(as=>[...new Set(as.map(a=>a.getAttribute('href')))]);
@@ -60,6 +61,15 @@ for(const [role,p]of [['admin',admin],['teacher',teacher],['student',student]]){
 const manager=await session('demo_manager');assert.equal(await manager.locator('.dashboard-stats .stat').count(),2);assert.equal(await manager.locator('#score,#aiScore').count(),0);await manager.screenshot({path:'screenshots/manager-desktop-final.png',fullPage:true});await manager.goto(base+`/hoc-tap/results/${jobID}/`);assert.equal(await manager.locator('#reviewForm').count(),0);routes.push('manager: results read only');
 // Knowledge questions are attached to published results; AI failure preserves the
 // question and handoff/history. Contacts remain a separate human-only channel.
+await student.setViewportSize({width:1440,height:1000});await teacher.setViewportSize({width:1440,height:1000});
+await student.goto(base+'/dashboard/');
+await student.locator('.app-sidebar').getByRole('link',{name:'LIÊN HỆ & PHẢN ÁNH',exact:true}).click();
+assert.match(await student.locator('#main-content').innerText(),/Bạn chưa gửi liên hệ nào/);
+assert.equal(await student.locator('#main-content a[href="/ho-tro/hoi-dap/"]').count(),0);
+await student.screenshot({path:'screenshots/student-contact-inbox-empty.png',fullPage:true});
+await student.getByRole('link',{name:'Tạo liên hệ mới',exact:true}).click();
+assert.equal(await student.locator('[name=subject],[name=category],[name=target],[name=job],[name=body]').count(),5);
+await student.screenshot({path:'screenshots/student-contact-form-desktop.png',fullPage:true});
 await student.goto(base+`/hoc-tap/results/${jobID}/`);
 await student.getByRole('link',{name:'Hỏi AI về kiến thức bài này',exact:true}).click();
 await fill(student,'body','Vì sao câu My hobby is reading dùng reading?');
@@ -68,7 +78,8 @@ const questionURL=student.url();assert.match(await student.locator('#main-conten
 await fill(student,'note','Em chưa hiểu danh động từ, nhờ thầy giải thích thêm.');
 await Promise.all([student.waitForResponse(r=>r.url().endsWith('/hoi-giao-vien/')&&r.request().method()==='POST'),student.getByRole('button',{name:'Hỏi giáo viên',exact:true}).click()]);
 await student.waitForFunction(()=>document.getElementById('main-content').textContent.includes('Chờ phản hồi'));
-await teacher.goto(base+'/ho-tro/hoi-dap/');
+await teacher.goto(base+'/ho-tro/lien-he/');
+await teacher.getByRole('link',{name:'Câu hỏi từ bài tập',exact:true}).click();
 await teacher.locator('tr').filter({hasText:'Đọc video UI '+stamp}).getByRole('link',{name:'Mở trao đổi',exact:true}).click();
 await fill(teacher,'body','Reading ở đây là danh động từ, ví dụ My hobby is swimming.');
 await Promise.all([teacher.waitForResponse(r=>r.url().endsWith('/gui/')&&r.request().method()==='POST'),teacher.getByRole('button',{name:'Gửi phản hồi',exact:true}).click()]);
@@ -89,7 +100,19 @@ await Promise.all([manager.waitForResponse(r=>r.url().endsWith('/gui/')&&r.reque
 await manager.waitForFunction(()=>document.getElementById('main-content').textContent.includes('Quản lý đã ghi nhận'));
 await student.goto(contactURL);assert.match(await student.locator('#main-content').innerText(),/Quản lý đã ghi nhận/);
 await student.setViewportSize({width:390,height:844});assert(await student.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));await student.screenshot({path:'screenshots/student-contact-mobile.png',fullPage:true});
-results.support='AI unavailable → saved question → teacher handoff/history → human answer; separate manager contact → response; closed thread and mobile checked';
+for(const width of [1440,768,390]){
+ await student.setViewportSize({width,height:1000});await student.goto(base+'/ho-tro/lien-he/');
+ assert(await student.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'Contact inbox overflow '+width);
+ await student.screenshot({path:`screenshots/student-contact-inbox-${width}.png`,fullPage:true});
+ await fill(student,'q','Lỗi truy cập video UI '+stamp);await student.locator('[name=status]').selectOption('answered');await student.getByRole('button',{name:'Áp dụng',exact:true}).click();
+ assert.equal(await student.locator('tbody tr').filter({hasText:'Lỗi truy cập video UI '+stamp}).count(),1);
+ await student.getByRole('link',{name:'Mở trao đổi',exact:true}).click();assert.equal(student.url(),contactURL);
+ await student.goto(base+'/ho-tro/lien-he/moi/');assert(await student.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'Contact form overflow '+width);
+ if(width===390)await student.screenshot({path:'screenshots/student-contact-form-mobile.png',fullPage:true});
+}
+await student.goto(base+`/hoc-tap/results/${jobID}/`);await student.getByRole('link',{name:'Hỏi AI về kiến thức bài này',exact:true}).click();assert.equal(student.url(),questionURL);
+assert.equal(await student.getByRole('link',{name:'Quay lại kết quả bài tập',exact:true}).getAttribute('href'),`/hoc-tap/results/${jobID}/`);
+results.support='No sidebar knowledge chat; result-only AI → teacher tab in contacts → human answer; contact inbox/form/filter/reply at desktop, tablet and mobile';
 
 const AxeBuilder=require('@axe-core/playwright').default;results.accessibility=[];results.accessibilityMode='prefers-contrast: more';
 const anonymousContext=await browser.newContext();const anon=await anonymousContext.newPage();await anon.emulateMedia({contrast:'more'});await anon.goto(base+'/accounts/login/');const anonymousReport=await new AxeBuilder({page:anon}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze();results.accessibility.push({role:'anonymous',url:'/accounts/login/',violations:anonymousReport.violations.map(v=>({id:v.id,impact:v.impact}))});await anonymousContext.close();
@@ -97,7 +120,7 @@ for(const[role,p]of [['admin',admin],['teacher',teacher],['student',student]]){
  await p.setViewportSize({width:1440,height:1000});await p.emulateMedia({contrast:'more'});
  const urls=role==='admin'?['/dashboard/','/accounts/users/','/accounts/users/create/','/courses/catalog/','/courses/classes/create/','/accounts/notifications/','/accounts/profile/','/ho-tro/hoi-dap/','/ho-tro/lien-he/']:
  role==='teacher'?['/dashboard/','/quan-ly/bai-tap/','/quan-ly/bai-tap/new/','/quan-ly/bai-tap/assigned/','/quan-ly/bai-tap/assign/','/courses/exemptions/','/ho-tro/hoi-dap/','/ho-tro/lien-he/',questionURL.replace(base,'')]:
- ['/dashboard/','/hoc-tap/ky-nang/','/courses/',`/courses/classes/${classID}/`,`/hoc-tap/results/${jobID}/`,'/ho-tro/hoi-dap/','/ho-tro/lien-he/','/ho-tro/lien-he/moi/',questionURL.replace(base,''),contactURL.replace(base,'')];
+ ['/dashboard/','/hoc-tap/ky-nang/','/courses/',`/courses/classes/${classID}/`,`/hoc-tap/results/${jobID}/`,'/ho-tro/lien-he/','/ho-tro/lien-he/moi/',questionURL.replace(base,''),contactURL.replace(base,'')];
  for(const url of urls){await p.goto(base+url);if(url==='/dashboard/')await p.waitForFunction(()=>document.getElementById('rate').textContent!=='—');const report=await new AxeBuilder({page:p}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze();results.accessibility.push({role,url,violations:report.violations.map(v=>({id:v.id,impact:v.impact,targets:v.nodes.map(n=>n.target)}))});}
  await p.emulateMedia({contrast:'no-preference'});await p.goto(base+'/dashboard/');await p.waitForFunction(()=>document.getElementById('rate').textContent!=='—');await p.screenshot({path:`screenshots/${role}-desktop-final.png`,fullPage:true});
 }

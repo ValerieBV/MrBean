@@ -1,22 +1,54 @@
-{% extends 'base.html' %}
-{% block title %}{% if kind == 'knowledge' %}Hỏi đáp kiến thức{% else %}Liên hệ & phản ánh{% endif %} · Mr Bean{% endblock %}
+{% extends 'base.html' %}{% load static %}
+{% block title %}{% if kind == 'knowledge' %}Câu hỏi từ bài tập{% else %}Liên hệ & phản ánh{% endif %} · Mr Bean{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'support/conversation.css' %}">{% endblock %}
 {% block page_class %}support-content{% endblock %}
 {% block content %}
-<div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
-    <div><h1 class="page-title-h1">{% if kind == 'knowledge' %}{% if is_learner %}HỎI ĐÁP KIẾN THỨC{% else %}CÂU HỎI CẦN GIẢI ĐÁP{% endif %}{% else %}LIÊN HỆ & PHẢN ÁNH{% endif %}</h1>
-    <p class="small text-secondary mb-0">{% if kind == 'knowledge' %}{% if is_learner %}Hỏi AI về kiến thức của bài đã có kết quả; chuyển giáo viên khi cần giải thích thêm.{% else %}Các câu hỏi học viên đã chuyển cho giáo viên. Mở cuộc trao đổi để trả lời.{% endif %}{% else %}Trao đổi trực tiếp với giáo viên hoặc quản lý về kết quả, lịch học, lỗi kỹ thuật và các phản ánh khác.{% endif %}</p></div>
-    {% if is_learner and kind == 'contact' %}<a class="btn-cta-orange" href="{% url 'support:contact_new' %}"><i class="bi bi-envelope-plus-fill" aria-hidden="true"></i>Tạo liên hệ mới</a>{% endif %}
+<div class="support-page-heading">
+    <div>
+        <h1 class="page-title-h1">{% if kind == 'knowledge' %}CÂU HỎI TỪ BÀI TẬP{% else %}LIÊN HỆ & PHẢN ÁNH{% endif %}</h1>
+        <p class="small text-secondary mb-0">{% if kind == 'knowledge' %}Giải đáp các câu hỏi học viên đã chuyển từ kết quả bài tập. Bạn có thể xem lịch sử trước khi phản hồi.{% elif is_learner %}Gửi thắc mắc, phản ánh đến giáo viên hoặc quản lý và theo dõi phản hồi tại đây.{% else %}Tiếp nhận và trả lời các liên hệ học viên gửi đến người phụ trách.{% endif %}</p>
+    </div>
+    {% if is_learner %}<a class="btn-cta-orange" href="{% url 'support:contact_new' %}"><i class="bi bi-envelope-plus-fill" aria-hidden="true"></i>Tạo liên hệ mới</a>{% endif %}
 </div>
-<div class="d-flex gap-2 flex-wrap mb-4"><a class="btn {% if kind == 'knowledge' %}btn-export-excel{% else %}btn-outline-secondary{% endif %}" href="{% url 'support:knowledge_list' %}">Hỏi đáp kiến thức</a><a class="btn {% if kind == 'contact' %}btn-export-excel{% else %}btn-outline-secondary{% endif %}" href="{% url 'support:contact_list' %}">Liên hệ & phản ánh</a></div>
-<section class="data-card-wrapper">
-    <h2 class="section-title-h2 mb-3">{% if is_learner %}LỊCH SỬ TRAO ĐỔI CỦA TÔI{% else %}HỘP THƯ CẦN THEO DÕI{% endif %}</h2>
-    <form class="d-flex gap-2 flex-wrap mb-3" method="get" role="search"><div><label for="support-query" class="small fw-semibold mb-1 d-block">Tìm kiếm</label><input class="search-box-rounded" id="support-query" name="q" value="{{ query }}" placeholder="Tiêu đề hoặc học viên…" maxlength="100"></div><div><label class="small fw-semibold mb-1 d-block" for="support-status">Trạng thái</label><select class="form-select rounded-pill" id="support-status" name="status"><option value="">Tất cả trạng thái</option>{% for value,label in statuses %}<option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div><button class="btn-action-edit align-self-end py-2" type="submit">Áp dụng</button></form>
-    <div class="table-responsive"><table class="custom-data-table"><thead><tr><th>Nội dung</th>{% if not is_learner %}<th>Học viên</th>{% endif %}<th>Người phụ trách</th><th>Trạng thái</th><th>Cập nhật</th><th>Thao tác</th></tr></thead><tbody>
-    {% for thread in threads %}<tr><td><div class="fw-bold">{{ thread.subject }}</div><div class="small text-secondary">{{ thread.get_category_display }}{% if thread.classroom %} · {{ thread.classroom.class_code }}{% endif %}</div></td>{% if not is_learner %}<td>{{ thread.student.display_name }}</td>{% endif %}<td>{% if thread.recipient %}{{ thread.recipient.display_name }}{% elif thread.kind == 'knowledge' and not thread.escalated_at %}AI trợ giảng{% else %}Chưa phân công{% endif %}</td><td><span class="badge" style="background:var(--color-light-cream);color:var(--color-dark-brown)">{{ thread.get_status_display }}</span></td><td class="small">{{ thread.updated_at|date:'d/m/Y H:i' }}</td><td><a class="btn-action-edit" href="{{ thread.get_absolute_url }}">Mở trao đổi</a></td></tr>
-    {% empty %}<tr><td colspan="{% if is_learner %}5{% else %}6{% endif %}" class="text-center py-5 text-secondary"><i class="bi bi-chat-square-text fs-2 d-block mb-2" aria-hidden="true" style="color:var(--color-warm-orange)"></i>Chưa có cuộc trao đổi phù hợp.</td></tr>{% endfor %}
-    </tbody></table></div>{% include 'core/source_pagination.html' with page=threads %}
-</section>
-{% if is_learner and kind == 'knowledge' %}
-<section class="data-card-wrapper"><h2 class="section-title-h2 mb-2">HỎI VỀ BÀI ĐÃ CÓ KẾT QUẢ</h2><p class="small text-secondary">Chọn bài để AI giải thích từ vựng, ngữ pháp hoặc nội dung học tập. Điểm công bố vẫn là điểm cuối cùng đã được xác nhận.</p><div class="table-responsive"><table class="custom-data-table"><thead><tr><th>Bài tập</th><th>Ngày nộp</th><th>Điểm cuối cùng</th><th>Thao tác</th></tr></thead><tbody>{% for job in results %}<tr><td>{{ job.task.title }}</td><td>{{ job.submitted_at|date:'d/m/Y H:i' }}</td><td>{{ job.final_score|default_if_none:'—' }}</td><td><a class="btn-action-edit" href="{% url 'support:start' job.pk %}">Hỏi về bài này</a></td></tr>{% empty %}<tr><td colspan="4" class="text-center py-4 text-secondary">Bạn chưa có bài được công bố kết quả. Khi có điểm, nút hỏi đáp sẽ xuất hiện ở trang kết quả.</td></tr>{% endfor %}</tbody></table></div>{% include 'core/source_pagination.html' with page=results page_key='results_page' %}</section>
+{% if not is_learner %}
+<nav class="support-inbox-tabs" aria-label="Loại hộp thư">
+    <a class="btn {% if kind == 'contact' %}btn-export-excel{% else %}btn-outline-secondary{% endif %}" href="{% url 'support:contact_list' %}" {% if kind == 'contact' %}aria-current="page"{% endif %}>Liên hệ trực tiếp</a>
+    <a class="btn {% if kind == 'knowledge' %}btn-export-excel{% else %}btn-outline-secondary{% endif %}" href="{% url 'support:knowledge_list' %}" {% if kind == 'knowledge' %}aria-current="page"{% endif %}>Câu hỏi từ bài tập</a>
+</nav>
 {% endif %}
+<div class="overview-cards-row support-overview" aria-label="Tổng quan hộp thư">
+    <div class="overview-card"><div class="overview-icon-wrapper"><i class="bi bi-envelope-paper-fill" aria-hidden="true"></i></div><div class="overview-info"><span class="overview-label">Tất cả trao đổi</span><span class="overview-number">{{ summary.total }}</span></div></div>
+    <div class="overview-card"><div class="overview-icon-wrapper"><i class="bi bi-hourglass-split" aria-hidden="true"></i></div><div class="overview-info"><span class="overview-label">Chờ phản hồi</span><span class="overview-number">{{ summary.waiting }}</span></div></div>
+    <div class="overview-card"><div class="overview-icon-wrapper"><i class="bi bi-chat-left-text-fill" aria-hidden="true"></i></div><div class="overview-info"><span class="overview-label">Đã phản hồi</span><span class="overview-number">{{ summary.answered }}</span></div></div>
+    <div class="overview-card"><div class="overview-icon-wrapper"><i class="bi bi-check-circle-fill" aria-hidden="true"></i></div><div class="overview-info"><span class="overview-label">Đã kết thúc</span><span class="overview-number">{{ summary.closed }}</span></div></div>
+</div>
+<section class="data-card-wrapper">
+    <div class="d-flex flex-wrap justify-content-between gap-2 align-items-center mb-3"><h2 class="section-title-h2 mb-0">{% if is_learner %}LIÊN HỆ CỦA TÔI{% else %}HỘP THƯ CẦN THEO DÕI{% endif %}</h2><span class="support-count">{{ threads.paginator.count }} trao đổi</span></div>
+    <form class="support-filters" method="get" role="search">
+        <div class="support-search"><label for="support-query" class="small fw-semibold mb-1 d-block">Tìm kiếm</label><input class="search-box-rounded" id="support-query" name="q" value="{{ query }}" placeholder="{% if is_learner %}Tìm theo tiêu đề…{% else %}Tiêu đề hoặc học viên…{% endif %}" maxlength="100"></div>
+        <div><label class="small fw-semibold mb-1 d-block" for="support-status">Trạng thái</label><select class="form-select rounded-pill" id="support-status" name="status"><option value="">Tất cả trạng thái</option>{% for value,label in statuses %}<option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+        <button class="btn-action-edit py-2" type="submit">Áp dụng</button>
+        {% if query or status_filter %}<a class="btn btn-outline-secondary rounded-pill" href="{% if kind == 'knowledge' %}{% url 'support:knowledge_list' %}{% else %}{% url 'support:contact_list' %}{% endif %}">Xóa bộ lọc</a>{% endif %}
+    </form>
+    <div class="table-responsive"><table class="custom-data-table support-inbox-table">
+        <caption class="visually-hidden">{% if is_learner %}Danh sách liên hệ của tôi{% else %}Danh sách trao đổi được phân công{% endif %}</caption>
+        <thead><tr><th scope="col">Nội dung</th>{% if not is_learner %}<th scope="col">Học viên</th>{% endif %}<th scope="col">Người phụ trách</th><th scope="col">Trạng thái</th><th scope="col">Cập nhật</th><th scope="col">Thao tác</th></tr></thead>
+        <tbody>{% for thread in threads %}
+        <tr>
+            <td data-label="Nội dung"><div class="fw-bold support-subject">{{ thread.subject }}</div><div class="small text-secondary">{{ thread.get_category_display }}{% if thread.classroom %} · {{ thread.classroom.class_code }}{% endif %}</div></td>
+            {% if not is_learner %}<td data-label="Học viên">{{ thread.student.display_name }}</td>{% endif %}
+            <td data-label="Người phụ trách">{% if thread.recipient %}{{ thread.recipient.display_name }}{% else %}Chưa phân công{% endif %}</td>
+            <td data-label="Trạng thái"><span class="support-status support-status-{{ thread.status }}">{{ thread.get_status_display }}</span></td>
+            <td data-label="Cập nhật" class="small">{{ thread.updated_at|date:'d/m/Y H:i' }}</td>
+            <td data-label="Thao tác"><a class="btn-action-edit" href="{{ thread.get_absolute_url }}">Mở trao đổi</a></td>
+        </tr>
+        {% empty %}<tr><td colspan="{% if is_learner %}5{% else %}6{% endif %}" class="support-empty">
+            <i class="bi bi-envelope-open fs-1 d-block mb-3" aria-hidden="true"></i>
+            <p class="fw-bold mb-2">{% if query or status_filter %}Không tìm thấy trao đổi phù hợp{% elif is_learner %}Bạn chưa gửi liên hệ nào{% else %}Chưa có trao đổi cần xử lý{% endif %}</p>
+            <p class="small text-secondary mb-0">{% if query or status_filter %}Thử thay đổi từ khóa hoặc xóa bộ lọc để xem lại.{% elif is_learner %}Chọn “Tạo liên hệ mới” để gửi nội dung đến giáo viên hoặc quản lý.{% else %}Các nội dung học viên gửi đến bạn sẽ xuất hiện tại đây.{% endif %}</p>
+        </td></tr>{% endfor %}</tbody>
+    </table></div>
+    {% include 'core/source_pagination.html' with page=threads %}
+</section>
+{% if is_learner %}<aside class="support-note"><i class="bi bi-journal-check" aria-hidden="true"></i><div><strong>Cần giải thích thêm kiến thức trong bài?</strong><p class="small mb-2">Mở bài đã có kết quả để hỏi AI; nếu cần, bạn có thể chuyển câu hỏi cho giáo viên ngay trong cuộc trao đổi đó.</p><a class="small fw-semibold" href="{% url 'submissions:student_home' %}">Xem bài tập của tôi</a></div></aside>{% endif %}
 {% endblock %}

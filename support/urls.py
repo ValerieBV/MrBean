@@ -5,8 +5,8 @@ from .models import Conversation
 
 app_name='support'
 urlpatterns=[
-    path('',RedirectView.as_view(pattern_name='support:knowledge_list',permanent=False)),
-    path('hoi-dap/',views.thread_list,{'kind':Conversation.KNOWLEDGE},name='knowledge_list'),
+    path('',RedirectView.as_view(pattern_name='support:contact_list',permanent=False)),
+    path('hoi-dap/',views.knowledge_list,name='knowledge_list'),
     path('lien-he/',views.thread_list,{'kind':Conversation.CONTACT},name='contact_list'),
     path('lien-he/moi/',views.contact_new,name='contact_new'),
     path('ket-qua/<int:job_id>/hoi-ai/',views.start,name='start'),
