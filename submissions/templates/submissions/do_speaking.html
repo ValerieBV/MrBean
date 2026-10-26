@@ -1,0 +1,87 @@
+{% extends 'base_student.html' %}
+{% block title %}{{ lesson.title }}{% endblock %}
+{% block tab_speaking %}tab-active{% endblock %}
+{% block content %}
+<div class="mb-4">
+    <a href="{% url 'submissions:student_skill' 'speaking' %}" class="text-amber-700 text-sm hover:underline"><i class="fa-solid fa-angle-left"></i> Speaking</a>
+    <h2 class="text-xl font-bold text-gray-800 mt-1 font-title">Buổi {{ lesson.order }}: {{ lesson.title }}</h2>
+</div>
+
+{% if lesson.youtube_url %}
+<div class="bg-white rounded-xl shadow-sm border p-4 mb-5">
+    <div class="aspect-video w-full"><iframe id="yt" class="w-full h-full rounded" allowfullscreen></iframe></div>
+</div>
+{% endif %}
+
+<form method="post" action="{% url 'submissions:submit_lesson' lesson.pk %}" enctype="multipart/form-data" id="work-form">
+    {% csrf_token %}
+    <div class="space-y-4">
+        {% for t in lesson.speaking_tasks.all %}
+        <div class="bg-white rounded-xl shadow-sm border p-5" data-task="{{ t.id }}">
+            <p class="font-semibold text-gray-800 mb-3">Câu {{ t.order }}. {{ t.sentence }}</p>
+            <div class="flex items-center space-x-3">
+                <button type="button" class="rec-btn text-white px-4 py-2 rounded-lg text-sm" style="background:#8e44ad"><i class="fa-solid fa-microphone"></i> Ghi âm</button>
+                <button type="button" class="stop-btn hidden bg-red-600 text-white px-4 py-2 rounded-lg text-sm"><i class="fa-solid fa-stop"></i> Dừng</button>
+                <span class="rec-status text-sm text-gray-400">Chưa ghi âm</span>
+            </div>
+            <audio class="player hidden w-full mt-3" controls></audio>
+            <input type="file" name="task_{{ t.id }}_audio" class="audio-input hidden" accept="audio/*">
+        </div>
+        {% empty %}
+        <p class="text-gray-400">Buổi này chưa có câu luyện nói.</p>
+        {% endfor %}
+    </div>
+    <div class="mt-5">
+        <button type="submit" class="text-white px-6 py-3 rounded-lg font-semibold" style="background:#8e44ad"><i class="fa-solid fa-paper-plane"></i> Nộp bài</button>
+    </div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+
+(function(){
+    const url = "{{ lesson.youtube_url|escapejs }}";
+    if (!url) return;
+    let id = '';
+    const m1 = url.match(/[?&]v=([^&]+)/); const m2 = url.match(/youtu\.be\/([^?]+)/);
+    const m3 = url.match(/embed\/([^?]+)/);
+    id = (m1 && m1[1]) || (m2 && m2[1]) || (m3 && m3[1]) || '';
+    const f = document.getElementById('yt');
+    if (f && id) f.src = 'https://www.youtube.com/embed/' + id;
+})();
+
+document.querySelectorAll('[data-task]').forEach(card => {
+    const recBtn = card.querySelector('.rec-btn');
+    const stopBtn = card.querySelector('.stop-btn');
+    const player = card.querySelector('.player');
+    const statusEl = card.querySelector('.rec-status');
+    const fileInput = card.querySelector('.audio-input');
+    let recorder, chunks = [];
+
+    recBtn.addEventListener('click', async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({audio:true});
+            recorder = new MediaRecorder(stream); chunks = [];
+            recorder.ondataavailable = e => chunks.push(e.data);
+            recorder.onstop = () => {
+                const blob = new Blob(chunks, {type:'audio/webm'});
+                player.src = URL.createObjectURL(blob); player.classList.remove('hidden');
+                const dt = new DataTransfer();
+                dt.items.add(new File([blob], 'rec.webm', {type:'audio/webm'}));
+                fileInput.files = dt.files;
+                statusEl.textContent = 'Đã ghi âm xong';
+            };
+            recorder.start();
+            recBtn.classList.add('hidden'); stopBtn.classList.remove('hidden');
+            statusEl.textContent = 'Đang ghi...';
+        } catch(err){ statusEl.textContent = 'Không truy cập được micro'; }
+    });
+    stopBtn.addEventListener('click', () => {
+        recorder.stop(); recorder.stream.getTracks().forEach(t=>t.stop());
+        stopBtn.classList.add('hidden'); recBtn.classList.remove('hidden');
+        recBtn.innerHTML = '<i class="fa-solid fa-rotate-right"></i> Ghi lại';
+    });
+});
+</script>
+{% endblock %}
