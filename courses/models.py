@@ -70,7 +70,7 @@ class ClassRoom(models.Model):
     class_code = models.CharField(max_length=50, unique=True, verbose_name="Mã lớp")
     course = models.ForeignKey(
         Course,
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         related_name='classes',
         verbose_name="Thuộc khóa học"
     )
@@ -110,6 +110,8 @@ class ClassRoom(models.Model):
         super().clean()
         if self.teacher and self.teacher.role != CustomUser.ROLE_TEACHER:
             raise ValidationError({'teacher': "Người được phân công phải có vai trò là Giáo viên/CTV."})
+        if self.start_date and self.end_date and self.end_date < self.start_date:
+            raise ValidationError({'end_date':'Ngày kết thúc phải từ ngày khai giảng trở đi.'})
 
     @property
     def total_students(self):
@@ -157,6 +159,7 @@ class Enrollment(models.Model):
         verbose_name_plural = "Danh sách học viên trong lớp"
         unique_together = ('classroom', 'student')
         ordering = ['classroom', 'student__username']
+        constraints = [models.UniqueConstraint(fields=['student'], condition=models.Q(status='active'), name='single_active_class_per_student')]
 
     def __str__(self):
         return f"{self.student.username} - {self.classroom.class_code} ({self.get_status_display()})"
@@ -239,11 +242,13 @@ class ExemptionRequest(models.Model):
     STATUS_PENDING = 'pending'
     STATUS_APPROVED = 'approved'
     STATUS_REJECTED = 'rejected'
+    STATUS_CANCELLED = 'cancelled'
 
     STATUS_CHOICES = (
         (STATUS_PENDING, 'Chờ duyệt'),
         (STATUS_APPROVED, 'Đã chấp thuận miễn'),
         (STATUS_REJECTED, 'Đã từ chối'),
+        (STATUS_CANCELLED, 'Học viên đã hủy'),
     )
 
     enrollment = models.ForeignKey(
@@ -263,6 +268,7 @@ class ExemptionRequest(models.Model):
         verbose_name="Buổi học / Bài tập xin miễn",
         help_text="Ví dụ: Buổi 4 - Speaking Part 2"
     )
+    assignment = models.ForeignKey('assignments.ClassAssignment', on_delete=models.PROTECT, null=True, blank=True, related_name='exemption_requests')
     reason = models.TextField(verbose_name="Lý do xin miễn")
     status = models.CharField(
         max_length=20,
@@ -286,6 +292,8 @@ class ExemptionRequest(models.Model):
         verbose_name = "Đơn xin miễn BTVN"
         verbose_name_plural = "Danh sách đơn xin miễn BTVN"
         ordering = ['-created_at']
+        constraints = [models.UniqueConstraint(fields=['enrollment','assignment'],
+            condition=models.Q(assignment__isnull=False, status__in=['pending','approved']), name='unique_open_exemption_per_assignment')]
 
     def __str__(self):
         return f"[{self.get_status_display()}] {self.enrollment.student.username} - {self.session_title} ({self.get_homework_type_display()})"
@@ -317,101 +325,11 @@ class ExemptionRequest(models.Model):
                     )
 
     def approve(self, teacher_user, note=""):
-        """
-        Nghiệp vụ giáo viên duyệt miễn bài tập Speaking/Vocab:
-        1. Kiểm tra quyền (phải là giáo viên phụ trách lớp hoặc Admin).
-        2. Từ chối nếu là Listening (bắt buộc, không được duyệt).
-        3. Kiểm tra hạn mức còn lại.
-        4. Tăng used_quota lên 1.
-        5. Gửi thông báo đến Quản lý (Manager) và Học viên (Student).
-        """
-        from accounts.models import Notification
-
-        classroom = self.enrollment.classroom
-
-        # Kiểm tra: Không được duyệt miễn Listening
-        if self.homework_type == self.HOMEWORK_TYPE_LISTENING:
-            raise ValidationError("Không thể duyệt miễn bài tập Nghe (Listening) — Listening là bắt buộc theo quy định trung tâm.")
-
-        # Xác thực quyền: Giáo viên của lớp hoặc Admin
-        if not (teacher_user.is_superuser or teacher_user.role == CustomUser.ROLE_ADMIN or classroom.teacher_id == teacher_user.id):
-            raise ValidationError("Chỉ giáo viên phụ trách lớp này hoặc Admin mới có quyền duyệt miễn bài tập.")
-
-        quota, _ = StudentExemptionQuota.objects.get_or_create(enrollment=self.enrollment)
-        if quota.remaining_quota <= 0:
-            raise ValidationError(f"Học viên đã hết hạn mức miễn bài tập ({quota.used_quota}/{quota.max_quota}).")
-
-        # Cập nhật quota và trạng thái đơn
-        quota.used_quota += 1
-        quota.save()
-
-        self.status = self.STATUS_APPROVED
-        self.reviewed_by = teacher_user
-        self.reviewed_at = timezone.now()
-        self.review_note = note
-        self.save()
-
-        hw_type_display = self.get_homework_type_display()
-
-        # 1. Thông báo cho Quản lý (Manager)
-        managers = CustomUser.objects.filter(role=CustomUser.ROLE_MANAGER, is_active=True)
-        teacher_display = teacher_user.get_full_name() or teacher_user.username
-        student_display = self.enrollment.student.get_full_name() or self.enrollment.student.username
-
-        for mgr in managers:
-            Notification.objects.create(
-                recipient=mgr,
-                sender=teacher_user,
-                title=f"Học viên được miễn BTVN {hw_type_display}: {student_display} ({classroom.class_code})",
-                message=(
-                    f"Giáo viên {teacher_display} đã DUYỆT đơn xin miễn BTVN cho học viên {student_display}.\n"
-                    f"- Lớp: {classroom.name} ({classroom.class_code})\n"
-                    f"- Loại bài tập: {hw_type_display}\n"
-                    f"- Bài tập / Buổi: {self.session_title}\n"
-                    f"- Lý do: {self.reason}\n"
-                    f"- Hạn mức còn lại: {quota.remaining_quota}/{quota.max_quota} buổi."
-                ),
-                notification_type=Notification.TYPE_EXEMPTION_APPROVED
-            )
-
-        # 2. Thông báo cho Học viên
-        Notification.objects.create(
-            recipient=self.enrollment.student,
-            sender=teacher_user,
-            title=f"Đơn xin miễn BTVN ({hw_type_display}) đã được duyệt: {self.session_title}",
-            message=(
-                f"Giáo viên {teacher_display} đã chấp thuận đơn xin miễn BTVN của bạn.\n"
-                f"- Loại bài tập: {hw_type_display}\n"
-                f"- Số buổi miễn còn lại của bạn: {quota.remaining_quota}/{quota.max_quota} buổi."
-            ),
-            notification_type=Notification.TYPE_EXEMPTION_APPROVED
-        )
+        from .services import ExemptionControlService
+        updated = ExemptionControlService.review(self.pk, teacher_user, approve=True, note=note)
+        self.__dict__.update(updated.__dict__)
 
     def reject(self, teacher_user, reason):
-        """
-        Giáo viên từ chối đơn xin miễn:
-        - Không trừ quota.
-        - Gửi thông báo đến học viên kèm lý do.
-        """
-        from accounts.models import Notification
-
-        classroom = self.enrollment.classroom
-        if not (teacher_user.is_superuser or teacher_user.role == CustomUser.ROLE_ADMIN or classroom.teacher_id == teacher_user.id):
-            raise ValidationError("Chỉ giáo viên phụ trách lớp này hoặc Admin mới có quyền từ chối đơn.")
-
-        self.status = self.STATUS_REJECTED
-        self.reviewed_by = teacher_user
-        self.reviewed_at = timezone.now()
-        self.review_note = reason
-        self.save()
-
-        teacher_display = teacher_user.get_full_name() or teacher_user.username
-        hw_type_display = self.get_homework_type_display()
-        Notification.objects.create(
-            recipient=self.enrollment.student,
-            sender=teacher_user,
-            title=f"Đơn xin miễn BTVN ({hw_type_display}) bị từ chối: {self.session_title}",
-            message=f"Giáo viên {teacher_display} đã từ chối đơn xin miễn BTVN của bạn.\nLý do: {reason}",
-            notification_type=Notification.TYPE_EXEMPTION_REJECTED
-        )
-
+        from .services import ExemptionControlService
+        updated = ExemptionControlService.review(self.pk, teacher_user, approve=False, note=reason)
+        self.__dict__.update(updated.__dict__)

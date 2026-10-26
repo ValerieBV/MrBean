@@ -1,183 +1,140 @@
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth import login, logout, authenticate
-from django.contrib.auth.forms import AuthenticationForm
-from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.contrib.auth import login, logout, update_session_auth_hash
+from django.contrib.auth.forms import AuthenticationForm, PasswordChangeForm, SetPasswordForm
+from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
+from django.db.models import Q
 from django.http import JsonResponse
-from accounts.models import CustomUser, Notification
-from accounts.forms import CustomUserCreationForm, CustomUserUpdateForm
-from accounts.permissions import role_required, admin_required, manager_required
+from django.shortcuts import render, redirect, get_object_or_404
+from django.urls import reverse
+from django.utils.http import url_has_allowed_host_and_scheme
+from django.views.decorators.http import require_POST
+from .models import CustomUser, Notification
+from .forms import CustomUserCreationForm, CustomUserUpdateForm, ProfileForm
+from .permissions import role_required, admin_required
 
 
 def user_login_view(request):
-    """Đăng nhập hệ thống phân quyền Mr Bean"""
     if request.user.is_authenticated:
         return redirect('dashboard:index')
-
-    if request.method == 'POST':
-        form = AuthenticationForm(request, data=request.POST)
-        if form.is_valid():
-            user = form.get_user()
-            login(request, user)
-            messages.success(request, f"Chào mừng {user.get_full_name() or user.username} [{user.get_role_display()}] quay trở lại!")
-            return redirect('dashboard:index')
-        else:
-            messages.error(request, "Tên đăng nhập hoặc mật khẩu không chính xác.")
-    else:
-        form = AuthenticationForm()
-
-    return render(request, 'accounts/login.html', {'form': form})
+    form = AuthenticationForm(request, data=request.POST or None)
+    target = request.POST.get('next') or request.GET.get('next','')
+    if request.method == 'POST' and form.is_valid():
+        login(request, form.get_user())
+        if target and url_has_allowed_host_and_scheme(target,{request.get_host()},require_https=request.is_secure()):
+            return redirect(target)
+        return redirect('dashboard:index')
+    return render(request,'accounts/login.html',{'form':form,'next':target})
 
 
 @login_required
+@require_POST
 def user_logout_view(request):
-    """Đăng xuất"""
     logout(request)
-    messages.info(request, "Bạn đã đăng xuất thành công.")
     return redirect('accounts:login')
 
 
-@role_required(CustomUser.ROLE_ADMIN, CustomUser.ROLE_MANAGER)
+@role_required('admin','manager')
 def user_list_view(request):
-    """
-    Quản lý danh sách người dùng:
-    - Admin & Quản lý có quyền xem.
-    - Lọc theo vai trò (Admin, Quản lý, Giáo viên, Học viên).
-    - Tìm kiếm theo tên đăng nhập, họ tên, email, SĐT.
-    """
-    role_filter = request.GET.get('role', '')
-    query = request.GET.get('q', '')
-
-    users = CustomUser.objects.all().order_by('-date_joined')
-
-    if role_filter:
-        users = users.filter(role=role_filter)
-
-    if query:
-        users = users.filter(
-            username__icontains=query
-        ) | users.filter(
-            first_name__icontains=query
-        ) | users.filter(
-            last_name__icontains=query
-        ) | users.filter(
-            email__icontains=query
-        ) | users.filter(
-            phone_number__icontains=query
-        ) | users.filter(
-            student_code__icontains=query
-        )
-
-    # Thống kê nhanh phục vụ Overview Cards
-    from courses.models import ClassRoom, ExemptionRequest, StudentExemptionQuota
-    total_students = CustomUser.objects.filter(role=CustomUser.ROLE_STUDENT).count()
-    active_classes = ClassRoom.objects.filter(is_active=True).count()
-    total_teachers = CustomUser.objects.filter(role=CustomUser.ROLE_TEACHER).count()
-    pending_exemptions = ExemptionRequest.objects.filter(status=ExemptionRequest.STATUS_PENDING).count()
-
-    # Danh sách kiểm soát hạn mức miễn BTVN nghe của học viên
-    student_quotas = StudentExemptionQuota.objects.select_related(
-        'enrollment__student', 'enrollment__classroom__course'
-    ).all().order_by('-updated_at')
-
-    # Prefetch lớp học cho từng user trong bảng
-    users = users.prefetch_related('class_enrollments__classroom', 'teaching_classes')
-
-    context = {
-        'users': users,
-        'role_filter': role_filter,
-        'query': query,
-        'role_choices': CustomUser.ROLE_CHOICES,
-        'total_students': total_students,
-        'active_classes': active_classes,
-        'total_teachers': total_teachers,
-        'pending_exemptions': pending_exemptions,
-        'student_quotas': student_quotas,
-    }
-    return render(request, 'accounts/user_list.html', context)
+    rows=CustomUser.objects.all().prefetch_related('class_enrollments__classroom','teaching_classes').order_by('-date_joined')
+    role=request.GET.get('role','');query=request.GET.get('q','').strip()[:100]
+    if role:rows=rows.filter(role=role)
+    if query:rows=rows.filter(Q(username__icontains=query)|Q(first_name__icontains=query)|Q(last_name__icontains=query)|Q(email__icontains=query)|Q(student_code__icontains=query))
+    from courses.models import ClassRoom
+    return render(request,'accounts/user_list.html',{'users':Paginator(rows,20).get_page(request.GET.get('page')),
+        'query':query,'role_filter':role,'role_choices':CustomUser.ROLE_CHOICES,
+        'total_students':CustomUser.objects.filter(role='student',is_active=True).count(),
+        'total_teachers':CustomUser.objects.filter(role='teacher',is_active=True).count(),
+        'active_classes':ClassRoom.objects.filter(is_active=True).count()})
 
 
-@role_required(CustomUser.ROLE_ADMIN, CustomUser.ROLE_MANAGER)
+@role_required('admin','manager')
 def user_create_view(request):
-    """Admin hoặc Quản lý thêm người dùng (Quản lý được tạo tài khoản cho học viên)"""
-    if request.method == 'POST':
-        form = CustomUserCreationForm(request.POST, current_user=request.user)
-        if form.is_valid():
-            user = form.save()
-            messages.success(request, f"Đã tạo thành công tài khoản {user.username} với vai trò {user.get_role_display()}.")
-            return redirect('accounts:user_list')
-    else:
-        form = CustomUserCreationForm(current_user=request.user)
-
-    title = 'Thêm học viên mới' if request.user.role == CustomUser.ROLE_MANAGER else 'Thêm người dùng mới'
-    return render(request, 'accounts/user_form.html', {'form': form, 'title': title})
-
-
-@admin_required
-def user_update_view(request, user_id):
-    """Admin chỉnh sửa thông tin và vai trò người dùng"""
-    target_user = get_object_or_404(CustomUser, id=user_id)
-    if request.method == 'POST':
-        form = CustomUserUpdateForm(request.POST, instance=target_user)
-        if form.is_valid():
-            form.save()
-            messages.success(request, f"Đã cập nhật thông tin tài khoản {target_user.username}.")
-            return redirect('accounts:user_list')
-    else:
-        form = CustomUserUpdateForm(instance=target_user)
-
-    return render(request, 'accounts/user_form.html', {'form': form, 'title': f'Chỉnh sửa người dùng: {target_user.username}', 'target_user': target_user})
-
-
-@admin_required
-def user_delete_view(request, user_id):
-    """Admin vô hiệu hóa hoặc xóa người dùng"""
-    target_user = get_object_or_404(CustomUser, id=user_id)
-    if request.method == 'POST':
-        if target_user == request.user:
-            messages.error(request, "Không thể tự xóa tài khoản của chính mình!")
-            return redirect('accounts:user_list')
-        
-        # An toàn: Soft delete bằng cách set is_active=False hoặc xóa
-        username = target_user.username
-        from django.db.models.deletion import ProtectedError
-        try:
-            target_user.delete()
-        except ProtectedError:
-            target_user.is_active = False
-            target_user.save(update_fields=['is_active'])
-            messages.info(request, f'Đã vô hiệu hóa {username}; giữ lịch sử bài tập và điểm.')
-            return redirect('accounts:user_list')
-        messages.success(request, f"Đã xóa người dùng {username} thành công.")
+    form=CustomUserCreationForm(request.POST or None,current_user=request.user)
+    if request.method=='POST' and form.is_valid():
+        user=form.save();messages.success(request,'Đã tạo tài khoản '+user.username+'.')
         return redirect('accounts:user_list')
+    return render(request,'accounts/user_form.html',{'form':form,'title':'Tạo tài khoản','back_url':reverse('accounts:user_list')})
 
-    return render(request, 'accounts/user_confirm_delete.html', {'target_user': target_user})
+
+@admin_required
+def user_update_view(request,user_id):
+    user=get_object_or_404(CustomUser,pk=user_id)
+    form=CustomUserUpdateForm(request.POST or None,instance=user)
+    if request.method=='POST' and form.is_valid():
+        if user.pk==request.user.pk and not form.cleaned_data['is_active']:
+            form.add_error('is_active','Không tự ngừng kích hoạt tài khoản đang sử dụng.')
+        else:
+            form.save();messages.success(request,'Đã cập nhật tài khoản.')
+            return redirect('accounts:user_list')
+    return render(request,'accounts/user_form.html',{'form':form,'title':'Cập nhật '+user.username,'target_user':user,'back_url':reverse('accounts:user_list')})
+
+
+@admin_required
+def user_delete_view(request,user_id):
+    user=get_object_or_404(CustomUser,pk=user_id)
+    if request.method=='POST':
+        if user.pk==request.user.pk:
+            messages.error(request,'Không thể tự vô hiệu hóa tài khoản đang sử dụng.')
+        elif user.role=='teacher' and user.teaching_classes.filter(is_active=True).exists():
+            messages.error(request,'Phân công giáo viên thay thế cho các lớp đang hoạt động trước.')
+        elif (user.role=='admin' or user.is_superuser) and not CustomUser.objects.filter(Q(role='admin')|Q(is_superuser=True),is_active=True).exclude(pk=user.pk).exists():
+            messages.error(request,'Cần giữ ít nhất một quản trị viên hoạt động.')
+        else:
+            user.is_active=False;user.save(update_fields=['is_active'])
+            messages.success(request,'Đã vô hiệu hóa tài khoản; lịch sử học tập và điểm được giữ nguyên.')
+        return redirect('accounts:user_list')
+    return render(request,'accounts/user_confirm_delete.html',{'target_user':user})
+
+
+@login_required
+def profile(request):
+    form=ProfileForm(request.POST or None,instance=request.user)
+    if request.method=='POST' and form.is_valid():
+        form.save();messages.success(request,'Đã cập nhật hồ sơ.')
+        return redirect('accounts:profile')
+    return render(request,'accounts/profile.html',{'form':form})
+
+
+@login_required
+def password_change(request):
+    form=PasswordChangeForm(request.user,request.POST or None)
+    if request.method=='POST' and form.is_valid():
+        user=form.save();update_session_auth_hash(request,user)
+        messages.success(request,'Đã đổi mật khẩu.');return redirect('accounts:profile')
+    return render(request,'accounts/user_form.html',{'form':form,'title':'Đổi mật khẩu','back_url':reverse('accounts:profile')})
+
+
+@admin_required
+def password_reset_user(request,user_id):
+    user=get_object_or_404(CustomUser,pk=user_id)
+    form=SetPasswordForm(user,request.POST or None)
+    if request.method=='POST' and form.is_valid():
+        form.save();messages.success(request,'Đã đặt lại mật khẩu cho '+user.username+'.')
+        return redirect('accounts:user_list')
+    return render(request,'accounts/user_form.html',{'form':form,'title':'Đặt mật khẩu cho '+user.username,'back_url':reverse('accounts:user_list')})
 
 
 @login_required
 def notification_list_view(request):
-    """
-    Xem danh sách thông báo:
-    - Quản lý nhận thông báo khi có học viên xin miễn / giáo viên duyệt miễn.
-    - Giáo viên nhận thông báo khi có đơn xin miễn mới cần duyệt.
-    - Học viên nhận thông báo khi đơn được duyệt hoặc bị từ chối.
-    """
-    notifications = request.user.notifications.all()
-    # Tự động đánh dấu đã đọc khi xem
-    unread = notifications.filter(is_read=False)
-    
-    return render(request, 'accounts/notifications.html', {
-        'notifications': notifications,
-        'unread_count': unread.count()
-    })
+    rows=request.user.notifications.all()
+    if request.GET.get('unread')=='1':rows=rows.filter(is_read=False)
+    return render(request,'accounts/notifications.html',{'notifications':Paginator(rows,20).get_page(request.GET.get('page')),
+        'unread_count':request.user.notifications.filter(is_read=False).count()})
 
 
 @login_required
-def mark_notification_read_view(request, notification_id):
-    """Đánh dấu thông báo đã đọc"""
-    noti = get_object_or_404(Notification, id=notification_id, recipient=request.user)
-    noti.is_read = True
-    noti.save()
-    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-        return JsonResponse({'status': 'ok'})
+@require_POST
+def mark_notification_read_view(request,notification_id):
+    item=get_object_or_404(Notification,pk=notification_id,recipient=request.user)
+    item.is_read=True;item.save(update_fields=['is_read'])
+    if request.headers.get('x-requested-with')=='XMLHttpRequest':return JsonResponse({'status':'ok'})
+    return redirect(item.safe_target_url if request.POST.get('open') else 'accounts:notification_list')
+
+
+@login_required
+@require_POST
+def notifications_read_all(request):
+    request.user.notifications.filter(is_read=False).update(is_read=True)
+    messages.success(request,'Đã đánh dấu tất cả thông báo là đã đọc.')
     return redirect('accounts:notification_list')

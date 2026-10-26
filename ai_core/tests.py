@@ -112,7 +112,7 @@ class GradingTests(IntegratedFixture):
 
     def test_late_at_five_minutes_falls_back(self):
         job=self.job();provider=Mock();provider.grade.return_value=GOOD
-        with patch('ai_core.services.timezone.now',side_effect=[job.submitted_at,job.submitted_at,job.ai_deadline,job.ai_deadline]):process_job(job.pk,provider)
+        with patch('ai_core.services.timezone.now',side_effect=__import__('itertools').chain([job.submitted_at,job.submitted_at],__import__('itertools').repeat(job.ai_deadline))):process_job(job.pk,provider)
         job.refresh_from_db();self.assertEqual(job.status,'manual')
 
     def test_student_only_own_task_and_auth_required(self):
@@ -167,6 +167,8 @@ class GradingTests(IntegratedFixture):
                 self.assertEqual(result['transcript'],'I like books.')
                 self.assertEqual(result['transcript_source'],'openai_transcription')
                 api.audio.transcriptions.create.assert_called_once()
+                self.assertEqual(api.audio.transcriptions.create.call_args.kwargs['languages'],['en'])
+                self.assertNotIn('language',api.audio.transcriptions.create.call_args.kwargs)
                 self.assertFalse(api.responses.create.call_args.kwargs['store'])
                 self.assertNotIn('input_audio',str(api.responses.create.call_args))
                 payload=json.loads(api.responses.create.call_args.kwargs['input'][0]['content'][0]['text'])

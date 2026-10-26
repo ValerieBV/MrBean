@@ -31,7 +31,7 @@ def prepare_image(upload):
         raise ValidationError('Không đọc được ảnh bài làm.') from exc
 
 
-def enqueue_submission(*, task, submission_key, kind=None, text='', audio=None, reference_text='', answers=None, images=None):
+def enqueue_submission(*, task, submission_key, kind=None, text='', audio=None, reference_text='', answers=None, images=None, reference_version=None):
     if not isinstance(submission_key, str) or not submission_key.strip() or len(submission_key) > 128:
         raise ValidationError('Mã lần nộp không hợp lệ.')
     if not isinstance(text, str) or len(text) > 20000:
@@ -46,6 +46,10 @@ def enqueue_submission(*, task, submission_key, kind=None, text='', audio=None, 
             if existing.task_id != task.pk:
                 raise ValidationError('Mã lần nộp đã thuộc bài khác.')
             return existing, False
+        from submissions.access import assert_can_submit
+        assert_can_submit(task)
+        if reference_version is not None and reference_version != task.assignment.reference_version:
+            raise ValidationError('Yêu cầu bài đã được cập nhật. Tải lại trang để xem đúng mẫu trước khi nộp.')
         rubric = task.assignment.rubric if task.assignment_id else {}
         kind = rubric.get('skill', kind)
         if kind not in ('speaking', 'vocabulary', 'listening'):
@@ -53,7 +57,7 @@ def enqueue_submission(*, task, submission_key, kind=None, text='', audio=None, 
         if kind == 'speaking':
             if text.strip() or not audio:
                 raise ValidationError('Bài đọc theo video chỉ nhận ghi âm; không nhận transcript học viên nhập.')
-            if rubric.get('mode') != 'repeat_video' or not rubric.get('reference_transcript') or not rubric.get('video_embed_url'):
+            if rubric.get('mode') != 'repeat_video' or not rubric.get('reference_transcript') or not (rubric.get('video_embed_url') or rubric.get('video_name')):
                 raise ValidationError('Giáo viên cần cập nhật video và lời mẫu cho lượt giao này trước khi nộp.')
         if kind == 'vocabulary' and not text.strip() and not images:
             raise ValidationError('Cần văn bản hoặc ảnh bài từ vựng.')
@@ -89,18 +93,45 @@ def enqueue_submission(*, task, submission_key, kind=None, text='', audio=None, 
                     QuestionResponse.objects.update_or_create(progress=progress, question_id=row['question_id'],
                         defaults={'chosen_option': row['chosen'], 'is_correct': row['correct']})
             progress.status, progress.completed_at, progress.draft = 'completed', job.submitted_at, {}
-            progress.score = job.final_score * 10 if job.final_score is not None else None
+            if job.final_score is not None:
+                progress.score = job.final_score * 10
             progress.save()
             job.progress = progress
             job.save(update_fields=['progress'])
+        from accounts.notifications import notify
+        from django.urls import reverse
+        notify(recipient=task.assignment.classroom.teacher, sender=task.learner,
+            title='Bài nộp mới: '+task.title, message=task.learner.get_full_name() or task.learner.username,
+            target_url=reverse('submissions:result',args=[job.pk]), event_key=f'submission:{job.pk}')
+        if job.status == 'graded':
+            notify(recipient=task.learner, title='Đã có điểm: '+task.title, message=job.teacher_feedback,
+                target_url=reverse('submissions:result',args=[job.pk]), event_key=f'result:{job.pk}')
         return job, True
 
 
 def expire_jobs(now=None):
     now = now or timezone.now()
-    return GradingJob.objects.filter(status__in=['queued', 'processing'],
+    expired = GradingJob.objects.filter(status__in=['queued', 'processing'],
         submitted_at__lte=now-timedelta(seconds=settings.AI_DEADLINE_SECONDS)).update(
             status='manual', fallback_reason='ai_deadline_exceeded', finished_at=now)
+    notify_manual_jobs()
+    return expired
+
+
+def notify_manual_jobs():
+    from accounts.notifications import notify
+    from accounts.models import Notification
+    from django.db.models import Exists, OuterRef, Value, CharField
+    from django.db.models.functions import Cast, Concat
+    from django.urls import reverse
+    rows = GradingJob.objects.filter(status='manual').annotate(
+        notification_key=Concat(Value('manual:'),Cast('pk',output_field=CharField())),
+        was_notified=Exists(Notification.objects.filter(event_key=OuterRef('notification_key')))).filter(was_notified=False)
+    for job in rows.select_related('task__assignment__classroom__teacher','task__teacher'):
+        teacher = job.task.assignment.classroom.teacher if job.task.assignment_id else job.task.teacher
+        notify(recipient=teacher, title='Bài cần chấm thủ công: '+job.task.title,
+            message='AI chưa hoàn tất. Vui lòng kiểm tra bài làm và xác nhận điểm.',
+            target_url=reverse('submissions:result',args=[job.pk]), event_key=f'manual:{job.pk}')
 
 
 def process_job(job_id, provider=None):
@@ -125,12 +156,20 @@ def process_job(job_id, provider=None):
             raise TimeoutError()
         if job.kind == 'speaking':
             result['transcript_source'] = 'openai_transcription'
-        GradingJob.objects.filter(pk=job_id, status='processing').update(
+        changed = GradingJob.objects.filter(pk=job_id, status='processing').update(
             status='ai_reviewed', result=result, suggested_score=result['score'],
             transcript=transcript, grading_method='openai', finished_at=finished)
+        if changed:
+            from accounts.notifications import notify
+            from django.urls import reverse
+            teacher = job.task.assignment.classroom.teacher if job.task.assignment_id else job.task.teacher
+            notify(recipient=teacher,title='AI đã gợi ý điểm: '+job.task.title,
+                message='Kiểm tra bản ghi hoặc ảnh và nhận xét trước khi xác nhận điểm chính thức.',
+                target_url=reverse('submissions:result',args=[job.pk]),event_key=f'ai-reviewed:{job.pk}')
     except Exception as exc:
         logger.warning('AI fallback job=%s error_type=%s', job_id, type(exc).__name__)
         GradingJob.objects.filter(pk=job_id, status='processing').update(
             status='manual', fallback_reason='ai_timeout' if isinstance(exc, TimeoutError) else 'ai_error',
             transcript=job.transcript if isinstance(job.transcript, str) and len(job.transcript)<=20000 else '', finished_at=timezone.now())
+        notify_manual_jobs()
     return True

@@ -1,342 +1,227 @@
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
-from django.db.models import Q
-from courses.models import Course, ClassRoom, Enrollment, StudentExemptionQuota, ExemptionRequest
-from courses.forms import ClassRoomForm, AssignTeacherForm, EnrollStudentForm, ExemptionRequestForm, ExemptionReviewForm
-from courses.services import ClassManagementService, ExemptionControlService
+from django.core.paginator import Paginator
+from django.db import transaction
+from django.db.models import Q, Count, ProtectedError
+from django.shortcuts import render, redirect, get_object_or_404
+from django.urls import reverse
+from django.views.decorators.http import require_POST
 from accounts.models import CustomUser
-from accounts.permissions import role_required, admin_required, manager_required
+from accounts.permissions import role_required
+from ai_core.permissions import classes_for, is_manager
+from .models import Course, ClassRoom, Enrollment, ExemptionRequest
+from .forms import (CourseForm, ClassRoomForm, AssignTeacherForm, EnrollStudentForm, EnrollmentStatusForm,
+                    ExemptionRequestForm, ExemptionReviewForm)
+from .services import ClassManagementService, ExemptionControlService
+
+
+@role_required('admin', 'manager')
+def course_list(request):
+    rows = Course.objects.annotate(class_count=Count('classes')).order_by('code')
+    return render(request, 'courses/course_list.html', {'courses': rows})
+
+
+@role_required('admin', 'manager')
+def course_form(request, pk=None):
+    course = get_object_or_404(Course, pk=pk) if pk else None
+    form = CourseForm(request.POST or None, instance=course)
+    if request.method == 'POST' and form.is_valid():
+        form.save()
+        messages.success(request, 'Đã lưu khóa học.')
+        return redirect('courses:course_list')
+    return render(request, 'core/form.html', {'form': form,
+        'title': 'Cập nhật khóa học' if pk else 'Tạo khóa học', 'back_url': reverse('courses:course_list')})
+
+
+@role_required('admin', 'manager')
+def course_delete(request, pk):
+    course = get_object_or_404(Course, pk=pk)
+    if request.method == 'POST':
+        try:
+            course.delete()
+            messages.success(request, 'Đã xóa khóa học chưa có lớp.')
+        except ProtectedError:
+            messages.error(request, 'Khóa học đã có lớp. Cần giữ khóa học để bảo toàn lịch sử.')
+        return redirect('courses:course_list')
+    return render(request, 'core/confirm.html', {'title': 'Xóa khóa học chưa sử dụng',
+        'description': str(course), 'back_url': reverse('courses:course_list')})
 
 
 @login_required
 def class_list_view(request):
-    """
-    Danh sách lớp học phân quyền:
-    - Admin, Quản lý: Xem tất cả các lớp học.
-    - Giáo viên: Chỉ xem các lớp mình ĐƯỢC PHÂN CÔNG GIẢNG DẠY (để chấm bài, duyệt miễn).
-    - Học viên: Chỉ xem các lớp mình ĐANG THEO HỌC.
-    """
-    user = request.user
-
-    student_enrollments = None
-    student_exemptions = None
-
-    if user.is_superuser or user.role in [CustomUser.ROLE_ADMIN, CustomUser.ROLE_MANAGER]:
-        classes = ClassRoom.objects.all().select_related('course', 'teacher')
-    elif user.role == CustomUser.ROLE_TEACHER:
-        classes = ClassRoom.objects.filter(teacher=user).select_related('course', 'teacher')
-    else:  # Student
-        classes = ClassRoom.objects.filter(
-            enrollments__student=user,
-            enrollments__status=Enrollment.STATUS_ACTIVE
-        ).select_related('course', 'teacher')
-
-        # Lấy dữ liệu lớp học, hạn mức miễn nghe và lịch sử đơn của học viên
-        student_enrollments = Enrollment.objects.filter(
-            student=user,
-            status=Enrollment.STATUS_ACTIVE
-        ).select_related('classroom__course', 'classroom__teacher', 'exemption_quota')
-
-        student_exemptions = ExemptionRequest.objects.filter(
-            enrollment__student=user
-        ).select_related('enrollment__classroom__course', 'reviewed_by').order_by('-created_at')
-
-    return render(request, 'courses/class_list.html', {
-        'classes': classes,
-        'user_role': user.role,
-        'student_enrollments': student_enrollments,
-        'student_exemptions': student_exemptions,
-    })
+    rows = classes_for(request.user).select_related('course', 'teacher').annotate(
+        active_students=Count('enrollments', filter=Q(enrollments__status='active'))).order_by('-created_at','pk')
+    query = request.GET.get('q', '').strip()[:100]
+    if query:
+        rows = rows.filter(Q(class_code__icontains=query) | Q(name__icontains=query) | Q(course__name__icontains=query))
+    if request.GET.get('status') == 'active': rows = rows.filter(is_active=True)
+    if request.GET.get('status') == 'closed': rows = rows.filter(is_active=False)
+    student_enrollments = Enrollment.objects.filter(student=request.user, status='active').select_related(
+        'classroom__course', 'classroom__teacher', 'exemption_quota') if request.user.role == 'student' else None
+    return render(request, 'courses/class_list.html', {'classes': Paginator(rows, 20).get_page(request.GET.get('page')),
+        'query': query, 'student_enrollments': student_enrollments})
 
 
 @login_required
 def class_detail_view(request, class_id):
-    """
-    Chi tiết lớp học:
-    - Hiển thị thông tin lớp, giáo viên phụ trách chấm bài.
-    - Danh sách học viên và hạn mức số buổi miễn nghe (Quota).
-    """
-    classroom = get_object_or_404(
-        ClassRoom.objects.select_related('course', 'teacher'),
-        id=class_id
-    )
-    user = request.user
-
-    # Kiểm tra quyền xem chi tiết lớp: Admin, Manager, Giáo viên của lớp, hoặc Học viên trong lớp
-    if not (user.is_superuser or user.role in [CustomUser.ROLE_ADMIN, CustomUser.ROLE_MANAGER]):
-        if user.role == CustomUser.ROLE_TEACHER and classroom.teacher != user:
-            messages.error(request, "Bạn không phụ trách lớp học này.")
-            return redirect('courses:class_list')
-        if user.role == CustomUser.ROLE_STUDENT and not classroom.enrollments.filter(student=user, status=Enrollment.STATUS_ACTIVE).exists():
-            messages.error(request, "Bạn không tham gia lớp học này.")
-            return redirect('courses:class_list')
-
-    enrollments = classroom.enrollments.select_related('student', 'exemption_quota').all()
-    if user.role == CustomUser.ROLE_STUDENT and not user.is_superuser:
-        enrollments = enrollments.filter(student=user)
-    can_manage = user.is_superuser or user.role in [CustomUser.ROLE_ADMIN, CustomUser.ROLE_MANAGER]
-    is_teacher_of_class = (user == classroom.teacher) or user.is_superuser or user.role == CustomUser.ROLE_ADMIN
-
-    # Đơn xin miễn đang chờ duyệt của lớp này
-    pending_exemptions = ExemptionRequest.objects.filter(
-        enrollment__classroom=classroom,
-        status=ExemptionRequest.STATUS_PENDING
-    ).select_related('enrollment__student')
-
-    if user.role == CustomUser.ROLE_STUDENT and not user.is_superuser:
-        pending_exemptions = pending_exemptions.filter(enrollment__student=user)
-
-    # Nếu là học viên, lấy thông tin quota của chính mình
-    student_quota = None
-    if user.role == CustomUser.ROLE_STUDENT:
-        my_enrollment = enrollments.filter(student=user).first()
-        if my_enrollment:
-            student_quota = getattr(my_enrollment, 'exemption_quota', None)
-
-    return render(request, 'courses/class_detail.html', {
-        'classroom': classroom,
-        'enrollments': enrollments,
-        'can_manage': can_manage,
-        'is_teacher_of_class': is_teacher_of_class,
-        'pending_exemptions': pending_exemptions,
-        'student_quota': student_quota,
-    })
+    classroom = get_object_or_404(classes_for(request.user).select_related('course', 'teacher'), pk=class_id)
+    enrollments = classroom.enrollments.select_related('student', 'exemption_quota')
+    pending = classroom.enrollments.filter(exemption_requests__status='pending').count()
+    if request.user.role == 'student' and not request.user.is_superuser:
+        enrollments = enrollments.filter(student=request.user)
+    return render(request, 'courses/class_detail.html', {'classroom': classroom, 'enrollments': enrollments,
+        'can_manage': is_manager(request.user), 'pending_count': pending,
+        'assignments': classroom.assignments.select_related('lesson').order_by('-assigned_at')[:20]})
 
 
-@role_required(CustomUser.ROLE_ADMIN, CustomUser.ROLE_MANAGER)
+@role_required('admin', 'manager')
 def class_create_view(request):
-    """Admin hoặc Quản lý tạo lớp học mới"""
-    if request.method == 'POST':
-        form = ClassRoomForm(request.POST)
-        if form.is_valid():
-            classroom = form.save(commit=False)
-            classroom.created_by = request.user
-            classroom.save()
-            messages.success(request, f"Đã tạo lớp học '{classroom.name}' ({classroom.class_code}) thành công.")
-            return redirect('courses:class_detail', class_id=classroom.id)
-    else:
-        form = ClassRoomForm()
-
-    return render(request, 'courses/class_form.html', {'form': form, 'title': 'Tạo lớp học mới'})
+    return _class_form(request)
 
 
-@role_required(CustomUser.ROLE_ADMIN, CustomUser.ROLE_MANAGER)
+@role_required('admin', 'manager')
 def class_update_view(request, class_id):
-    """Chỉnh sửa thông tin lớp học"""
-    classroom = get_object_or_404(ClassRoom, id=class_id)
-    if request.method == 'POST':
-        form = ClassRoomForm(request.POST, instance=classroom)
-        if form.is_valid():
-            form.save()
-            messages.success(request, f"Đã cập nhật lớp học '{classroom.name}'.")
-            return redirect('courses:class_detail', class_id=classroom.id)
-    else:
-        form = ClassRoomForm(instance=classroom)
-
-    return render(request, 'courses/class_form.html', {'form': form, 'title': f'Chỉnh sửa lớp: {classroom.class_code}', 'classroom': classroom})
+    return _class_form(request, get_object_or_404(ClassRoom, pk=class_id))
 
 
-@role_required(CustomUser.ROLE_ADMIN, CustomUser.ROLE_MANAGER)
+def _class_form(request, classroom=None):
+    was_active = classroom.is_active if classroom else False
+    form = ClassRoomForm(request.POST or None, instance=classroom, initial={'course':request.GET.get('course')} if not classroom else None)
+    if request.method == 'POST' and form.is_valid():
+        with transaction.atomic():
+            saved = form.save(commit=False)
+            if not saved.pk: saved.created_by = request.user
+            saved.save()
+            if saved.teacher:
+                ClassManagementService.assign_teacher_to_class(saved, saved.teacher)
+            if was_active and not saved.is_active:
+                saved.enrollments.filter(status='active').update(status='completed')
+        messages.success(request, 'Đã lưu thông tin lớp. Lớp ngừng hoạt động vẫn giữ đầy đủ điểm và lịch sử.')
+        return redirect('courses:class_detail', class_id=saved.pk)
+    return render(request, 'core/form.html', {'form': form, 'title': 'Cập nhật lớp học' if classroom else 'Tạo lớp học',
+        'back_url': reverse('courses:class_list')})
+
+
+@role_required('admin', 'manager')
+def enrollment_update(request, pk):
+    enrollment = get_object_or_404(Enrollment.objects.select_related('student','classroom'), pk=pk)
+    form = EnrollmentStatusForm(request.POST or None, initial={'status':enrollment.status})
+    if request.method == 'POST' and form.is_valid():
+        try:
+            status = form.cleaned_data['status']
+            if status == 'active' and enrollment.status != 'active':
+                ClassManagementService.enroll_student_to_class(enrollment.classroom,enrollment.student)
+            elif status != enrollment.status:
+                enrollment.status = status
+                enrollment.save(update_fields=['status'])
+            messages.success(request,'Đã cập nhật ghi danh; lịch sử bài làm được giữ nguyên.')
+            return redirect('courses:class_detail',class_id=enrollment.classroom_id)
+        except ValidationError as exc: form.add_error(None,exc)
+    return render(request,'core/form.html',{'form':form,'title':'Ghi danh · '+enrollment.student.username,
+        'back_url':reverse('courses:class_detail',args=[enrollment.classroom_id])})
+
+
+@role_required('admin', 'manager')
 def assign_teacher_view(request, class_id):
-    """
-    Phân công giáo viên vào đúng lớp dạy để chấm bài.
-    Chỉ cho phép chọn user có role='teacher'.
-    """
-    classroom = get_object_or_404(ClassRoom, id=class_id)
-    if request.method == 'POST':
-        form = AssignTeacherForm(request.POST)
-        if form.is_valid():
-            teacher = form.cleaned_data['teacher']
-            try:
-                ClassManagementService.assign_teacher_to_class(classroom, teacher)
-                messages.success(request, f"Đã phân công giáo viên {teacher.get_full_name() or teacher.username} phụ trách lớp {classroom.class_code}.")
-            except ValidationError as e:
-                messages.error(request, str(e))
-            return redirect('courses:class_detail', class_id=classroom.id)
-    else:
-        initial = {'teacher': classroom.teacher} if classroom.teacher else {}
-        form = AssignTeacherForm(initial=initial)
-
-    return render(request, 'courses/assign_teacher.html', {'form': form, 'classroom': classroom})
+    classroom = get_object_or_404(ClassRoom, pk=class_id)
+    form = AssignTeacherForm(request.POST or None, initial={'teacher': classroom.teacher})
+    if request.method == 'POST' and form.is_valid():
+        try:
+            ClassManagementService.assign_teacher_to_class(classroom, form.cleaned_data['teacher'])
+            messages.success(request, 'Đã phân công giáo viên và cập nhật quyền chấm bài của lớp.')
+            return redirect('courses:class_detail', class_id=class_id)
+        except ValidationError as exc: form.add_error(None, exc)
+    return render(request, 'core/form.html', {'form': form, 'title': 'Phân công giáo viên · '+classroom.class_code,
+        'back_url': reverse('courses:class_detail', args=[class_id])})
 
 
-@role_required(CustomUser.ROLE_ADMIN, CustomUser.ROLE_MANAGER)
+@role_required('admin', 'manager')
 def enroll_student_view(request, class_id):
-    """
-    Thêm học viên vào lớp học.
-    Tự động cấp định mức 08 buổi (TOEIC/VSTEP) hoặc 05 buổi (B1).
-    """
-    classroom = get_object_or_404(ClassRoom, id=class_id)
-    if request.method == 'POST':
-        form = EnrollStudentForm(request.POST, classroom=classroom)
-        if form.is_valid():
-            student = form.cleaned_data['student']
-            try:
-                ClassManagementService.enroll_student_to_class(classroom, student)
-                messages.success(request, f"Đã thêm học viên {student.get_full_name() or student.username} vào lớp {classroom.class_code}.")
-            except ValidationError as e:
-                messages.error(request, str(e))
-            return redirect('courses:class_detail', class_id=classroom.id)
-    else:
-        form = EnrollStudentForm(classroom=classroom)
-
-    return render(request, 'courses/enroll_student.html', {'form': form, 'classroom': classroom})
+    classroom = get_object_or_404(ClassRoom, pk=class_id)
+    form = EnrollStudentForm(request.POST or None, classroom=classroom)
+    if request.method == 'POST' and form.is_valid():
+        try:
+            ClassManagementService.enroll_student_to_class(classroom, form.cleaned_data['student'])
+            messages.success(request, 'Đã ghi danh và đồng bộ các bài tập đang mở cho học viên.')
+            return redirect('courses:class_detail', class_id=class_id)
+        except ValidationError as exc: form.add_error(None, exc)
+    return render(request, 'core/form.html', {'form': form, 'title': 'Thêm học viên · '+classroom.class_code,
+        'back_url': reverse('courses:class_detail', args=[class_id])})
 
 
-@role_required(CustomUser.ROLE_ADMIN, CustomUser.ROLE_MANAGER)
+@role_required('admin', 'manager')
 def remove_student_view(request, class_id, student_id):
-    """Xóa học viên khỏi lớp học"""
-    classroom = get_object_or_404(ClassRoom, id=class_id)
-    student = get_object_or_404(CustomUser, id=student_id)
+    enrollment = get_object_or_404(Enrollment.objects.select_related('student', 'classroom'),
+        classroom_id=class_id, student_id=student_id)
     if request.method == 'POST':
         try:
-            ClassManagementService.remove_student_from_class(classroom, student)
-            messages.success(request, f"Đã xóa học viên {student.username} khỏi lớp {classroom.class_code}.")
-        except ValidationError as e:
-            messages.error(request, str(e))
-        return redirect('courses:class_detail', class_id=classroom.id)
+            ClassManagementService.remove_student_from_class(enrollment.classroom, enrollment.student)
+            messages.success(request, 'Đã chuyển học viên sang trạng thái nghỉ học. Lịch sử được giữ nguyên.')
+        except ValidationError as exc: messages.error(request, '; '.join(exc.messages))
+        return redirect('courses:class_detail', class_id=class_id)
+    return render(request, 'core/confirm.html', {'title': 'Ngừng ghi danh',
+        'description': enrollment.student.username+' · '+enrollment.classroom.class_code,
+        'back_url': reverse('courses:class_detail', args=[class_id])})
 
-    return render(request, 'courses/student_confirm_remove.html', {'classroom': classroom, 'student': student})
 
-
-# ==========================================================
-# CƠ CHẾ KIỂM SOÁT MIỄN BTVN (CHỈ SPEAKING & VOCABULARY - BẮT BUỘC LISTENING)
-# ==========================================================
-
-@login_required
+@role_required('student')
 def request_exemption_view(request, class_id):
-    """
-    Học viên nộp đơn xin miễn BTVN:
-    - Bắt buộc làm bài tập Listening.
-    - Chỉ cho phép xin miễn Speaking và Vocabulary.
-    - Kiểm tra số buổi miễn còn lại (> 0) theo mã học viên.
-    """
-    classroom = get_object_or_404(ClassRoom, id=class_id)
-    user = request.user
-
-    enrollment = Enrollment.objects.filter(
-        classroom=classroom,
-        student=user,
-        status=Enrollment.STATUS_ACTIVE
-    ).first()
-
-    if not enrollment:
-        messages.error(request, "Bạn không phải học viên đang hoạt động trong lớp này.")
-        return redirect('courses:class_detail', class_id=classroom.id)
-
-    quota = getattr(enrollment, 'exemption_quota', None)
-    if not quota or quota.remaining_quota <= 0:
-        messages.error(request, f"Bạn đã sử dụng hết số buổi miễn BTVN ({quota.used_quota if quota else 0}/{quota.max_quota if quota else 0}).")
-        return redirect('courses:class_detail', class_id=classroom.id)
-
-    if request.method == 'POST':
-        form = ExemptionRequestForm(request.POST)
-        form.instance.enrollment = enrollment
-        if form.is_valid():
-            try:
-                exemption = ExemptionControlService.submit_exemption(
-                    student=user,
-                    classroom=classroom,
-                    homework_type=form.cleaned_data['homework_type'],
-                    session_title=form.cleaned_data['session_title'],
-                    reason=form.cleaned_data['reason']
-                )
-                messages.success(
-                    request,
-                    f"Đã gửi đơn xin miễn {exemption.get_homework_type_display()} '{exemption.session_title}' thành công! "
-                    f"Giáo viên phụ trách sẽ xem xét và phê duyệt."
-                )
-                return redirect('courses:class_detail', class_id=classroom.id)
-            except ValidationError as e:
-                messages.error(request, str(e))
-    else:
-        form = ExemptionRequestForm(initial={'homework_type': ExemptionRequest.HOMEWORK_TYPE_SPEAKING})
-
-    return render(request, 'courses/request_exemption.html', {
-        'form': form,
-        'classroom': classroom,
-        'quota': quota
-    })
+    enrollment = get_object_or_404(Enrollment.objects.select_related('classroom', 'exemption_quota'),
+        classroom_id=class_id, classroom__is_active=True, student=request.user, status='active')
+    form = ExemptionRequestForm(request.POST or None, student=request.user, classroom=enrollment.classroom,
+        initial={'assignment': request.GET.get('assignment')})
+    form.instance.enrollment = enrollment
+    if request.method == 'POST' and form.is_valid():
+        try:
+            ExemptionControlService.submit_exemption(student=request.user, classroom=enrollment.classroom,
+                assignment=form.cleaned_data['assignment'], reason=form.cleaned_data['reason'])
+            messages.success(request, 'Đã gửi đơn xin miễn. Bài này tạm dừng nhận bài trong khi chờ duyệt.')
+            return redirect('courses:exemption_list')
+        except ValidationError as exc: form.add_error(None, exc)
+    return render(request, 'courses/request_exemption.html', {'form': form, 'classroom': enrollment.classroom,
+        'quota': enrollment.exemption_quota})
 
 
 @login_required
 def exemption_list_view(request):
-    """
-    Danh sách đơn xin miễn BTVN:
-    - Giáo viên: Xem các đơn thuộc các lớp mình đang giảng dạy để duyệt.
-    - Quản lý / Admin: Xem toàn bộ các đơn xin miễn để theo dõi, quản trị vận hành.
-    - Học viên: Xem các đơn của chính mình.
-    """
-    user = request.user
-    if user.is_superuser or user.role in [CustomUser.ROLE_ADMIN, CustomUser.ROLE_MANAGER]:
-        exemptions = ExemptionRequest.objects.all().select_related(
-            'enrollment__classroom', 'enrollment__student', 'reviewed_by'
-        )
-    elif user.role == CustomUser.ROLE_TEACHER:
-        # Giáo viên chỉ xem lớp mình phụ trách
-        exemptions = ExemptionRequest.objects.filter(
-            enrollment__classroom__teacher=user
-        ).select_related('enrollment__classroom', 'enrollment__student', 'reviewed_by')
-    else:  # Student
-        exemptions = ExemptionRequest.objects.filter(
-            enrollment__student=user
-        ).select_related('enrollment__classroom', 'enrollment__student', 'reviewed_by')
-
-    status_filter = request.GET.get('status', '')
-    if status_filter:
-        exemptions = exemptions.filter(status=status_filter)
-
-    return render(request, 'courses/exemption_list.html', {
-        'exemptions': exemptions,
-        'status_filter': status_filter
-    })
+    rows = ExemptionRequest.objects.select_related('enrollment__student', 'enrollment__classroom', 'reviewed_by', 'assignment__lesson')
+    if request.user.role == 'student' and not request.user.is_superuser:
+        rows = rows.filter(enrollment__student=request.user)
+    elif not is_manager(request.user):
+        rows = rows.filter(enrollment__classroom__in=classes_for(request.user))
+    status = request.GET.get('status', '')
+    if status: rows = rows.filter(status=status)
+    return render(request, 'courses/exemption_list.html', {'exemptions': Paginator(rows, 20).get_page(request.GET.get('page')),
+        'status_filter': status, 'status_choices': ExemptionRequest.STATUS_CHOICES})
 
 
-@role_required(CustomUser.ROLE_ADMIN, CustomUser.ROLE_TEACHER)
+@role_required('admin', 'teacher')
 def exemption_review_view(request, exemption_id):
-    """
-    Giáo viên hoặc Admin duyệt / từ chối đơn xin miễn BTVN:
-    - Nếu Chấp thuận: Trừ quota, gửi thông báo cho Quản lý và Học viên.
-    - Nếu Từ chối: Gửi thông báo kèm lý do cho Học viên.
-    """
-    exemption = get_object_or_404(
-        ExemptionRequest.objects.select_related('enrollment__classroom', 'enrollment__student', 'enrollment__exemption_quota'),
-        id=exemption_id
-    )
-    classroom = exemption.enrollment.classroom
-
-    # Kiểm tra đúng giáo viên lớp hoặc admin
-    if not (request.user.is_superuser or request.user.role == CustomUser.ROLE_ADMIN or classroom.teacher == request.user):
-        messages.error(request, "Chỉ giáo viên phụ trách lớp này mới có quyền duyệt đơn.")
+    exemption = get_object_or_404(ExemptionRequest.objects.select_related('enrollment__classroom',
+        'enrollment__student', 'enrollment__exemption_quota').filter(enrollment__classroom__in=classes_for(request.user)), pk=exemption_id)
+    if exemption.status != 'pending':
+        messages.info(request, 'Đơn đã được xử lý: '+exemption.get_status_display())
         return redirect('courses:exemption_list')
+    form = ExemptionReviewForm(request.POST or None, exemption=exemption)
+    if request.method == 'POST' and form.is_valid():
+        try:
+            ExemptionControlService.review(exemption.pk, request.user,
+                approve=form.cleaned_data['action']=='approve', note=form.cleaned_data['note'],
+                assignment=form.cleaned_data.get('assignment'))
+            messages.success(request, 'Đã xử lý đơn và thông báo kết quả cho học viên.')
+            return redirect('courses:exemption_list')
+        except ValidationError as exc: form.add_error(None, exc)
+    return render(request, 'courses/exemption_review.html', {'form': form, 'exemption': exemption,
+        'quota': exemption.enrollment.exemption_quota})
 
-    if exemption.status != ExemptionRequest.STATUS_PENDING:
-        messages.warning(request, f"Đơn này đã được xử lý ({exemption.get_status_display()}).")
-        return redirect('courses:exemption_list')
 
-    if request.method == 'POST':
-        form = ExemptionReviewForm(request.POST)
-        if form.is_valid():
-            action = form.cleaned_data['action']
-            note = form.cleaned_data['note']
-            try:
-                if action == 'approve':
-                    ExemptionControlService.approve_exemption(exemption.id, teacher=request.user, note=note)
-                    messages.success(request, f"Đã duyệt đơn miễn {exemption.get_homework_type_display()} cho học viên {exemption.enrollment.student.username}. Quản lý đã được thông báo.")
-                else:
-                    ExemptionControlService.reject_exemption(exemption.id, teacher=request.user, reason=note)
-                    messages.info(request, f"Đã từ chối đơn miễn BTVN của học viên {exemption.enrollment.student.username}.")
-                return redirect('courses:exemption_list')
-            except ValidationError as e:
-                messages.error(request, str(e))
-    else:
-        form = ExemptionReviewForm()
-
-    return render(request, 'courses/exemption_review.html', {
-        'exemption': exemption,
-        'form': form,
-        'classroom': classroom,
-        'quota': getattr(exemption.enrollment, 'exemption_quota', None)
-    })
+@role_required('student')
+@require_POST
+def exemption_cancel(request, exemption_id):
+    exemption = get_object_or_404(ExemptionRequest, pk=exemption_id, enrollment__student=request.user)
+    try:
+        ExemptionControlService.cancel(exemption.pk, request.user)
+        messages.success(request, 'Đã hủy đơn. Bạn có thể nộp bài theo quy định của lớp.')
+    except ValidationError as exc: messages.error(request, '; '.join(exc.messages))
+    return redirect('courses:exemption_list')

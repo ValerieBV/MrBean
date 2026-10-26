@@ -1,8 +1,10 @@
-# Mr Bean — Dashboard ba vai trò và chấm bài tự động
+# Mr Bean — Hướng dẫn AI và dashboard
+
+Hướng dẫn chạy toàn dự án: [README.md](README.md). Quy trình chi tiết: [docs/WORKFLOWS.md](docs/WORKFLOWS.md).
 
 ## Phạm vi và nguồn tích hợp
 
-Mọi thay đổi chỉ được đưa vào nhánh **`codex/ai-dashboard-bv`**. Không merge vào
+Mọi thay đổi chỉ được đưa vào nhánh **`codex/mrbean-full-integration`**. Không merge vào
 `AI`, `master`, `assignments` hoặc `feature/setup-web-admin`.
 
 Nguồn đọc (snapshot đã tích hợp vào chính nhánh này):
@@ -30,8 +32,8 @@ DB (xem dưới).
 
 ```powershell
 git fetch origin
-git switch codex/ai-dashboard-bv
-git pull --ff-only origin codex/ai-dashboard-bv
+git switch codex/mrbean-full-integration
+git pull --ff-only origin codex/mrbean-full-integration
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install -r requirements.txt
@@ -76,8 +78,8 @@ và `seed_phanb` chuyển tới cùng lệnh an toàn này, cũng bắt buộc `
 
 ```dotenv
 OPENAI_API_KEY=YOUR_API_KEY_HERE
-OPENAI_TEXT_MODEL=gpt-4o-mini
-OPENAI_TRANSCRIBE_MODEL=gpt-4o-mini-transcribe
+OPENAI_TEXT_MODEL=gpt-6-luna
+OPENAI_TRANSCRIBE_MODEL=gpt-transcribe
 DJANGO_DEBUG=true
 DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1
 DJANGO_SECRET_KEY=YOUR_RANDOM_DJANGO_SECRET
@@ -223,7 +225,7 @@ Queue lưu DB; atomic claim tránh nhiều worker cùng chấm một bài. Deadl
 retry ẩn. Kết quả đến muộn không ghi đè manual hoặc điểm giáo viên.
 Có thể chạy nhiều worker với PostgreSQL khi tải tăng.
 
-Chạy watchdog `python manage.py expire_ai_jobs` bằng Task Scheduler mỗi phút
+Chạy watchdog `python manage.py expire_ai_jobs --loop` trong tiến trình độc lập, kiểm tra mỗi giây
 (Windows), hoặc cron/supervisor ở máy chủ, độc lập với worker. Watchdog có
 sai số tối đa một chu kỳ; hạ tầng dừng thì không thể cam kết thời gian tuyệt
 đối. Các mục SLA tiếp tục không hiển thị trên dashboard.

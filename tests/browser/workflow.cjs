@@ -1,0 +1,70 @@
+const {chromium}=require('playwright');
+const fs=require('fs'),assert=require('node:assert/strict'),{execFileSync,spawn}=require('child_process');
+const path=require('path'),os=require('os');
+const root=path.resolve(__dirname,'../..'),base='http://127.0.0.1:8765';
+const python=process.env.MRBEAN_PYTHON|| (process.platform==='win32'?path.join(root,'.venv','Scripts','python.exe'):path.join(root,'.venv','bin','python'));
+const temporary=fs.mkdtempSync(path.join(os.tmpdir(),'mrbean-e2e-'));
+const output=path.resolve(process.env.MRBEAN_QA_OUTPUT||temporary);
+fs.mkdirSync(output,{recursive:true});process.chdir(output);
+const env={...process.env,DJANGO_DEBUG:'true',OPENAI_API_KEY:'',DJANGO_DB_PATH:path.join(temporary,'test.sqlite3'),DJANGO_MEDIA_ROOT:path.join(temporary,'media')};
+execFileSync(python,['manage.py','migrate','--noinput'],{cwd:root,env,stdio:'pipe'});
+execFileSync(python,['manage.py','seed_demo','--password','DemoLocal123!'],{cwd:root,env,stdio:'pipe'});
+execFileSync('ffmpeg',['-loglevel','error','-f','lavfi','-i','color=c=0x334536:s=640x360:d=3','-f','lavfi','-i','sine=frequency=440:duration=3','-c:v','libx264','-pix_fmt','yuv420p','-c:a','aac','-shortest','-y','sample-reference.mp4'],{stdio:'pipe'});
+fs.mkdirSync('screenshots',{recursive:true});
+const stamp=Date.now().toString().slice(-7),errors=[],routes=[],results={stamp};
+const now=new Date(),start=new Date(now.getTime()-24*3600000).toISOString().slice(0,16),due=new Date(now.getTime()+7*24*3600000).toISOString().slice(0,16);
+let server;
+process.on('exit',()=>server?.kill());
+(async()=>{
+const serverLog=fs.openSync('browser-server.log','w');
+server=spawn(python,['-u','manage.py','runserver','127.0.0.1:8765','--noreload'],{cwd:root,env,stdio:['ignore',serverLog,serverLog]});
+for(let i=0;i<100;i++){try{const r=await fetch(base+'/accounts/login/');if(r.ok)break;}catch{}await new Promise(r=>setTimeout(r,100));}
+const browser=await chromium.launch({headless:true,executablePath:process.env.MRBEAN_CHROMIUM_PATH||undefined,
+ args:['--no-sandbox','--disable-dev-shm-usage','--disable-gpu','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader','--use-fake-device-for-media-stream','--use-fake-ui-for-media-stream'],
+});
+async function session(username){const ctx=await browser.newContext({viewport:{width:1440,height:1000},permissions:['microphone']});const p=await ctx.newPage();p.on('pageerror',e=>errors.push(username+': '+e.message));p.on('response',r=>{if(r.url().startsWith(base)&&r.status()>=400)errors.push(username+': HTTP '+r.status()+' '+r.url());});await p.goto(base+'/accounts/login/');await p.locator('[name=username]').fill(username);await p.locator('[name=password]').fill(username.startsWith('ui_student')?'Learning!8429':'DemoLocal123!');await Promise.all([p.waitForURL('**/dashboard/'),p.getByRole('button',{name:'Đăng nhập →'}).click()]);await p.waitForFunction(()=>document.getElementById('rate')?.textContent!=='—');return p;}
+async function fill(p,name,value){await p.locator(`[name="${name}"]`).fill(value);}
+async function save(p,name='Lưu thay đổi'){await Promise.all([p.waitForURL(url=>!url.pathname.endsWith('/new/')&&!url.pathname.endsWith('/create/')&&!url.pathname.endsWith('/edit/')),p.getByRole('button',{name,exact:true}).click()]);}
+const admin=await session('demo_admin');await admin.screenshot({path:'screenshots/admin-desktop.png',fullPage:true});
+await admin.goto(base+'/courses/catalog/new/');await fill(admin,'code','UI-'+stamp);await fill(admin,'name','Khóa học giao diện '+stamp);await admin.locator('[name=course_type]').selectOption('B1');await save(admin);
+await admin.getByRole('article').filter({hasText:'UI-'+stamp}).getByRole('link',{name:'Tạo lớp',exact:true}).click();
+await fill(admin,'class_code','UI-C'+stamp);await fill(admin,'name','Lớp kiểm thử '+stamp);await admin.locator('[name=teacher]').selectOption(await admin.locator('[name=teacher] option').filter({hasText:'demo_teacher'}).getAttribute('value'));await save(admin);
+const classURL=admin.url();const classID=classURL.match(/classes\/(\d+)/)[1];results.classID=classID;
+await admin.goto(base+'/accounts/users/create/');await fill(admin,'username','ui_student'+stamp);await admin.locator('[name=role]').selectOption('student');await fill(admin,'first_name','Học viên kiểm thử');await fill(admin,'student_code','B2026UI'+stamp);await fill(admin,'password','Learning!8429');await fill(admin,'confirm_password','Learning!8429');await save(admin);
+await admin.goto(base+`/courses/classes/${classID}/enroll/`);const studentValue=await admin.locator('[name=student] option').filter({hasText:'ui_student'+stamp}).getAttribute('value');await admin.locator('[name=student]').selectOption(studentValue);await save(admin);
+const teacher=await session('demo_teacher');
+async function createLesson(skill,order,title,extras={}){await teacher.goto(base+'/quan-ly/bai-tap/new/');await teacher.locator('[name=skill]').selectOption(skill);await teacher.locator('[name=program]').selectOption('B1');await fill(teacher,'order',String(order));await fill(teacher,'title',title);await fill(teacher,'description','Nội dung dùng kiểm thử giao diện và quy trình.');for(const [key,val]of Object.entries(extras)){if(key==='video_file')await teacher.locator('[name=video_file]').setInputFiles(val);else await fill(teacher,key,val);}await save(teacher);return teacher.url().match(/lesson\/(\d+)/)[1];}
+async function assignLesson(lessonID){await teacher.goto(base+`/quan-ly/bai-tap/assign/?lesson=${lessonID}&classroom=${classID}`);await fill(teacher,'assigned_at',start);await fill(teacher,'due_at',due);await fill(teacher,'repetitions','2');await Promise.all([teacher.waitForURL('**/assigned/*/'),teacher.getByRole('button',{name:'Lưu thay đổi',exact:true}).click()]);return teacher.url();}
+const listening=await createLesson('listening',Number(stamp),'Bài nghe UI '+stamp);
+await fill(teacher,'order','1');await fill(teacher,'question_text','Which answer is correct?');await fill(teacher,'option_a','First choice');await fill(teacher,'option_b','Second choice');await teacher.locator('[name=correct_option]').selectOption('B');await teacher.getByRole('button',{name:'+ Thêm nội dung',exact:true}).click();await teacher.waitForURL('**/lesson/*/');await assignLesson(listening);
+const student=await session('ui_student'+stamp);await student.goto(base+'/hoc-tap/ky-nang/');await student.getByRole('article').filter({hasText:'Bài nghe UI '+stamp}).getByRole('link',{name:'Bắt đầu làm bài →'}).click();
+const listeningTaskURL=student.url();await student.waitForFunction(()=>typeof document.getElementById('submissionForm')?.onsubmit==='function');await student.locator('input[type=radio][value=B]').check();await student.waitForFunction(()=>document.getElementById('draftStatus')?.textContent.startsWith('Đã lưu nháp'));
+await student.reload();assert(await student.locator('input[type=radio][value=B]').isChecked());await Promise.all([student.waitForURL('**/results/*/'),student.getByRole('button',{name:'Nộp bài',exact:true}).click()]);assert.match(await student.locator('body').innerText(),/Đúng 1\/1/);results.listening='auto-graded 10/10; draft restored';
+const vocab=await createLesson('vocabulary',Number(stamp),'Từ vựng UI '+stamp);await fill(teacher,'order','1');await fill(teacher,'word','Hello');await fill(teacher,'meaning','Xin chào');await teacher.getByRole('button',{name:'+ Thêm nội dung',exact:true}).click();await assignLesson(vocab);
+await student.goto(base+'/hoc-tap/ky-nang/');await student.getByRole('article').filter({hasText:'Từ vựng UI '+stamp}).getByRole('link',{name:'Bắt đầu làm bài →'}).click();await student.getByRole('link',{name:'Cần xin miễn bài này?'}).click();await fill(student,'reason','Xin miễn để kiểm thử quy trình duyệt đúng bài.');await Promise.all([student.waitForURL('**/exemptions/'),student.getByRole('button',{name:'Gửi đơn',exact:true}).click()]);
+await teacher.goto(base+'/courses/exemptions/');await teacher.locator('tr').filter({hasText:'Từ vựng UI '+stamp}).getByRole('link',{name:'Xem xét đơn'}).click();await teacher.locator('[name=action][value=approve]').check();await fill(teacher,'note','Đồng ý miễn bài theo quy định.');await Promise.all([teacher.waitForURL('**/exemptions/'),teacher.getByRole('button',{name:'Lưu quyết định',exact:true}).click()]);results.exemption='requested and approved once';
+const speaking=await createLesson('speaking',Number(stamp),'Đọc video UI '+stamp,{video_file:'sample-reference.mp4',reference_transcript:'My hobby is reading.'});await assignLesson(speaking);
+await student.goto(base+'/hoc-tap/ky-nang/');await student.getByRole('article').filter({hasText:'Đọc video UI '+stamp}).getByRole('link',{name:'Bắt đầu làm bài →'}).click();assert.equal(await student.locator('input[type=file]').count(),0);await student.getByRole('button',{name:'Bắt đầu ghi âm',exact:true}).click();await student.waitForFunction(()=>document.getElementById('recordStatus').textContent.startsWith('Đang ghi âm'));await new Promise(r=>setTimeout(r,1700));await student.getByRole('button',{name:'Dừng ghi âm',exact:true}).click();await student.waitForFunction(()=>!document.getElementById('submitButton').disabled);await student.screenshot({path:'screenshots/student-recording.png',fullPage:true});await Promise.all([student.waitForURL('**/results/*/'),student.getByRole('button',{name:'Nộp bài',exact:true}).click()]);const jobID=student.url().match(/results\/(\d+)/)[1];results.speakingJobID=jobID;
+execFileSync(python,['manage.py','run_ai_worker','--once'],{cwd:root,env,stdio:'pipe'});
+await teacher.goto(base+`/hoc-tap/results/${jobID}/`);await teacher.locator('#score').fill('7.5');await teacher.locator('#feedback').fill('Đã kiểm tra bản ghi và lời mẫu. Điểm chấm thủ công.');await teacher.getByRole('button',{name:'Xác nhận điểm',exact:true}).click();await teacher.waitForFunction(()=>!document.getElementById('reviewForm'));await student.reload();assert.match(await student.locator('body').innerText(),/Điểm chấm thủ công/);results.speaking='microphone-only recording; provider failure → manual → confirmed 7.5';
+await teacher.goto(base+'/dashboard/');await teacher.waitForFunction(()=>document.getElementById('rate').textContent!=='—');await teacher.screenshot({path:'screenshots/teacher-desktop.png',fullPage:true});
+await student.goto(base+'/dashboard/');await student.waitForFunction(()=>document.getElementById('rate').textContent!=='—');assert.equal(await student.locator('#rate').innerText(),'100%');await student.screenshot({path:'screenshots/student-desktop.png',fullPage:true});
+for(const [role,p]of [['admin',admin],['teacher',teacher],['student',student]]){
+ await p.goto(base+'/dashboard/');await p.waitForFunction(()=>document.getElementById('rate').textContent!=='—');
+ const links=await p.locator('.sidebar a').evaluateAll(as=>[...new Set(as.map(a=>a.getAttribute('href')))]);
+ for(const href of links){const response=await p.goto(base+href);assert.equal(response.status(),200,role+' nav '+href);routes.push(role+': '+href);}
+ for(const width of [1440,768,390]){await p.setViewportSize({width,height:920});await p.goto(base+'/dashboard/');await p.waitForFunction(()=>document.getElementById('rate').textContent!=='—');assert(await p.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1),role+' horizontal overflow');if(width===390){await p.getByRole('button',{name:'Mở điều hướng',exact:true}).click();assert.equal(await p.locator('[data-menu-toggle]').getAttribute('aria-expanded'),'true');await p.keyboard.press('Escape');assert.equal(await p.locator('[data-menu-toggle]').getAttribute('aria-expanded'),'false');await p.screenshot({path:`screenshots/${role}-mobile.png`,fullPage:true});}}
+}
+const manager=await session('demo_manager');await manager.goto(base+`/hoc-tap/results/${jobID}/`);assert.equal(await manager.locator('#reviewForm').count(),0);routes.push('manager: results read only');
+const AxeBuilder=require('@axe-core/playwright').default;results.accessibility=[];
+const anonymousContext=await browser.newContext();const anon=await anonymousContext.newPage();await anon.goto(base+'/accounts/login/');const anonymousReport=await new AxeBuilder({page:anon}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze();results.accessibility.push({role:'anonymous',url:'/accounts/login/',violations:anonymousReport.violations.map(v=>({id:v.id,impact:v.impact}))});await anonymousContext.close();
+for(const[role,p]of [['admin',admin],['teacher',teacher],['student',student]]){
+ await p.setViewportSize({width:1440,height:1000});
+ const urls=role==='admin'?['/dashboard/','/accounts/users/','/accounts/users/create/','/courses/catalog/','/courses/classes/create/','/accounts/notifications/','/accounts/profile/']:
+ role==='teacher'?['/dashboard/','/quan-ly/bai-tap/','/quan-ly/bai-tap/new/','/quan-ly/bai-tap/assigned/','/quan-ly/bai-tap/assign/','/courses/exemptions/']:
+ ['/dashboard/','/hoc-tap/ky-nang/','/courses/',`/courses/classes/${classID}/`,`/hoc-tap/results/${jobID}/`];
+ for(const url of urls){await p.goto(base+url);if(url==='/dashboard/')await p.waitForFunction(()=>document.getElementById('rate').textContent!=='—');const report=await new AxeBuilder({page:p}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze();results.accessibility.push({role,url,violations:report.violations.map(v=>({id:v.id,impact:v.impact,targets:v.nodes.map(n=>n.target)}))});}
+ await p.goto(base+'/dashboard/');await p.waitForFunction(()=>document.getElementById('rate').textContent!=='—');await p.screenshot({path:`screenshots/${role}-desktop-final.png`,fullPage:true});
+}
+results.routes=routes;results.errors=errors;fs.writeFileSync('browser-qa-results.json',JSON.stringify(results,null,2));console.log(JSON.stringify(results,null,2));console.log('QA output: '+output);await browser.close();server.kill();assert.equal(errors.length,0,'Browser console/HTTP errors');assert.equal(results.accessibility.flatMap(r=>r.violations).length,0,'Accessibility violations');
+})().catch(e=>{console.error(e.stack);console.error(JSON.stringify({errors}));process.exit(1)});

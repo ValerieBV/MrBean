@@ -64,6 +64,10 @@ class CustomUser(AbstractUser):
         return f"{display_name} - [{self.get_role_display()}]"
 
     @property
+    def display_name(self):
+        return self.get_full_name() or self.username
+
+    @property
     def is_admin_user(self):
         return self.role == self.ROLE_ADMIN or self.is_superuser
 
@@ -97,9 +101,13 @@ class CustomUser(AbstractUser):
         return 8  # Mặc định
 
     def save(self, *args, **kwargs):
-        # Tự động set is_staff cho admin và manager để quản trị hệ thống
-        if self.role in [self.ROLE_ADMIN, self.ROLE_MANAGER]:
-            self.is_staff = True
+        old_role, old_staff = self.role, self.is_staff
+        if self.is_superuser:
+            self.role = self.ROLE_ADMIN
+        self.is_staff = self.is_superuser or self.role in [self.ROLE_ADMIN, self.ROLE_MANAGER]
+        if kwargs.get('update_fields'):
+            extra = ({'role'} if self.role != old_role else set()) | ({'is_staff'} if self.is_staff != old_staff else set())
+            kwargs['update_fields'] = set(kwargs['update_fields']) | extra
         super().save(*args, **kwargs)
 
 
@@ -143,6 +151,8 @@ class Notification(models.Model):
         verbose_name="Loại thông báo"
     )
     is_read = models.BooleanField(default=False, verbose_name="Đã đọc")
+    target_url = models.CharField(max_length=300, blank=True, default='')
+    event_key = models.CharField(max_length=128, unique=True, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Thời gian tạo")
 
     class Meta:
@@ -152,3 +162,7 @@ class Notification(models.Model):
 
     def __str__(self):
         return f"[{self.get_notification_type_display()}] {self.title} -> {self.recipient.username}"
+
+    @property
+    def safe_target_url(self):
+        return self.target_url if self.target_url.startswith('/') and not self.target_url.startswith('//') else '/accounts/notifications/'

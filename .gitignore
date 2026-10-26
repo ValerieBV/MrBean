@@ -4,4 +4,8 @@ __pycache__/
 db.sqlite3
 media/
 .idea/
-.env
+.envnode_modules/
+staticfiles/
+browser-output/
+playwright-report/
+test-results/

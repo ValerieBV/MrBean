@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'core',
     'accounts',
     'courses',
     'assignments',
@@ -84,7 +85,7 @@ WSGI_APPLICATION = 'core.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'NAME': os.getenv('DJANGO_DB_PATH', str(BASE_DIR / 'db.sqlite3')),
     }
 }
 
@@ -132,7 +133,7 @@ STATICFILES_DIRS = []
 
 # Cấu hình lưu trữ file tải lên (Media - File audio, bài tập)
 MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+MEDIA_ROOT = os.getenv('DJANGO_MEDIA_ROOT', os.path.join(BASE_DIR, 'media'))
 
 # Email
 # https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
@@ -147,8 +148,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # AI keys are environment-only. Never commit production credentials.
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY', '')
-OPENAI_TEXT_MODEL = os.getenv('OPENAI_TEXT_MODEL', 'gpt-4o-mini')
-OPENAI_TRANSCRIBE_MODEL = os.getenv('OPENAI_TRANSCRIBE_MODEL', 'gpt-4o-mini-transcribe')
+OPENAI_TEXT_MODEL = os.getenv('OPENAI_TEXT_MODEL', 'gpt-6-luna')
+OPENAI_TRANSCRIBE_MODEL = os.getenv('OPENAI_TRANSCRIBE_MODEL', 'gpt-transcribe')
 AI_DEADLINE_SECONDS = 300
 AI_REQUEST_TIMEOUT_SECONDS = 120
 AI_MAX_AUDIO_BYTES = 20 * 1024 * 1024

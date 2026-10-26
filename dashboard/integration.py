@@ -40,7 +40,7 @@ def sync_class_assignment(assignment):
         raise ValidationError('Lớp cần có giáo viên trước khi giao bài.')
     rows = []
     for enrollment in Enrollment.objects.filter(classroom=assignment.classroom, status='active').select_related('student'):
-        task, _ = LearningTask.objects.get_or_create(
+        task, created = LearningTask.objects.get_or_create(
             assignment_key=f'class-assignment:{assignment.pk}', learner=enrollment.student,
             defaults=dict(assignment=assignment, title=assignment.lesson.title, teacher=teacher,
                           assigned_at=assignment.assigned_at, due_at=assignment.due_at))
@@ -50,5 +50,12 @@ def sync_class_assignment(assignment):
         if task.teacher_id != teacher.pk:
             task.teacher = teacher
             task.save(update_fields=['teacher'])
+        if created:
+            from accounts.notifications import notify
+            from django.urls import reverse
+            notify(recipient=enrollment.student, sender=assignment.created_by,
+                title='Bài tập mới: '+assignment.lesson.title,
+                message='Lớp '+assignment.classroom.class_code+'. Hạn nộp: '+timezone.localtime(assignment.due_at).strftime('%d/%m/%Y %H:%M'),
+                target_url=reverse('submissions:do_task',args=[task.pk]), event_key=f'assignment:{task.pk}')
         rows.append(task)
     return rows

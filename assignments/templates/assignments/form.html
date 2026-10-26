@@ -1,1 +1,1 @@
-{% extends 'base.html' %}{% block title %}{{ title }}{% endblock %}{% block content %}<h1 class="report-title">{{ title }}</h1><section class="report-panel"><form class="report-form" method="post" enctype="multipart/form-data">{% csrf_token %}{{ form.as_p }}<button class="report-button">Lưu</button> <a href="{% url 'assignments:assignment_list' %}">Quay lại</a></form></section>{% endblock %}
+{% extends 'core/form.html' %}

@@ -1,0 +1,1100 @@
+{
+  "codex/ai-dashboard-bv": [
+    {
+      "path": ".env.example",
+      "sha": "06a1ce4935c287a61fb704ff6e17100ba1a9df38"
+    },
+    {
+      "path": ".github/workflows/ai-dashboard.yml",
+      "sha": "9b93a2abc703f64f0de0d8a5eeae2a39e3cc2f88"
+    },
+    {
+      "path": ".gitignore",
+      "sha": "919b286530651cafea0f94d0219012a0a51c1ffb"
+    },
+    {
+      "path": "README_AI.md",
+      "sha": "29c81eaffe71b237c799771af9dc6ae45424d038"
+    },
+    {
+      "path": "accounts/__init__.py",
+      "sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "accounts/admin.py",
+      "sha": "7f28ba20fdbcd31dab307f6015e79cbed6ea625b"
+    },
+    {
+      "path": "accounts/apps.py",
+      "sha": "1aefbd5863dd5f044d3425be9db6e0f0822735f7"
+    },
+    {
+      "path": "accounts/forms.py",
+      "sha": "8f4726c8ad3847692903a7a5c488a0f15bd2ab57"
+    },
+    {
+      "path": "accounts/migrations/0001_initial.py",
+      "sha": "6602557ad02b2f2b14dfc14df4498fc29a384489"
+    },
+    {
+      "path": "accounts/migrations/0002_alter_customuser_options_and_more.py",
+      "sha": "7d09154aa030cd8d24e01ba6e262548b1797c66d"
+    },
+    {
+      "path": "accounts/migrations/0003_customuser_student_code.py",
+      "sha": "0bd24d264ebfe63e20cd7969a6b54563dad322bc"
+    },
+    {
+      "path": "accounts/migrations/__init__.py",
+      "sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "accounts/models.py",
+      "sha": "832417983bf53344267aeca1a77d0350f5e8abe5"
+    },
+    {
+      "path": "accounts/permissions.py",
+      "sha": "14b40111f32e82a59f5c1f05a94a550a4fa75302"
+    },
+    {
+      "path": "accounts/templates/accounts/login.html",
+      "sha": "c3f4b9844a24e52e7dfb626e636e11d7d17e7e4c"
+    },
+    {
+      "path": "accounts/templates/accounts/notifications.html",
+      "sha": "b54da33229ca90488737163b1d6074172a97e970"
+    },
+    {
+      "path": "accounts/templates/accounts/user_confirm_delete.html",
+      "sha": "a911b06e2ec586586524f5b2161959aaa40313b8"
+    },
+    {
+      "path": "accounts/templates/accounts/user_form.html",
+      "sha": "3c32a18bf7a1ef571aeb8a181ad20e4419d7b4fc"
+    },
+    {
+      "path": "accounts/templates/accounts/user_list.html",
+      "sha": "a724447d96460abe60580e1082b148edc58f406a"
+    },
+    {
+      "path": "accounts/tests.py",
+      "sha": "30e394cafffbdaf994702bda3973d7e9bfba8b80"
+    },
+    {
+      "path": "accounts/urls.py",
+      "sha": "7053aaea97bb886961780953e26f3a5be68e7493"
+    },
+    {
+      "path": "accounts/views.py",
+      "sha": "42e1eb23da3185688fe8f17f3cfade9910bfbabd"
+    },
+    {
+      "path": "ai_core/__init__.py",
+      "sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "ai_core/admin.py",
+      "sha": "9914a3645c2fe96c05a895fe984fa86011a44f36"
+    },
+    {
+      "path": "ai_core/apps.py",
+      "sha": "954c1ee300cc88a9c4b6b42a0d1b2f82cef6a00a"
+    },
+    {
+      "path": "ai_core/management/__init__.py",
+      "sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "ai_core/management/commands/__init__.py",
+      "sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "ai_core/management/commands/check_openai.py",
+      "sha": "ad12812d476a1b39088623e528dcb0864e041ec6"
+    },
+    {
+      "path": "ai_core/management/commands/expire_ai_jobs.py",
+      "sha": "06ed8d54843e90059434ed21d889c4348fc6784c"
+    },
+    {
+      "path": "ai_core/management/commands/run_ai_worker.py",
+      "sha": "c92aa53fc4e50d2a0efb3bc111aea0452584c29c"
+    },
+    {
+      "path": "ai_core/migrations/0001_initial.py",
+      "sha": "f1c59497ad7ba183077c88606be413fdf8bea82a"
+    },
+    {
+      "path": "ai_core/migrations/0002_gradingjob_answers_gradingjob_grading_method_and_more.py",
+      "sha": "25141664aaba19b7b7c4643b1611becaef200d5f"
+    },
+    {
+      "path": "ai_core/migrations/0003_alter_gradingjob_status.py",
+      "sha": "75dd399cddc9c9818b45db7d5d0cfcd1f634315f"
+    },
+    {
+      "path": "ai_core/migrations/__init__.py",
+      "sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "ai_core/models.py",
+      "sha": "0a82a2ea4eb4e45f615e87b8a806c8ebdbc7003b"
+    },
+    {
+      "path": "ai_core/permissions.py",
+      "sha": "3d099aaa9424eced38c687933f4085c99db4b463"
+    },
+    {
+      "path": "ai_core/providers.py",
+      "sha": "c4eb620cfb746449d87f092153fad96a5d2fa395"
+    },
+    {
+      "path": "ai_core/reading.py",
+      "sha": "75ca12e9b44ab0355b71c3ab8f6d6bd29d69063b"
+    },
+    {
+      "path": "ai_core/services.py",
+      "sha": "05110d4e63969c57378ef4d90a4abc135611708e"
+    },
+    {
+      "path": "ai_core/test_reading.py",
+      "sha": "793298e03ed11dc6136f497f344caee9b9a49c78"
+    },
+    {
+      "path": "ai_core/tests.py",
+      "sha": "8eddf94647236ade7dcbaaf66df5073611ce4300"
+    },
+    {
+      "path": "ai_core/urls.py",
+      "sha": "82481a8c936299cebfc02d4d6e1626e56aba5cd3"
+    },
+    {
+      "path": "ai_core/views.py",
+      "sha": "4900a4658be1f7a7335c2942f839c9a769de4276"
+    },
+    {
+      "path": "assignments/__init__.py",
+      "sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "assignments/admin.py",
+      "sha": "4599119e7430740592edbe411939de5a988ae278"
+    },
+    {
+      "path": "assignments/apps.py",
+      "sha": "8f91f53c27d5c3bbb48b86d6159fb21bf99d65b3"
+    },
+    {
+      "path": "assignments/forms.py",
+      "sha": "9fa16f0a15a0300925beb091ed391e6c8e5123a9"
+    },
+    {
+      "path": "assignments/management/__init__.py",
+      "sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "assignments/management/commands/__init__.py",
+      "sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "assignments/management/commands/seed_phanb.py",
+      "sha": "01c856519cdb1a329be9aa47d71b184aaf2a0867"
+    },
+    {
+      "path": "assignments/migrations/0001_initial.py",
+      "sha": "e10864a47e9437cf0c6e0983938a2a7b5cf120e2"
+    },
+    {
+      "path": "assignments/migrations/0002_classassignment.py",
+      "sha": "d5d8bee0432d1313e95891da7dfcc2bf95c5d7b1"
+    },
+    {
+      "path": "assignments/migrations/0003_lesson_reference_transcript.py",
+      "sha": "4f08e37b9e7b9fc0eeb325c3d00c06111921c39c"
+    },
+    {
+      "path": "assignments/migrations/__init__.py",
+      "sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "assignments/models.py",
+      "sha": "916b62d77d39fd39536d3ee653aad21c998534d5"
+    },
+    {
+      "path": "assignments/services.py",
+      "sha": "0bca8a6419bb83beb71a345c6d572c41f199c0e4"
+    },
+    {
+      "path": "assignments/templates/assignments/detail.html",
+      "sha": "09887424274ad9b54072cc1a48f8bfb00931a910"
+    },
+    {
+      "path": "assignments/templates/assignments/form.html",
+      "sha": "56983d992680b024f7f967797ac41f610f4d3e66"
+    },
+    {
+      "path": "assignments/templates/assignments/list.html",
+      "sha": "5e713cd6fcfd017b425afa4e9ddf6d049830f75a"
+    },
+    {
+      "path": "assignments/test_reading.py",
+      "sha": "2414a5f012ff75d364e7dc6451392e25e6cf0bd1"
+    },
+    {
+      "path": "assignments/tests.py",
+      "sha": "7ce503c2dd97ba78597f6ff6e4393132753573f6"
+    },
+    {
+      "path": "assignments/urls.py",
+      "sha": "2df8b6eb7cb2b3f60b67a48e96e9504d4ae36024"
+    },
+    {
+      "path": "assignments/video.py",
+      "sha": "7f8ba396d9931159e7f4e430fed399d6eb1ee7ea"
+    },
+    {
+      "path": "assignments/views.py",
+      "sha": "f26dd1ab96a73d7b5ad45ad13c96120cfd802674"
+    },
+    {
+      "path": "core/__init__.py",
+      "sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "core/asgi.py",
+      "sha": "a0b44fd06164782f3720691ab5a75b64849fe287"
+    },
+    {
+      "path": "core/settings.py",
+      "sha": "b16b4770b9a6ca678b2886c27f2b39262923253e"
+    },
+    {
+      "path": "core/urls.py",
+      "sha": "02e4381f2d1bd1c7bad77600738ae8567fb1fb8c"
+    },
+    {
+      "path": "core/wsgi.py",
+      "sha": "6ea9106902b2a3fb6dda4156c0e4096a9d87ae22"
+    },
+    {
+      "path": "courses/__init__.py",
+      "sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "courses/admin.py",
+      "sha": "c26f2da459ada731a3649b2bc45e74cbda6fec8a"
+    },
+    {
+      "path": "courses/apps.py",
+      "sha": "89d10b4ac42f557e5788e4b8f7e832530f14451a"
+    },
+    {
+      "path": "courses/forms.py",
+      "sha": "dc0442f870a66c9d076ac2d53f4c1e08b6ff5055"
+    },
+    {
+      "path": "courses/management/commands/seed_data.py",
+      "sha": "01c856519cdb1a329be9aa47d71b184aaf2a0867"
+    },
+    {
+      "path": "courses/migrations/0001_initial.py",
+      "sha": "8a99cc02e682775caad8f6ed1a8cbf70c0db59ea"
+    },
+    {
+      "path": "courses/migrations/0002_alter_studentexemptionquota_options_and_more.py",
+      "sha": "e4e3ab608c3517e7a9c32461eba95b72f68e4f23"
+    },
+    {
+      "path": "courses/migrations/__init__.py",
+      "sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "courses/models.py",
+      "sha": "a496abdb647bbb5a478fb83f4d8724e6ce67d667"
+    },
+    {
+      "path": "courses/services.py",
+      "sha": "0a8b7cf5df2e1e6d1bdda72532391cb912ddec0d"
+    },
+    {
+      "path": "courses/signals.py",
+      "sha": "d311f64862ad98058e7b517086cd178e47beca17"
+    },
+    {
+      "path": "courses/templates/courses/assign_teacher.html",
+      "sha": "2904b349fc7d2870355f7018c5e7af7ad0922e4b"
+    },
+    {
+      "path": "courses/templates/courses/class_detail.html",
+      "sha": "74b86d100f0f34b254bc7060635b8585a13e510a"
+    },
+    {
+      "path": "courses/templates/courses/class_form.html",
+      "sha": "9a6c9b32afba372637ba90c4f4646b8f1180aac5"
+    },
+    {
+      "path": "courses/templates/courses/class_list.html",
+      "sha": "5a88d988585dee874495762c10c59836a8a84d47"
+    },
+    {
+      "path": "courses/templates/courses/enroll_student.html",
+      "sha": "d68c0bb5a4a796bb790b1efb9e4646a722d83321"
+    },
+    {
+      "path": "courses/templates/courses/exemption_list.html",
+      "sha": "82d0d66cd6cd8d822049f98544e30b11f423eaf9"
+    },
+    {
+      "path": "courses/templates/courses/exemption_review.html",
+      "sha": "9516c175420aa425bbce838fe822fb6f31ebe819"
+    },
+    {
+      "path": "courses/templates/courses/request_exemption.html",
+      "sha": "5df58299d4c348d277467ae1f9c59601334e9e2f"
+    },
+    {
+      "path": "courses/templates/courses/student_confirm_remove.html",
+      "sha": "86a57a8f779f3eff4dc0924d3e2fc2ce62520550"
+    },
+    {
+      "path": "courses/tests.py",
+      "sha": "12f766ab39795f7be112d0b1b345f3c6d3f0cc86"
+    },
+    {
+      "path": "courses/urls.py",
+      "sha": "3cc62c231a643b4c70f9564aba38c3ce698015df"
+    },
+    {
+      "path": "courses/views.py",
+      "sha": "6877955af83055f827368f7e23b519db0370111d"
+    },
+    {
+      "path": "dashboard/__init__.py",
+      "sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "dashboard/admin.py",
+      "sha": "e15b33fc23737f1f7f6bb338cfb1f48a3fa9a499"
+    },
+    {
+      "path": "dashboard/apps.py",
+      "sha": "50878e766268481aa6732f075857b0f1736fbd2d"
+    },
+    {
+      "path": "dashboard/context.py",
+      "sha": "a974b36e91c04aee5018402ecd5bc6c2fa298786"
+    },
+    {
+      "path": "dashboard/integration.py",
+      "sha": "c271a59604ce11ee106c809b0cba864b3427794e"
+    },
+    {
+      "path": "dashboard/management/__init__.py",
+      "sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "dashboard/management/commands/__init__.py",
+      "sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "dashboard/management/commands/import_legacy_progress.py",
+      "sha": "f758fcda7bdbb2c35c1b84ecc76feea72e0a46fb"
+    },
+    {
+      "path": "dashboard/management/commands/seed_demo.py",
+      "sha": "ad9de0c546b16af6fc4f894e3d67e37d2354b1dd"
+    },
+    {
+      "path": "dashboard/management/commands/sync_assignment_rosters.py",
+      "sha": "89045f6f696c09ea3af7e3e6bf559807160ac57b"
+    },
+    {
+      "path": "dashboard/migrations/0001_initial.py",
+      "sha": "5ca938afbf972199b983306a84fcb03e818c71cb"
+    },
+    {
+      "path": "dashboard/migrations/0002_learningtask_assignment.py",
+      "sha": "961c4ace158ba36f5dc40d418be51e089e3a369a"
+    },
+    {
+      "path": "dashboard/migrations/__init__.py",
+      "sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "dashboard/models.py",
+      "sha": "53d52254ec20f4dad870b2716dbad3058f849a6e"
+    },
+    {
+      "path": "dashboard/services.py",
+      "sha": "5b493dbe77b92f75d0cd669b553e0822fd9b4d8f"
+    },
+    {
+      "path": "dashboard/static/dashboard/reports.js",
+      "sha": "03dff29f0b0458383a3842377b4cb8f48a90cf04"
+    },
+    {
+      "path": "dashboard/templates/dashboard/_filters.html",
+      "sha": "932d26b6ea33c18b93b1bb1c33fdb1b527d65e48"
+    },
+    {
+      "path": "dashboard/templates/dashboard/staff.html",
+      "sha": "c5ab508f3502c6b16a12dd6045dc47323786420c"
+    },
+    {
+      "path": "dashboard/templates/dashboard/student.html",
+      "sha": "f7247afeba563aa5a24488765ff41e611f5c3b4c"
+    },
+    {
+      "path": "dashboard/tests.py",
+      "sha": "f773d140e66a045db7857b4cc2d28d69c3857545"
+    },
+    {
+      "path": "dashboard/testutils.py",
+      "sha": "4bdc8a03b4c616f0b26d1638f3596d0ae1006836"
+    },
+    {
+      "path": "dashboard/urls.py",
+      "sha": "4df48493ec0ae31f5b7f121a4d0c9fd0d1bc1939"
+    },
+    {
+      "path": "dashboard/views.py",
+      "sha": "83450bf6c1469f74e782bf958184d3edfdf2cc39"
+    },
+    {
+      "path": "manage.py",
+      "sha": "f2a662cfd4112a159108ead7ade49589f1621fd8"
+    },
+    {
+      "path": "requirements.txt",
+      "sha": "ec172c314d96ac6342b27571a941b98406e36816"
+    },
+    {
+      "path": "submissions/__init__.py",
+      "sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "submissions/admin.py",
+      "sha": "b7d76fce37b129a738b996f0f954934c29849335"
+    },
+    {
+      "path": "submissions/apps.py",
+      "sha": "651db952de3ad1984ed0b5d04a813aae976cb85e"
+    },
+    {
+      "path": "submissions/context.py",
+      "sha": "7cab486050cef5d53a0919e68690144bd4fc2c2a"
+    },
+    {
+      "path": "submissions/grading.py",
+      "sha": "ed6632d28cdd6f5aeea352bd48af4ed763a28197"
+    },
+    {
+      "path": "submissions/migrations/0001_initial.py",
+      "sha": "8225d9689af976c52dc7c5f6ba0b354265b8b8c2"
+    },
+    {
+      "path": "submissions/migrations/__init__.py",
+      "sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "submissions/models.py",
+      "sha": "773ec2f387635497f9b0f59db11503e57a49aa08"
+    },
+    {
+      "path": "submissions/static/submissions/submit.js",
+      "sha": "c152e7ab452407889c7cc2f41bb6906ce4d92a14"
+    },
+    {
+      "path": "submissions/templates/submissions/do_task.html",
+      "sha": "087a858294f4a4e5961fab4eff4579ce8e7bb81d"
+    },
+    {
+      "path": "submissions/templates/submissions/result.html",
+      "sha": "419d5ada717739a61e5fcd11ee4ec0b58b437e56"
+    },
+    {
+      "path": "submissions/test_recording.py",
+      "sha": "1f5a67de602ea4603e9306d153b03735fb356e91"
+    },
+    {
+      "path": "submissions/tests.py",
+      "sha": "7ce503c2dd97ba78597f6ff6e4393132753573f6"
+    },
+    {
+      "path": "submissions/urls.py",
+      "sha": "2880d15273730688cef83ecaa3a29398200af7cf"
+    },
+    {
+      "path": "submissions/views.py",
+      "sha": "883ca802862382d3e5b9019ec01a69ac708f8a3e"
+    },
+    {
+      "path": "templates/base.html",
+      "sha": "237bab431f5c52be5cecf622c0d38669aa5a3d6e"
+    }
+  ],
+  "assignments": [
+    {
+      "path": ".gitignore",
+      "sha": "919b286530651cafea0f94d0219012a0a51c1ffb"
+    },
+    {
+      "path": "accounts/__init__.py",
+      "sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "accounts/admin.py",
+      "sha": "8c38f3f3dad51e4585f3984282c2a4bec5349c1e"
+    },
+    {
+      "path": "accounts/apps.py",
+      "sha": "9b3fc5a44939430bfb326ca9a33f80e99b06b5be"
+    },
+    {
+      "path": "accounts/migrations/0001_initial.py",
+      "sha": "6602557ad02b2f2b14dfc14df4498fc29a384489"
+    },
+    {
+      "path": "accounts/migrations/__init__.py",
+      "sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "accounts/models.py",
+      "sha": "9bf3963f2299f948be6fc1ff6a4d87ccc751b19b"
+    },
+    {
+      "path": "accounts/tests.py",
+      "sha": "7ce503c2dd97ba78597f6ff6e4393132753573f6"
+    },
+    {
+      "path": "accounts/views.py",
+      "sha": "91ea44a218fbd2f408430959283f0419c921093e"
+    },
+    {
+      "path": "ai_core/__init__.py",
+      "sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "ai_core/admin.py",
+      "sha": "8c38f3f3dad51e4585f3984282c2a4bec5349c1e"
+    },
+    {
+      "path": "ai_core/apps.py",
+      "sha": "954c1ee300cc88a9c4b6b42a0d1b2f82cef6a00a"
+    },
+    {
+      "path": "ai_core/migrations/__init__.py",
+      "sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "ai_core/models.py",
+      "sha": "71a836239075aa6e6e4ecb700e9c42c95c022d91"
+    },
+    {
+      "path": "ai_core/tests.py",
+      "sha": "7ce503c2dd97ba78597f6ff6e4393132753573f6"
+    },
+    {
+      "path": "ai_core/views.py",
+      "sha": "91ea44a218fbd2f408430959283f0419c921093e"
+    },
+    {
+      "path": "assignments/__init__.py",
+      "sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "assignments/admin.py",
+      "sha": "4599119e7430740592edbe411939de5a988ae278"
+    },
+    {
+      "path": "assignments/apps.py",
+      "sha": "8f91f53c27d5c3bbb48b86d6159fb21bf99d65b3"
+    },
+    {
+      "path": "assignments/forms.py",
+      "sha": "bf778549c29c8c0b699b45257fed67d2412a22bb"
+    },
+    {
+      "path": "assignments/management/__init__.py",
+      "sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "assignments/management/commands/__init__.py",
+      "sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "assignments/management/commands/seed_phanb.py",
+      "sha": "6cb0108e75f70e47c804a97875ea884cbb930e92"
+    },
+    {
+      "path": "assignments/migrations/0001_initial.py",
+      "sha": "e10864a47e9437cf0c6e0983938a2a7b5cf120e2"
+    },
+    {
+      "path": "assignments/migrations/__init__.py",
+      "sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "assignments/models.py",
+      "sha": "3760fad2934f60d1e7675870bbdb433e48519a3d"
+    },
+    {
+      "path": "assignments/tests.py",
+      "sha": "7ce503c2dd97ba78597f6ff6e4393132753573f6"
+    },
+    {
+      "path": "assignments/urls.py",
+      "sha": "ba43c5f567d6f06e699c00845e100a91023d74fe"
+    },
+    {
+      "path": "assignments/views.py",
+      "sha": "2d5549cff73bc01da21f437989f4d68212c264ae"
+    },
+    {
+      "path": "core/__init__.py",
+      "sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "core/asgi.py",
+      "sha": "a0b44fd06164782f3720691ab5a75b64849fe287"
+    },
+    {
+      "path": "core/settings.py",
+      "sha": "b81e3ff2ad781f6919cccedbf7e91dc2f6c8092a"
+    },
+    {
+      "path": "core/urls.py",
+      "sha": "19efebbefbba6a1dfa76af011ab455bd1724950f"
+    },
+    {
+      "path": "core/views.py",
+      "sha": "3483d53df136e7b884fdd14e30e5603a9a14f75a"
+    },
+    {
+      "path": "core/wsgi.py",
+      "sha": "6ea9106902b2a3fb6dda4156c0e4096a9d87ae22"
+    },
+    {
+      "path": "courses/__init__.py",
+      "sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "courses/admin.py",
+      "sha": "8c38f3f3dad51e4585f3984282c2a4bec5349c1e"
+    },
+    {
+      "path": "courses/apps.py",
+      "sha": "a32e945f1ba29832a37819b483944df66cc39fb0"
+    },
+    {
+      "path": "courses/migrations/__init__.py",
+      "sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "courses/models.py",
+      "sha": "71a836239075aa6e6e4ecb700e9c42c95c022d91"
+    },
+    {
+      "path": "courses/tests.py",
+      "sha": "7ce503c2dd97ba78597f6ff6e4393132753573f6"
+    },
+    {
+      "path": "courses/views.py",
+      "sha": "91ea44a218fbd2f408430959283f0419c921093e"
+    },
+    {
+      "path": "dashboard/__init__.py",
+      "sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "dashboard/admin.py",
+      "sha": "8c38f3f3dad51e4585f3984282c2a4bec5349c1e"
+    },
+    {
+      "path": "dashboard/apps.py",
+      "sha": "50878e766268481aa6732f075857b0f1736fbd2d"
+    },
+    {
+      "path": "dashboard/migrations/__init__.py",
+      "sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "dashboard/models.py",
+      "sha": "71a836239075aa6e6e4ecb700e9c42c95c022d91"
+    },
+    {
+      "path": "dashboard/tests.py",
+      "sha": "7ce503c2dd97ba78597f6ff6e4393132753573f6"
+    },
+    {
+      "path": "dashboard/views.py",
+      "sha": "91ea44a218fbd2f408430959283f0419c921093e"
+    },
+    {
+      "path": "manage.py",
+      "sha": "f2a662cfd4112a159108ead7ade49589f1621fd8"
+    },
+    {
+      "path": "requirements.txt",
+      "sha": "177b534aadc06393a4065ad9f731b23989919438"
+    },
+    {
+      "path": "submissions/__init__.py",
+      "sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "submissions/admin.py",
+      "sha": "b7d76fce37b129a738b996f0f954934c29849335"
+    },
+    {
+      "path": "submissions/apps.py",
+      "sha": "651db952de3ad1984ed0b5d04a813aae976cb85e"
+    },
+    {
+      "path": "submissions/context.py",
+      "sha": "02779d4d56118cadf9ff739503e7a94981d99544"
+    },
+    {
+      "path": "submissions/migrations/0001_initial.py",
+      "sha": "8225d9689af976c52dc7c5f6ba0b354265b8b8c2"
+    },
+    {
+      "path": "submissions/migrations/__init__.py",
+      "sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "submissions/models.py",
+      "sha": "773ec2f387635497f9b0f59db11503e57a49aa08"
+    },
+    {
+      "path": "submissions/tests.py",
+      "sha": "7ce503c2dd97ba78597f6ff6e4393132753573f6"
+    },
+    {
+      "path": "submissions/urls.py",
+      "sha": "9c05e46d5ad51e53ed63e2b9ea47b0b7fe7b6fee"
+    },
+    {
+      "path": "submissions/views.py",
+      "sha": "6effc168b156106d324b150f9f86fae121d7384b"
+    }
+  ],
+  "feature/setup-web-admin": [
+    {
+      "path": ".gitignore",
+      "sha": "919b286530651cafea0f94d0219012a0a51c1ffb"
+    },
+    {
+      "path": "accounts/__init__.py",
+      "sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "accounts/admin.py",
+      "sha": "7f28ba20fdbcd31dab307f6015e79cbed6ea625b"
+    },
+    {
+      "path": "accounts/apps.py",
+      "sha": "1aefbd5863dd5f044d3425be9db6e0f0822735f7"
+    },
+    {
+      "path": "accounts/forms.py",
+      "sha": "8f4726c8ad3847692903a7a5c488a0f15bd2ab57"
+    },
+    {
+      "path": "accounts/migrations/0001_initial.py",
+      "sha": "6602557ad02b2f2b14dfc14df4498fc29a384489"
+    },
+    {
+      "path": "accounts/migrations/0002_alter_customuser_options_and_more.py",
+      "sha": "7d09154aa030cd8d24e01ba6e262548b1797c66d"
+    },
+    {
+      "path": "accounts/migrations/0003_customuser_student_code.py",
+      "sha": "0bd24d264ebfe63e20cd7969a6b54563dad322bc"
+    },
+    {
+      "path": "accounts/migrations/__init__.py",
+      "sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "accounts/models.py",
+      "sha": "832417983bf53344267aeca1a77d0350f5e8abe5"
+    },
+    {
+      "path": "accounts/permissions.py",
+      "sha": "14b40111f32e82a59f5c1f05a94a550a4fa75302"
+    },
+    {
+      "path": "accounts/templates/accounts/login.html",
+      "sha": "c3f4b9844a24e52e7dfb626e636e11d7d17e7e4c"
+    },
+    {
+      "path": "accounts/templates/accounts/notifications.html",
+      "sha": "b54da33229ca90488737163b1d6074172a97e970"
+    },
+    {
+      "path": "accounts/templates/accounts/user_confirm_delete.html",
+      "sha": "a911b06e2ec586586524f5b2161959aaa40313b8"
+    },
+    {
+      "path": "accounts/templates/accounts/user_form.html",
+      "sha": "3c32a18bf7a1ef571aeb8a181ad20e4419d7b4fc"
+    },
+    {
+      "path": "accounts/templates/accounts/user_list.html",
+      "sha": "a724447d96460abe60580e1082b148edc58f406a"
+    },
+    {
+      "path": "accounts/tests.py",
+      "sha": "30e394cafffbdaf994702bda3973d7e9bfba8b80"
+    },
+    {
+      "path": "accounts/urls.py",
+      "sha": "7053aaea97bb886961780953e26f3a5be68e7493"
+    },
+    {
+      "path": "accounts/views.py",
+      "sha": "132fd436daa008aa2403fc21b59deebc91389433"
+    },
+    {
+      "path": "ai_core/__init__.py",
+      "sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "ai_core/admin.py",
+      "sha": "8c38f3f3dad51e4585f3984282c2a4bec5349c1e"
+    },
+    {
+      "path": "ai_core/apps.py",
+      "sha": "954c1ee300cc88a9c4b6b42a0d1b2f82cef6a00a"
+    },
+    {
+      "path": "ai_core/migrations/__init__.py",
+      "sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "ai_core/models.py",
+      "sha": "71a836239075aa6e6e4ecb700e9c42c95c022d91"
+    },
+    {
+      "path": "ai_core/tests.py",
+      "sha": "7ce503c2dd97ba78597f6ff6e4393132753573f6"
+    },
+    {
+      "path": "ai_core/views.py",
+      "sha": "91ea44a218fbd2f408430959283f0419c921093e"
+    },
+    {
+      "path": "assignments/__init__.py",
+      "sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "assignments/admin.py",
+      "sha": "8c38f3f3dad51e4585f3984282c2a4bec5349c1e"
+    },
+    {
+      "path": "assignments/apps.py",
+      "sha": "8f91f53c27d5c3bbb48b86d6159fb21bf99d65b3"
+    },
+    {
+      "path": "assignments/migrations/__init__.py",
+      "sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "assignments/models.py",
+      "sha": "71a836239075aa6e6e4ecb700e9c42c95c022d91"
+    },
+    {
+      "path": "assignments/tests.py",
+      "sha": "7ce503c2dd97ba78597f6ff6e4393132753573f6"
+    },
+    {
+      "path": "assignments/views.py",
+      "sha": "91ea44a218fbd2f408430959283f0419c921093e"
+    },
+    {
+      "path": "core/__init__.py",
+      "sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "core/asgi.py",
+      "sha": "a0b44fd06164782f3720691ab5a75b64849fe287"
+    },
+    {
+      "path": "core/settings.py",
+      "sha": "1522960b2f4216638643b715e5bbaa5572efee2c"
+    },
+    {
+      "path": "core/urls.py",
+      "sha": "84aea43bb36875285fcae2f9da0a0856dcfe8b5f"
+    },
+    {
+      "path": "core/wsgi.py",
+      "sha": "6ea9106902b2a3fb6dda4156c0e4096a9d87ae22"
+    },
+    {
+      "path": "courses/__init__.py",
+      "sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "courses/admin.py",
+      "sha": "c26f2da459ada731a3649b2bc45e74cbda6fec8a"
+    },
+    {
+      "path": "courses/apps.py",
+      "sha": "89d10b4ac42f557e5788e4b8f7e832530f14451a"
+    },
+    {
+      "path": "courses/forms.py",
+      "sha": "dc0442f870a66c9d076ac2d53f4c1e08b6ff5055"
+    },
+    {
+      "path": "courses/management/commands/seed_data.py",
+      "sha": "c93e324b92cdbf63631e50a0fc49210a3d185e44"
+    },
+    {
+      "path": "courses/migrations/0001_initial.py",
+      "sha": "8a99cc02e682775caad8f6ed1a8cbf70c0db59ea"
+    },
+    {
+      "path": "courses/migrations/0002_alter_studentexemptionquota_options_and_more.py",
+      "sha": "e4e3ab608c3517e7a9c32461eba95b72f68e4f23"
+    },
+    {
+      "path": "courses/migrations/__init__.py",
+      "sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "courses/models.py",
+      "sha": "a496abdb647bbb5a478fb83f4d8724e6ce67d667"
+    },
+    {
+      "path": "courses/services.py",
+      "sha": "d3aaac809c0510053bd3b81d48fc1244b91797b4"
+    },
+    {
+      "path": "courses/signals.py",
+      "sha": "d311f64862ad98058e7b517086cd178e47beca17"
+    },
+    {
+      "path": "courses/templates/courses/assign_teacher.html",
+      "sha": "2904b349fc7d2870355f7018c5e7af7ad0922e4b"
+    },
+    {
+      "path": "courses/templates/courses/class_detail.html",
+      "sha": "74b86d100f0f34b254bc7060635b8585a13e510a"
+    },
+    {
+      "path": "courses/templates/courses/class_form.html",
+      "sha": "9a6c9b32afba372637ba90c4f4646b8f1180aac5"
+    },
+    {
+      "path": "courses/templates/courses/class_list.html",
+      "sha": "5a88d988585dee874495762c10c59836a8a84d47"
+    },
+    {
+      "path": "courses/templates/courses/enroll_student.html",
+      "sha": "d68c0bb5a4a796bb790b1efb9e4646a722d83321"
+    },
+    {
+      "path": "courses/templates/courses/exemption_list.html",
+      "sha": "82d0d66cd6cd8d822049f98544e30b11f423eaf9"
+    },
+    {
+      "path": "courses/templates/courses/exemption_review.html",
+      "sha": "9516c175420aa425bbce838fe822fb6f31ebe819"
+    },
+    {
+      "path": "courses/templates/courses/request_exemption.html",
+      "sha": "5df58299d4c348d277467ae1f9c59601334e9e2f"
+    },
+    {
+      "path": "courses/templates/courses/student_confirm_remove.html",
+      "sha": "86a57a8f779f3eff4dc0924d3e2fc2ce62520550"
+    },
+    {
+      "path": "courses/tests.py",
+      "sha": "12f766ab39795f7be112d0b1b345f3c6d3f0cc86"
+    },
+    {
+      "path": "courses/urls.py",
+      "sha": "3cc62c231a643b4c70f9564aba38c3ce698015df"
+    },
+    {
+      "path": "courses/views.py",
+      "sha": "c0e48a9333421ad844e0cf1eec4a3df27f3de867"
+    },
+    {
+      "path": "dashboard/__init__.py",
+      "sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "dashboard/admin.py",
+      "sha": "8c38f3f3dad51e4585f3984282c2a4bec5349c1e"
+    },
+    {
+      "path": "dashboard/apps.py",
+      "sha": "50878e766268481aa6732f075857b0f1736fbd2d"
+    },
+    {
+      "path": "dashboard/migrations/__init__.py",
+      "sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "dashboard/models.py",
+      "sha": "71a836239075aa6e6e4ecb700e9c42c95c022d91"
+    },
+    {
+      "path": "dashboard/tests.py",
+      "sha": "7ce503c2dd97ba78597f6ff6e4393132753573f6"
+    },
+    {
+      "path": "dashboard/views.py",
+      "sha": "91ea44a218fbd2f408430959283f0419c921093e"
+    },
+    {
+      "path": "manage.py",
+      "sha": "f2a662cfd4112a159108ead7ade49589f1621fd8"
+    },
+    {
+      "path": "requirements.txt",
+      "sha": "1701767bd1be3a97d9ceb7ac194d13983ffdc1ed"
+    },
+    {
+      "path": "static/__init__.py",
+      "sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "submissions/__init__.py",
+      "sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "submissions/admin.py",
+      "sha": "8c38f3f3dad51e4585f3984282c2a4bec5349c1e"
+    },
+    {
+      "path": "submissions/apps.py",
+      "sha": "651db952de3ad1984ed0b5d04a813aae976cb85e"
+    },
+    {
+      "path": "submissions/migrations/__init__.py",
+      "sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "submissions/models.py",
+      "sha": "71a836239075aa6e6e4ecb700e9c42c95c022d91"
+    },
+    {
+      "path": "submissions/tests.py",
+      "sha": "7ce503c2dd97ba78597f6ff6e4393132753573f6"
+    },
+    {
+      "path": "submissions/views.py",
+      "sha": "91ea44a218fbd2f408430959283f0419c921093e"
+    },
+    {
+      "path": "templates/base.html",
+      "sha": "83ca529ee3c40f65f01389e57e4c4a72ea500428"
+    }
+  ]
+}

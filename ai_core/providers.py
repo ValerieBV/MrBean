@@ -97,8 +97,9 @@ class OpenAIGrader:
                     data = stream.read(settings.AI_MAX_AUDIO_BYTES + 1)
                 if not data or len(data) > settings.AI_MAX_AUDIO_BYTES:
                     raise ValueError('invalid_audio_size')
+                language_hint = {'languages':['en']} if settings.OPENAI_TRANSCRIBE_MODEL.startswith('gpt-transcribe') else {'language':'en'}
                 response = client.with_options(timeout=remaining()).audio.transcriptions.create(
-                    model=settings.OPENAI_TRANSCRIBE_MODEL, file=(Path(job.audio.name).name, data), language='en')
+                    model=settings.OPENAI_TRANSCRIBE_MODEL, file=(Path(job.audio.name).name, data), **language_hint)
                 text = response.text.strip()
                 if text and len(text) <= 20000:
                     job.transcript = text  # Preserve transcription for manual fallback if grading then fails.

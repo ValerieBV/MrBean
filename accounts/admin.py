@@ -25,13 +25,13 @@ class CustomUserAdmin(UserAdmin):
     ordering = ('username',)
 
     fieldsets = UserAdmin.fieldsets + (
-        ('Thông tin bổ sung', {'fields': ('role', 'phone_number')}),
+        ('Thông tin bổ sung', {'fields': ('role', 'phone_number', 'student_code')}),
     )
 
     add_fieldsets = UserAdmin.add_fieldsets + (
         ('Thông tin bổ sung', {
             'classes': ('wide',),
-            'fields': ('role', 'phone_number', 'email', 'first_name', 'last_name'),
+            'fields': ('role', 'phone_number', 'student_code', 'email', 'first_name', 'last_name'),
         }),
     )
 

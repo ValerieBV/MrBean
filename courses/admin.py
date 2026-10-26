@@ -45,7 +45,7 @@ class ClassRoomAdmin(admin.ModelAdmin):
         if obj.teacher:
             name = obj.teacher.get_full_name() or obj.teacher.username
             return format_html('<strong>{}</strong>', name)
-        return format_html('<span style="color: red;">Chưa phân công</span>')
+        return format_html('<span style="color: {};">{}</span>', 'red', 'Chưa phân công')
     teacher_display.short_description = "Giáo viên phụ trách"
 
     def total_students_display(self, obj):
@@ -66,7 +66,7 @@ class EnrollmentAdmin(admin.ModelAdmin):
         if quota:
             return f"Còn {quota.remaining_quota}/{quota.max_quota} buổi"
         return "Chưa kích hoạt"
-    quota_display.short_description = "Hạn mức miễn nghe"
+    quota_display.short_description = "Hạn mức miễn Speaking/Vocabulary"
 
 
 @admin.register(StudentExemptionQuota)
@@ -127,18 +127,15 @@ class ExemptionRequestAdmin(admin.ModelAdmin):
     class_display.short_description = "Lớp"
 
     def homework_type_badge(self, obj):
-        if obj.homework_type == ExemptionRequest.HOMEWORK_TYPE_LISTENING:
-            return format_html('<span style="color: green; font-weight: bold;">Listening (Hợp lệ)</span>')
-        return format_html('<span style="color: red; font-weight: bold;">{} (Không hợp lệ)</span>', obj.get_homework_type_display())
-    homework_type_badge.short_description = "Loại BTVN"
+        label = 'Listening: không được miễn' if obj.homework_type == 'listening' else obj.get_homework_type_display()
+        color = 'red' if obj.homework_type == 'listening' else 'green'
+        return format_html('<span style="color: {}; font-weight: bold;">{}</span>', color, label)
+    homework_type_badge.short_description = 'Loại bài tập'
 
     def status_badge(self, obj):
-        if obj.status == ExemptionRequest.STATUS_APPROVED:
-            return format_html('<span style="color: green; font-weight: bold;">✔ Đã duyệt</span>')
-        elif obj.status == ExemptionRequest.STATUS_REJECTED:
-            return format_html('<span style="color: red; font-weight: bold;">✖ Từ chối</span>')
-        return format_html('<span style="color: orange; font-weight: bold;">⏳ Chờ duyệt</span>')
-    status_badge.short_description = "Trạng thái"
+        color = {'approved':'green', 'rejected':'red', 'pending':'orange'}.get(obj.status,'gray')
+        return format_html('<span style="color: {}; font-weight: bold;">{}</span>', color, obj.get_status_display())
+    status_badge.short_description = 'Trạng thái'
 
     def quota_remaining_display(self, obj):
         quota = getattr(obj.enrollment, 'exemption_quota', None)
@@ -147,12 +144,14 @@ class ExemptionRequestAdmin(admin.ModelAdmin):
         return "-"
     quota_remaining_display.short_description = "Quota còn lại"
 
-    @admin.action(description="✔ Duyệt các đơn xin miễn BTVN nghe đã chọn")
+    @admin.action(description="✔ Duyệt các đơn xin miễn Speaking/Vocabulary đã chọn")
     def approve_requests_action(self, request, queryset):
         count = 0
         for req in queryset:
             if req.status == ExemptionRequest.STATUS_PENDING:
                 try:
+                    if not req.assignment_id:
+                        raise ValueError('Cần mở đơn tại giao diện nghiệp vụ để liên kết đúng bài đã giao trước khi duyệt.')
                     req.approve(teacher_user=request.user, note="Admin duyệt hàng loạt")
                     count += 1
                 except Exception as e:

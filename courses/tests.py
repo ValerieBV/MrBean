@@ -1,3 +1,5 @@
+from django.utils import timezone
+from datetime import timedelta
 from django.test import TestCase
 from django.core.exceptions import ValidationError
 from accounts.models import CustomUser, Notification
@@ -231,10 +233,15 @@ class CourseAndExemptionTests(TestCase):
         """Kiểm tra học viên gửi đơn qua Web View cho Speaking thành công"""
         ClassManagementService.enroll_student_to_class(self.class_toeic, self.student_toeic)
         self.client.force_login(self.student_toeic)
-
+        from assignments.models import Lesson
+        from assignments.services import assign_to_class
+        lesson = Lesson.objects.create(skill='speaking', program='CHUNG', order=1,
+            title='Buổi 1 - Speaking Practice', youtube_url='https://youtu.be/abcdefghijk',
+            reference_transcript='This is the exact sample script.')
+        assignment = assign_to_class(actor=self.teacher_toeic, lesson=lesson, classroom=self.class_toeic,
+            assigned_at=timezone.now(), due_at=timezone.now()+timedelta(days=1))
         response = self.client.post(f"/courses/classes/{self.class_toeic.id}/request-exemption/", {
-            'homework_type': ExemptionRequest.HOMEWORK_TYPE_SPEAKING,
-            'session_title': 'Buổi 1 - Speaking Practice',
+            'assignment': assignment.pk,
             'reason': 'Em bị ốm sốt'
         }, follow=True)
 
@@ -257,8 +264,8 @@ class CourseAndExemptionTests(TestCase):
             'last_name': 'Hoc Vien',
             'role': CustomUser.ROLE_STUDENT,
             'student_code': 'T253C1Nguyen99',
-            'password': 'password123',
-            'confirm_password': 'password123',
+            'password': 'NewLearner!7943',
+            'confirm_password': 'NewLearner!7943',
         }, follow=True)
 
         self.assertEqual(response.status_code, 200)

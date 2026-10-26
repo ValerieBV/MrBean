@@ -29,7 +29,7 @@ def serialize(job):
 
 
 @require_POST
-def submit(request):
+def submit(request, task_id=None):
     if not request.user.is_authenticated:
         return JsonResponse({'error': 'authentication_required'}, status=401)
     if request.user.role != 'student' or request.user.is_superuser:
@@ -40,13 +40,13 @@ def submit(request):
             raise ValueError()
         task = get_object_or_404(tasks_for(request.user).filter(assignment__isnull=False,
             assignment__classroom__is_active=True, assignment__classroom__enrollments__student=request.user,
-            assignment__classroom__enrollments__status='active', assigned_at__lte=timezone.now()), pk=int(data.get('task_id')))
+            assignment__classroom__enrollments__status='active', assigned_at__lte=timezone.now()), pk=int(task_id if task_id is not None else data.get('task_id')))
         answers = data.get('answers', {})
         if isinstance(answers, str):
             answers = json.loads(answers)
         job, created = enqueue_submission(task=task, submission_key=data.get('submission_key'),
             text=data.get('text', ''), audio=request.FILES.get('audio'),
-            answers=answers, images=request.FILES.getlist('images'))
+            answers=answers, images=request.FILES.getlist('images'), reference_version=data.get('reference_version'))
     except (ValueError, TypeError, ValidationError) as exc:
         return JsonResponse({'error': 'invalid_submission', 'message': '; '.join(exc.messages) if isinstance(exc, ValidationError) else 'Dữ liệu không hợp lệ.'}, status=400)
     return JsonResponse(serialize(job), status=201 if created else 200)
@@ -118,4 +118,28 @@ def review(request, job_id):
         if job.progress_id and not GradingJob.objects.filter(progress_id=job.progress_id,
                 submitted_at__gte=job.submitted_at).exclude(pk=job.pk).filter(Q(submitted_at__gt=job.submitted_at) | Q(pk__gt=job.pk)).exists():
             type(job.progress).objects.filter(pk=job.progress_id).update(score=score*10)
+        from accounts.notifications import notify
+        notify(recipient=job.task.learner, sender=request.user, title='Đã có điểm: '+job.task.title,
+            message=feedback, target_url=reverse('submissions:result',args=[job.pk]), event_key=f'result:{job.pk}')
     return JsonResponse(serialize(job))
+
+
+@require_GET
+def reference_video(request, job_id):
+    if not request.user.is_authenticated:
+        return JsonResponse({'error':'authentication_required'},status=401)
+    job=get_object_or_404(GradingJob.objects.filter(task__in=tasks_for(request.user)),pk=job_id)
+    return private_path(job.rubric_snapshot.get('video_name',''))
+
+
+def private_path(name):
+    from django.core.files.storage import default_storage
+    if not name:
+        return JsonResponse({'error':'file_missing'},status=404)
+    try:
+        response=FileResponse(default_storage.open(name,'rb'))
+        response['Cache-Control']='private, no-store'
+        response['X-Content-Type-Options']='nosniff'
+        return response
+    except (FileNotFoundError,ValueError):
+        return JsonResponse({'error':'file_missing'},status=404)

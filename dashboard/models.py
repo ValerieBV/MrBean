@@ -12,6 +12,7 @@ class LearningTask(models.Model):
     teacher = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='teaching_tasks')
     assigned_at = models.DateTimeField(default=timezone.now)
     due_at = models.DateTimeField()
+    exemption = models.OneToOneField('courses.ExemptionRequest', on_delete=models.PROTECT, null=True, blank=True, related_name='exempt_task')
 
     class Meta:
         constraints = [models.UniqueConstraint(fields=['assignment_key', 'learner'], name='unique_assignment_learner')]

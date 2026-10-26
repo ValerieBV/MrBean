@@ -37,6 +37,7 @@ class Lesson(models.Model):
     )
     reference_transcript = models.TextField('Lời mẫu chính xác của video', blank=True, help_text='Nội dung học viên phải đọc lại, không phải câu lệnh giao bài.')
     youtube_url = models.URLField("Link YouTube (bài nói)", blank=True)
+    video_file = models.FileField('Video mẫu MP4 hoặc WebM', upload_to='assignments/video/', blank=True)
     is_active = models.BooleanField("Đang mở", default=True)
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
@@ -122,6 +123,10 @@ class ClassAssignment(models.Model):
     due_at = models.DateTimeField()
     rubric = models.JSONField(default=dict, blank=True)
     vocab_repetitions = models.PositiveSmallIntegerField(default=1)
+    is_active = models.BooleanField('Đang nhận bài', default=True)
+    allow_late_submission = models.BooleanField('Cho phép nộp quá hạn', default=True)
+    requires_previous = models.BooleanField('Hoàn thành bài trước để mở bài này', default=True)
+    reference_video = models.FileField(upload_to='assignments/video/', blank=True)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
 
     class Meta:
@@ -130,3 +135,10 @@ class ClassAssignment(models.Model):
 
     def __str__(self):
         return f'{self.classroom.class_code} / {self.lesson.title}'
+
+    @property
+    def reference_version(self):
+        import hashlib
+        import json
+        content = json.dumps({'rubric': self.rubric, 'video': self.reference_video.name}, sort_keys=True, ensure_ascii=False)
+        return hashlib.sha256(content.encode()).hexdigest()

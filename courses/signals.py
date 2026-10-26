@@ -45,6 +45,7 @@ def notify_on_exemption_request_created(sender, instance, created, **kwargs):
                     f"Vui lòng vào hệ thống xem xét và phê duyệt."
                 ),
                 notification_type=Notification.TYPE_EXEMPTION_REQUEST
+                ,target_url=f'/courses/exemptions/{instance.pk}/review/'
             )
 
         # 2. Quản lý được thông báo về việc có buổi xin miễn của học viên
@@ -60,4 +61,5 @@ def notify_on_exemption_request_created(sender, instance, created, **kwargs):
                     f"- Giáo viên phụ trách: {classroom.teacher.get_full_name() if classroom.teacher else 'Chưa có'}"
                 ),
                 notification_type=Notification.TYPE_EXEMPTION_REQUEST
+                ,target_url='/courses/exemptions/'
             )

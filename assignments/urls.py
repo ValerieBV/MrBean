@@ -3,9 +3,21 @@ from . import views
 app_name = 'assignments'
 urlpatterns = [
     path('', views.assignment_list, name='assignment_list'),
+    path('skill/<str:skill>/', views.assignment_list, name='skill_lessons'),
+    path('skill/<str:skill>/new/', views.lesson_create, name='skill_lesson_create'),
+    path('skill/<str:skill>/new/', views.lesson_create, name='lesson_create'),
     path('new/', views.lesson_create, name='lesson_create'),
+    path('assigned/', views.assigned_list, name='assigned_list'),
+    path('assigned/<int:pk>/', views.assigned_detail, name='assigned_detail'),
+    path('assigned/<int:pk>/edit/', views.assigned_update, name='assigned_update'),
     path('assigned/<int:pk>/reading-reference/', views.reading_reference, name='reading_reference'),
     path('assign/', views.assign, name='assign'),
     path('lesson/<int:pk>/', views.lesson_detail, name='lesson_detail'),
     path('lesson/<int:pk>/edit/', views.lesson_update, name='lesson_update'),
+    path('lesson/<int:pk>/delete/', views.lesson_delete, name='lesson_delete'),
+    path('lesson/<int:pk>/clone/', views.lesson_clone, name='lesson_clone'),
+    path('lesson/<int:pk>/media/<str:kind>/', views.lesson_media, name='lesson_media'),
+    path('item/<str:skill>/<int:pk>/edit/', views.item_edit, name='item_edit'),
+    path('item/<str:skill>/<int:pk>/delete/', views.item_edit, {'delete': True}, name='item_delete'),
+    path('question/<int:pk>/image/', views.question_image, name='question_image'),
 ]

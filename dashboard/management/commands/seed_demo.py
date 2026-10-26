@@ -2,6 +2,7 @@
 from datetime import timedelta
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
+from django.core.management import call_command
 from django.db import transaction
 from django.utils import timezone
 from accounts.models import CustomUser
@@ -37,7 +38,10 @@ class Command(BaseCommand):
         if classroom.teacher_id != users['teacher'].pk:
             raise CommandError('Lớp demo đã có giáo viên khác; dừng để bảo toàn dữ liệu.')
         for name in ('demo_student', 'demo_student2'):
-            Enrollment.objects.get_or_create(classroom=classroom, student=CustomUser.objects.get(username=name))
+            student = CustomUser.objects.get(username=name)
+            if Enrollment.objects.filter(student=student,status='active').exclude(classroom=classroom).exists():
+                raise CommandError('Học viên demo đang ở lớp khác; dừng để không thay đổi ghi danh hiện có.')
+            Enrollment.objects.get_or_create(classroom=classroom, student=student)
         now = timezone.now()
         for skill, title in [('listening','TOEIC Part 1–2'),('speaking','Self Introduction'),('vocabulary','Business English cơ bản')]:
             lesson, _ = Lesson.objects.get_or_create(skill=skill, program='CHUNG', order=900,
@@ -60,4 +64,5 @@ class Command(BaseCommand):
                 sync_class_assignment(existing)
             else:
                 assign_to_class(actor=users['admin'],lesson=lesson,classroom=classroom,assigned_at=now-timedelta(days=1),due_at=now+timedelta(days=7),repetitions=3)
+        call_command('seed_source_catalog', owner=users['admin'].username, stdout=self.stdout)
         self.stdout.write(self.style.SUCCESS('Đã chuẩn bị demo_admin, demo_manager, demo_teacher, demo_student, demo_student2; bài nghe trắc nghiệm và từ vựng được giao. Không gọi OpenAI; bài nghe mẫu cần bổ sung file nghe thật.'))
