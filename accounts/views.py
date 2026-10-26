@@ -42,12 +42,16 @@ def user_list_view(request):
     role=request.GET.get('role','');query=request.GET.get('q','').strip()[:100]
     if role:rows=rows.filter(role=role)
     if query:rows=rows.filter(Q(username__icontains=query)|Q(first_name__icontains=query)|Q(last_name__icontains=query)|Q(email__icontains=query)|Q(student_code__icontains=query))
-    from courses.models import ClassRoom
+    from courses.models import ClassRoom, ExemptionRequest, StudentExemptionQuota
     return render(request,'accounts/user_list.html',{'users':Paginator(rows,20).get_page(request.GET.get('page')),
         'query':query,'role_filter':role,'role_choices':CustomUser.ROLE_CHOICES,
         'total_students':CustomUser.objects.filter(role='student',is_active=True).count(),
         'total_teachers':CustomUser.objects.filter(role='teacher',is_active=True).count(),
-        'active_classes':ClassRoom.objects.filter(is_active=True).count()})
+        'active_classes':ClassRoom.objects.filter(is_active=True).count(),
+        'pending_exemptions':ExemptionRequest.objects.filter(status='pending').count(),
+        'student_quotas':Paginator(StudentExemptionQuota.objects.select_related(
+            'enrollment__student', 'enrollment__classroom__course').order_by('-updated_at'),20
+            ).get_page(request.GET.get('quota_page'))})
 
 
 @role_required('admin','manager')

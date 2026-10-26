@@ -1,11 +1,24 @@
 {% extends 'base.html' %}
+{% load ui %}
 {% block title %}{{ title }} · MR BEAN ENGLISH{% endblock %}
 {% block content %}
-<section class="panel form-panel">
-    <header class="form-heading"><h1>{% include 'core/icon.html' with name='edit' %}{{ title }}</h1><p>Điền đầy đủ thông tin và kiểm tra trước khi lưu.</p></header>
-    <form method="post" enctype="multipart/form-data">
-        {% csrf_token %}{% include 'core/fields.html' %}
-        <div class="form-actions"><a class="btn outline" href="{{ back_url }}">← Quay lại</a><button type="submit" class="btn">Lưu thay đổi</button></div>
-    </form>
-</section>
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <div class="card border-0 rounded-4 shadow-sm" style="background:#ffffff;border:1px solid rgba(212,98,26,.25)!important">
+            <div class="card-header py-3 border-0 bg-transparent">
+                <h2 class="section-title-h2 mb-0" style="color:var(--color-burn-orange)"><i aria-hidden="true" class="bi bi-pencil-square me-2"></i>{{ title }}</h2>
+            </div>
+            <div class="card-body p-4 pt-1">
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    {% include 'core/bootstrap_fields.html' %}
+                    <div class="d-flex flex-wrap justify-content-between gap-2 mt-4 pt-2 border-top">
+                        <a class="btn" href="{{ back_url }}" style="background-color:var(--color-light-cream);color:var(--color-dark-brown);border:1px solid rgba(42,26,14,.2);border-radius:30px;font-weight:600"><i aria-hidden="true" class="bi bi-arrow-left me-1"></i>Quay lại</a>
+                        <button type="submit" class="btn-cta-orange px-4"><i aria-hidden="true" class="bi bi-check-circle-fill me-1"></i>Lưu thay đổi</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}

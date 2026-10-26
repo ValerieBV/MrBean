@@ -1,40 +1,128 @@
 {% extends 'base.html' %}
-{% block title %}Kiểm soát miễn BTVN · MR BEAN ENGLISH{% endblock %}
+{% load ui %}
+
+{% block title %}Kiểm soát Miễn BTVN Nghe - MR BEAN ENGLISH{% endblock %}
+
 {% block content %}
-<div class="page-header reference-page-header">
-    <div><h1>Kiểm soát miễn BTVN (chỉ miễn Speaking & Vocabulary)</h1><p>Danh sách đơn xin miễn BTVN{% if user.role == 'student' %} của bạn{% else %} của học viên{% endif %}. Bắt buộc hoàn thành bài tập Listening.</p></div>
-    {% if user.role == 'student' %}<a class="btn" href="{% url 'courses:class_list' %}">Chọn lớp để xin miễn</a>{% endif %}
-</div>
-<section class="panel exemption-filter" aria-label="Bộ lọc đơn miễn bài">
-    <strong>Bộ lọc trạng thái:</strong>
-    <div class="status-filters">
-        <a class="status-filter {% if not status_filter %}selected{% endif %}" href="{% url 'courses:exemption_list' %}" {% if not status_filter %}aria-current="page"{% endif %}>Tất cả</a>
-        <a class="status-filter {% if status_filter == 'pending' %}selected{% endif %}" href="?status=pending" {% if status_filter == 'pending' %}aria-current="page"{% endif %}>Chờ duyệt</a>
-        <a class="status-filter {% if status_filter == 'approved' %}selected{% endif %}" href="?status=approved" {% if status_filter == 'approved' %}aria-current="page"{% endif %}>✓ Đã duyệt</a>
-        <a class="status-filter {% if status_filter == 'rejected' %}selected{% endif %}" href="?status=rejected" {% if status_filter == 'rejected' %}aria-current="page"{% endif %}>✕ Bị từ chối</a>
-        {% if status_filter == 'cancelled' %}<a class="status-filter selected" href="?status=cancelled" aria-current="page">Đã hủy</a>{% else %}<a class="status-filter cancelled-filter" href="?status=cancelled">Đã hủy</a>{% endif %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="page-title-h1">KIỂM SOÁT MIỄN BTVN (CHỈ MIỄN SPEAKING & VOCABULARY)</h1>
+        <div class="text-muted small" style="color: #6d5b4e !important;">Danh sách đơn xin miễn BTVN của học viên. Bắt buộc hoàn thành bài tập Listening.</div>
     </div>
-</section>
-<section class="panel exemption-table-panel">
-    <div class="table-wrap">
-        <table class="exemption-table">
-            <thead><tr><th>Học viên</th><th>Lớp học</th><th>Buổi / Bài tập</th><th>Lý do</th><th>Trạng thái</th><th>Người duyệt</th><th>Ngày gửi</th><th>Thao tác</th></tr></thead>
-            <tbody>
-                {% for item in exemptions %}
+</div>
+
+<!-- Bộ lọc trạng thái -->
+<div class="data-card-wrapper p-3 mb-4">
+    <div class="d-flex flex-wrap gap-2 align-items-center">
+        <span class="fw-bold small me-2" style="color: var(--color-dark-brown);">Bộ lọc trạng thái:</span>
+        <a href="{% url 'courses:exemption_list' %}" class="btn btn-sm {% if not status_filter %}btn-cta-orange{% else %}btn-outline-secondary{% endif %}" style="border-radius: 20px; font-weight: 600;">
+            Tất cả
+        </a>
+        <a href="{% url 'courses:exemption_list' %}?status=pending" class="btn btn-sm {% if status_filter == 'pending' %}btn-export-excel{% else %}btn-outline-secondary{% endif %}" style="border-radius: 20px; font-weight: 600;">
+             Chờ duyệt
+        </a>
+        <a href="{% url 'courses:exemption_list' %}?status=approved" class="btn btn-sm {% if status_filter == 'approved' %}btn-cta-orange{% else %}btn-outline-secondary{% endif %}" style="border-radius: 20px; font-weight: 600;">
+            ✔ Đã duyệt
+        </a>
+        <a href="{% url 'courses:exemption_list' %}?status=rejected" class="btn btn-sm {% if status_filter == 'rejected' %}btn-action-delete{% else %}btn-outline-secondary{% endif %}" style="border-radius: 20px; font-weight: 600;">
+            ✖ Bị từ chối
+        </a>
+        <a href="{% url 'courses:exemption_list' %}?status=cancelled" class="btn btn-sm {% if status_filter == 'cancelled' %}btn-action-edit{% else %}btn-outline-secondary{% endif %}" style="border-radius:20px;font-weight:600">Đã hủy</a>
+    </div>
+</div>
+
+<!-- Bảng danh sách đơn xin miễn -->
+<div class="data-card-wrapper">
+    <div class="table-responsive">
+        <table class="custom-data-table">
+            <thead>
                 <tr>
-                    <td><strong>{{ item.enrollment.student.display_name }}</strong><small>{% if item.enrollment.student.student_code %}<span class="badge role-tag">{{ item.enrollment.student.student_code }}</span>{% endif %} @{{ item.enrollment.student.username }}</small></td>
-                    <td><strong>{{ item.enrollment.classroom.class_code }}</strong><small>{{ item.enrollment.classroom.course.code }}</small></td>
-                    <td><span class="assignment-label">{{ item.session_title }}</span><small class="skill-label">{% if item.homework_type == 'speaking' %}{% include 'core/icon.html' with name='mic' %}Speaking{% elif item.homework_type == 'vocabulary' %}{% include 'core/icon.html' with name='book' %}Vocabulary{% else %}Listening · không được miễn{% endif %}</small>{% if not item.assignment_id %}<small>Đơn cũ chưa liên kết bài</small>{% endif %}</td>
-                    <td class="exemption-reason"><span title="{{ item.reason }}">{{ item.reason|truncatechars:80 }}</span>{% if item.review_note %}<small>Nhận xét: {{ item.review_note }}</small>{% endif %}</td>
-                    <td><span class="badge {{ item.status }}">{{ item.get_status_display }}</span></td>
-                    <td>{% if item.reviewed_by %}<strong>{{ item.reviewed_by.display_name }}</strong><small>{{ item.reviewed_at|date:'d/m H:i' }}</small>{% else %}—{% endif %}</td>
-                    <td class="date-cell">{{ item.created_at|date:'d/m/Y H:i' }}</td>
-                    <td>{% if item.status == 'pending' %}{% if user.is_superuser or user.role == 'admin' or user.role == 'teacher' %}<a class="btn small" href="{% url 'courses:exemption_review' item.pk %}">Xem xét đơn</a>{% elif user.role == 'student' %}<form method="post" action="{% url 'courses:exemption_cancel' item.pk %}">{% csrf_token %}<button class="btn secondary small" type="submit">Hủy đơn</button></form>{% else %}<small>Chờ giáo viên xử lý</small>{% endif %}{% else %}<span class="subtle">Đã xử lý</span>{% endif %}</td>
+                    <th>Học viên</th>
+                    <th>Lớp học</th>
+                    <th>Buổi / Bài tập</th>
+                    <th>Lý do</th>
+                    <th>Trạng thái</th>
+                    <th>Người duyệt</th>
+                    <th>Ngày gửi</th>
+                    <th class="text-end pe-3">Thao tác</th>
                 </tr>
-                {% empty %}<tr><td colspan="8" class="reference-table-empty">{% include 'core/icon.html' with name='inbox' %}<p>Không có đơn xin miễn nào.</p></td></tr>{% endfor %}
+            </thead>
+            <tbody>
+                {% for req in exemptions %}
+                <tr>
+                    <td>
+                        <div class="fw-bold">{{ req.enrollment.student.get_full_name|default:req.enrollment.student.username }}</div>
+                        <div class="small opacity-75">
+                            {% if req.enrollment.student.student_code %}
+                            <span class="badge" style="background-color: var(--color-warm-orange); color: var(--color-dark-brown); font-weight: 700; font-size: 0.72rem;">{{ req.enrollment.student.student_code }}</span>
+                            {% endif %}
+                            @{{ req.enrollment.student.username }}
+                        </div>
+                    </td>
+                    <td>
+                        <div><a href="{% url 'courses:class_detail' req.enrollment.classroom.id %}" class="fw-bold text-decoration-none" style="color: var(--color-burn-orange);">{{ req.enrollment.classroom.class_code }}</a></div>
+                        <div class="small text-muted">{{ req.enrollment.classroom.course.code }}</div>
+                    </td>
+                    <td>
+                        <span class="badge" style="background-color: var(--color-light-cream); color: var(--color-dark-brown); border: 1px solid var(--color-warm-orange);">
+                            {{ req.session_title }}
+                        </span>
+                        <div class="small mt-1 fw-bold" style="color: var(--color-burn-orange);">
+                            {% if req.homework_type == 'speaking' %}
+                                <i aria-hidden="true" class="bi bi-mic-fill me-1"></i>Speaking
+                            {% elif req.homework_type == 'vocabulary' %}
+                                <i aria-hidden="true" class="bi bi-book-half me-1"></i>Vocabulary
+                            {% else %}
+                                <i aria-hidden="true" class="bi bi-headphones me-1"></i>Listening
+                            {% endif %}
+                        </div>
+                    </td>
+                    <td class="small text-muted" style="max-width: 200px;">
+                        {{ req.reason|truncatechars:60 }}
+                    </td>
+                    <td>
+                        {% if req.status == 'approved' %}
+                            <span class="badge" style="background-color: #e6f6ec; color: #15803d; font-weight: 700; border-radius: 20px; padding: 0.35rem 0.75rem;"> Đã duyệt</span>
+                        {% elif req.status == 'rejected' %}
+                            <span class="badge" style="background-color: #fee2e2; color: #b91c1c; font-weight: 700; border-radius: 20px; padding: 0.35rem 0.75rem;"> Từ chối</span>
+                        {% elif req.status == 'cancelled' %}
+                            <span class="badge bg-secondary">Đã hủy</span>
+                        {% else %}
+                            <span class="badge" style="background-color: #fff7ed; color: var(--color-burn-orange); border: 1px solid var(--color-warm-orange); font-weight: 700; border-radius: 20px; padding: 0.35rem 0.75rem;"> Chờ duyệt</span>
+                        {% endif %}
+                    </td>
+                    <td class="small">
+                        {% if req.reviewed_by %}
+                            <div class="fw-bold" style="color: var(--color-dark-brown);">{{ req.reviewed_by.get_full_name|default:req.reviewed_by.username }}</div>
+                            <div class="text-muted">{{ req.reviewed_at|date:"d/m H:i" }}</div>
+                        {% else %}
+                            <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td class="small text-muted">{{ req.created_at|date:"d/m/Y H:i" }}</td>
+                    <td class="text-end pe-3">
+                        {% if req.status == 'pending' and user.is_superuser or req.status == 'pending' and user.role == 'admin' or req.status == 'pending' and user.role == 'teacher' %}
+                        <a href="{% url 'courses:exemption_review' req.id %}" class="btn-cta-orange py-1 px-3" style="font-size: 0.8rem;">
+                            <i aria-hidden="true" class="bi bi-check2-circle me-1"></i>Xét duyệt
+                        </a>
+                        {% elif req.status == 'pending' and user.role == 'student' %}
+                        <form method="post" action="{% url 'courses:exemption_cancel' req.id %}">{% csrf_token %}<button type="submit" class="btn-action-delete">Hủy đơn</button></form>
+                        {% else %}
+                        <span class="text-muted small">{{ req.get_status_display }}</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="8" class="text-center py-5 text-muted">
+                        <i aria-hidden="true" class="bi bi-inbox fs-2 d-block mb-1" style="color: var(--color-warm-orange);"></i>
+                        Không có đơn xin miễn nào.
+                    </td>
+                </tr>
+                {% endfor %}
             </tbody>
         </table>
     </div>
-    {% include 'core/pagination.html' with page=exemptions %}
-</section>
+</div>
+{% include 'core/source_pagination.html' with page=exemptions %}
 {% endblock %}

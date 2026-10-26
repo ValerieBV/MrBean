@@ -1,1 +1,248 @@
-{% extends 'base.html' %}{% block title %}{{ classroom.class_code }} · Mr Bean{% endblock %}{% block content %}<div class="page-header class-header"><div><div class="eyebrow"><a href="{% url 'courses:class_list' %}">LỚP HỌC</a> / {{ classroom.class_code }}</div><h1>{{ classroom.name }}</h1><p>{{ classroom.course.name }} · {% if classroom.is_active %}Đang hoạt động{% else %}Đã kết thúc{% endif %}</p></div><div class="actions">{% if can_manage %}<a class="btn secondary" href="{% url 'courses:class_update' classroom.pk %}">Chỉnh sửa lớp</a><a class="btn" href="{% url 'courses:enroll_student' classroom.pk %}">+ Thêm học viên</a>{% elif user.role == 'student' %}<a class="btn" href="{% url 'submissions:student_home' %}">Xem bài tập</a>{% endif %}</div></div><div class="two-columns"><section class="panel"><div class="panel-head"><h2>Thông tin lớp học</h2>{% if can_manage %}<a class="text-link" href="{% url 'courses:assign_teacher' classroom.pk %}">Phân công giáo viên</a>{% endif %}</div><dl class="data-list"><div><dt>Mã lớp</dt><dd>{{ classroom.class_code }}</dd></div><div><dt>Giáo viên</dt><dd>{{ classroom.teacher.display_name|default:'Chưa phân công' }}</dd></div><div><dt>Ngày khai giảng</dt><dd>{{ classroom.start_date|date:'d/m/Y'|default:'Chưa đặt' }}</dd></div><div><dt>Ngày kết thúc</dt><dd>{{ classroom.end_date|date:'d/m/Y'|default:'Chưa đặt' }}</dd></div></dl></section><section class="panel"><h2>{% if is_reporting_staff %}Tiến độ và công việc{% else %}Luyện tập trong lớp{% endif %}</h2><p class="subtle">{% if is_reporting_staff %}Theo dõi bài đã giao, kết quả và học viên cần hỗ trợ của lớp này.{% else %}Hoàn thành bài đã giao, theo dõi điểm và nhận xét từ giáo viên.{% endif %}</p><div class="actions"><a class="btn secondary small" href="{% url 'dashboard:index' %}?classroom={{ classroom.pk }}">Báo cáo lớp</a>{% if is_reporting_staff %}<a class="btn small" href="{% url 'assignments:assign' %}?classroom={{ classroom.pk }}">Giao bài</a>{% else %}<a class="btn secondary small" href="{% url 'courses:request_exemption' classroom.pk %}">Xin miễn bài</a>{% endif %}</div></section></div><section class="panel"><div class="panel-head"><h2>{% if user.role == 'student' %}Ghi danh và hạn mức của tôi{% else %}Danh sách học viên{% endif %}</h2>{% if is_reporting_staff %}<a class="text-link" href="{% url 'courses:exemption_list' %}">{{ pending_count }} đơn đang chờ duyệt</a>{% endif %}</div><div class="table-wrap"><table><thead><tr><th>Học viên</th><th>Mã học viên</th><th>Ghi danh</th><th>Lượt miễn còn lại</th>{% if can_manage %}<th>Thao tác</th>{% endif %}</tr></thead><tbody>{% for enrollment in enrollments %}<tr><td><strong>{{ enrollment.student.get_full_name|default:enrollment.student.username }}</strong></td><td>{{ enrollment.student.student_code|default:'Chưa cấp' }}</td><td><span class="badge {% if enrollment.status == 'active' %}green{% endif %}">{{ enrollment.get_status_display }}</span></td><td>{{ enrollment.exemption_quota.remaining_quota }}/{{ enrollment.exemption_quota.max_quota }}</td>{% if can_manage %}<td><a href="{% url 'courses:enrollment_update' enrollment.pk %}">Cập nhật ghi danh</a>{% if enrollment.status == 'active' %} · <a href="{% url 'courses:remove_student' classroom.pk enrollment.student_id %}">Ngừng ghi danh</a>{% endif %}</td>{% endif %}</tr>{% empty %}<tr><td colspan="5" class="empty">Chưa có học viên trong lớp.</td></tr>{% endfor %}</tbody></table></div></section>{% if is_reporting_staff %}<section class="panel"><div class="panel-head"><h2>Bài tập đã giao</h2><a href="{% url 'assignments:assigned_list' %}?classroom={{ classroom.pk }}" class="text-link">Xem tất cả →</a></div><div class="table-wrap"><table><thead><tr><th>Buổi học</th><th>Kỹ năng</th><th>Hạn nộp</th><th>Chi tiết</th></tr></thead><tbody>{% for assignment in assignments %}<tr><td>{{ assignment.lesson.title }}</td><td>{{ assignment.lesson.get_skill_display }}</td><td>{{ assignment.due_at|date:'d/m/Y H:i' }}</td><td><a href="{% url 'assignments:assigned_detail' assignment.pk %}">Xem lượt giao</a></td></tr>{% empty %}<tr><td colspan="4" class="empty">Chưa có bài tập được giao.</td></tr>{% endfor %}</tbody></table></div></section>{% endif %}{% endblock %}
+{% extends 'base.html' %}
+{% load ui %}
+
+{% block title %}Chi tiết Lớp: {{ classroom.class_code }} - MR BEAN ENGLISH{% endblock %}
+
+{% block content %}
+<!-- Header Lớp -->
+<div class="card border-0 rounded-4 shadow-sm mb-4" style="background: #ffffff; border: 1px solid rgba(212, 98, 26, 0.25) !important;">
+    <div class="card-body p-4">
+        <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+            <div>
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <span class="badge" style="background-color: var(--color-dark-brown); color: var(--color-warm-orange); font-size: 0.95rem; font-weight: 800; border-radius: 8px;">
+                        {{ classroom.class_code }}
+                    </span>
+                    <span class="badge" style="background-color: var(--color-warm-orange); color: var(--color-dark-brown); font-weight: 700; border-radius: 8px;">
+                        {{ classroom.course.get_course_type_display }}
+                    </span>
+                    {% if classroom.is_active %}
+                        <span class="badge" style="background-color: #e6f6ec; color: #15803d; font-weight: 700; border-radius: 20px;">
+                            Đang hoạt động
+                        </span>
+                    {% else %}
+                        <span class="badge" style="background-color: #f3f4f6; color: #6b7280; font-weight: 700; border-radius: 20px;">
+                            Tạm dừng
+                        </span>
+                    {% endif %}
+                </div>
+                <h1 class="page-title-h1 mb-1">{{ classroom.name }}</h1>
+                <div class="small" style="color: #6d5b4e;"><i aria-hidden="true" class="bi bi-mortarboard-fill me-1" style="color: var(--color-burn-orange);"></i>Chương trình: <strong>{{ classroom.course.name }}</strong></div>
+            </div>
+            
+            <div class="d-flex flex-wrap gap-2">
+                {% if can_manage %}
+                <a href="{% url 'courses:assign_teacher' classroom.id %}" class="btn" style="background-color: var(--color-warm-orange); color: var(--color-dark-brown); font-weight: 700; border-radius: 30px; font-size: 0.88rem;">
+                    <i aria-hidden="true" class="bi bi-person-badge me-1"></i>Phân công Giáo viên
+                </a>
+                <a href="{% url 'courses:enroll_student' classroom.id %}" class="btn-cta-orange">
+                    <i aria-hidden="true" class="bi bi-person-plus me-1"></i>Thêm Học viên
+                </a>
+                <a href="{% url 'courses:class_update' classroom.id %}" class="btn-action-edit" style="border-radius: 20px; padding: 0.55rem 0.9rem;">
+                    <i aria-hidden="true" class="bi bi-pencil"></i> Sửa lớp
+                </a>
+                {% endif %}
+                {% if user.role == 'student' %}
+                <a href="{% url 'courses:request_exemption' classroom.id %}" class="btn-cta-orange">
+                    <i aria-hidden="true" class="bi bi-file-earmark-plus me-1"></i>Nộp đơn xin miễn BTVN
+                </a>
+                {% endif %}
+            </div>
+        </div>
+
+        <hr class="my-3" style="border-color: rgba(212, 98, 26, 0.2);">
+
+        <!-- Thông tin giáo viên và định mức -->
+        <div class="row g-3 small">
+            <div class="col-md-4">
+                <span class="d-block" style="color: #846d5c;">Giáo viên phụ trách chấm bài:</span>
+                {% if classroom.teacher %}
+                    <strong class="fs-6" style="color: var(--color-burn-orange);"><i aria-hidden="true" class="bi bi-person-check-fill me-1"></i>{{ classroom.teacher.get_full_name|default:classroom.teacher.username }}</strong>
+                {% else %}
+                    <span class="text-danger fw-bold"><i aria-hidden="true" class="bi bi-exclamation-triangle-fill me-1"></i>Chưa phân công giáo viên!</span>
+                {% endif %}
+            </div>
+            <div class="col-md-4">
+                <span class="d-block" style="color: #846d5c;">Chính sách miễn BTVN:</span>
+                <strong class="fs-6" style="color: var(--color-dark-brown);"><i aria-hidden="true" class="bi bi-shield-check me-1" style="color: var(--color-burn-orange);"></i>8 buổi (Mã T/V) &bull; 5 buổi (Mã B)</strong>
+                <span style="color: var(--color-burn-orange); font-weight: 600;">(Chỉ miễn Speaking/Vocab, Bắt buộc Listening)</span>
+            </div>
+            <div class="col-md-4">
+                <span class="d-block" style="color: #846d5c;">Thời gian:</span>
+                <span>Từ: {{ classroom.start_date|date:"d/m/Y"|default:"Chưa rõ" }} - Đến: {{ classroom.end_date|date:"d/m/Y"|default:"Chưa rõ" }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Banner Quota cho học viên nếu người xem là học viên -->
+{% if student_quota %}
+<div class="rounded-4 p-4 mb-4 shadow-sm" style="background-color: var(--color-dark-brown); color: #ffffff;">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+        <div>
+            <h5 class="fw-bold mb-1" style="color: var(--color-warm-orange);"><i aria-hidden="true" class="bi bi-shield-check me-2"></i>HẠN MỨC MIỄN BTVN (SPEAKING/VOCAB) CỦA BẠN</h5>
+            <div class="small opacity-75">
+                Bạn đã sử dụng <strong style="color: var(--color-warm-orange);">{{ student_quota.used_quota }}</strong> trên tổng số <strong>{{ student_quota.max_quota }}</strong> buổi được miễn theo mã học viên.
+            </div>
+        </div>
+        <div class="text-end">
+            <span class="fs-3 fw-bold" style="color: var(--color-warm-orange);">
+                Còn lại: {{ student_quota.remaining_quota }} / {{ student_quota.max_quota }} buổi
+            </span>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Đơn xin miễn đang chờ duyệt (Hiển thị cho Giáo viên phụ trách hoặc Quản lý) -->
+{% if is_teacher_of_class or can_manage %}
+{% if pending_exemptions %}
+<div class="card border-0 rounded-4 shadow-sm mb-4" style="background: #ffffff; border: 2px solid var(--color-warm-orange) !important;">
+    <div class="card-header py-3 bg-transparent border-0">
+        <h2 class="section-title-h2 mb-0" style="color: var(--color-burn-orange);">
+            <i aria-hidden="true" class="bi bi-hourglass-split me-2"></i>ĐƠN XIN MIỄN BTVN ĐANG CHỜ DUYỆT ({{ pending_exemptions.count }})
+        </h2>
+    </div>
+    <div class="table-responsive">
+        <table class="custom-data-table">
+            <thead>
+                <tr>
+                    <th>Học viên</th>
+                    <th>Buổi / Bài tập</th>
+                    <th>Lý do</th>
+                    <th>Hạn mức còn lại</th>
+                    <th>Thời gian gửi</th>
+                    <th class="text-end pe-3">Thao tác</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for req in pending_exemptions %}
+                <tr>
+                    <td class="fw-bold">{{ req.enrollment.student.get_full_name|default:req.enrollment.student.username }}</td>
+                    <td>
+                        <span class="badge" style="background-color: var(--color-light-cream); color: var(--color-dark-brown); border: 1px solid var(--color-warm-orange);">
+                            {{ req.session_title }}
+                        </span>
+                    </td>
+                    <td class="small text-secondary">{{ req.reason }}</td>
+                    <td>
+                        <span class="fw-bold" style="color: var(--color-burn-orange);">
+                            {{ req.enrollment.exemption_quota.remaining_quota }}/{{ req.enrollment.exemption_quota.max_quota }} buổi
+                        </span>
+                    </td>
+                    <td class="small text-muted">{{ req.created_at|date:"d/m/Y H:i" }}</td>
+                    <td class="text-end pe-3">
+                        {% if is_teacher_of_class %}<a href="{% url 'courses:exemption_review' req.id %}" class="btn-cta-orange py-1 px-3" style="font-size: 0.8rem;">
+                            <i aria-hidden="true" class="bi bi-check-circle me-1"></i>Xét duyệt
+                        </a>{% else %}<span class="text-muted small">Chờ giáo viên xét duyệt</span>{% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+{% endif %}
+
+<!-- Danh sách Học viên trong lớp -->
+<div class="data-card-wrapper">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="section-title-h2 mb-0">DANH SÁCH HỌC VIÊN ({{ enrollments.count }})</h2>
+    </div>
+
+    <div class="table-responsive">
+        <table class="custom-data-table">
+            <thead>
+                <tr>
+                    <th>Học viên</th>
+                    <th>Email & SĐT</th>
+                    <th>Trạng thái</th>
+                    <th>Tiến trình miễn BTVN (Speaking/Vocab)</th>
+                    <th>Ngày vào lớp</th>
+                    {% if can_manage %}
+                    <th class="text-end pe-3">Hành động</th>
+                    {% endif %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for e in enrollments %}
+                <tr>
+                    <td>
+                        <div class="fw-bold">{{ e.student.get_full_name|default:e.student.username }}</div>
+                        <div class="small opacity-75">
+                            {% if e.student.student_code %}
+                            <span class="badge" style="background-color: var(--color-warm-orange); color: var(--color-dark-brown); font-weight: 700; font-size: 0.72rem;">{{ e.student.student_code }}</span>
+                            {% endif %}
+                            @{{ e.student.username }}
+                        </div>
+                    </td>
+                    <td class="small">
+                        <div>{{ e.student.email|default:"-" }}</div>
+                        <div class="text-muted">{{ e.student.phone_number|default:"-" }}</div>
+                    </td>
+                    <td>
+                        {% if e.status == 'active' %}
+                            <span class="badge" style="background-color: #e6f6ec; color: #15803d; font-weight: 700; border-radius: 20px;">Đang học</span>
+                        {% elif e.status == 'completed' %}
+                            <span class="badge" style="background-color: var(--color-light-cream); color: var(--color-dark-brown); font-weight: 700; border-radius: 20px;">Hoàn thành</span>
+                        {% else %}
+                            <span class="badge" style="background-color: #f3f4f6; color: #6b7280; font-weight: 700; border-radius: 20px;">Nghỉ/Bảo lưu</span>
+                        {% endif %}
+                    </td>
+                    <td style="min-width: 200px;">
+                        {% if e.exemption_quota %}
+                            <div class="d-flex align-items-center gap-2 mb-1">
+                                <div class="custom-progress-track flex-grow-1" style="height: 10px;">
+                                    {% widthratio e.exemption_quota.used_quota e.exemption_quota.max_quota 100 as p_used %}
+                                    <div class="custom-progress-fill" style="width: {{ p_used }}%;"></div>
+                                </div>
+                                <span class="fw-bold small" style="color: var(--color-dark-brown);">
+                                    <strong style="color: var(--color-burn-orange);">{{ e.exemption_quota.used_quota }}</strong>/{{ e.exemption_quota.max_quota }}
+                                </span>
+                            </div>
+                            <div class="small" style="font-size: 0.72rem; color: #846d5c;">
+                                Còn lại: <strong>{{ e.exemption_quota.remaining_quota }}</strong> buổi
+                            </div>
+                        {% else %}
+                            <span class="text-muted small">Chưa thiết lập</span>
+                        {% endif %}
+                    </td>
+                    <td class="small text-muted">{{ e.enrolled_at|date:"d/m/Y" }}</td>
+                    {% if can_manage %}
+                    <td class="text-end pe-3">
+                        <a class="btn-action-edit mb-1" href="{% url 'courses:enrollment_update' e.id %}">Trạng thái</a>
+                        <a href="{% url 'courses:remove_student' classroom.id e.student.id %}" class="btn-action-delete" title="Ngừng ghi danh">
+                            <i aria-hidden="true" class="bi bi-person-dash"></i> Ngừng học
+                        </a>
+                    </td>
+                    {% endif %}
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center py-4 text-muted">
+                        <i aria-hidden="true" class="bi bi-person-x fs-2 d-block mb-1" style="color: var(--color-warm-orange);"></i>
+                        Lớp học hiện chưa có học viên nào.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% if assignments %}
+<div class="data-card-wrapper">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
+        <h2 class="section-title-h2 mb-0">BÀI TẬP ĐÃ GIAO CHO LỚP</h2>
+        {% if is_reporting_staff %}<a class="btn-cta-orange" href="{% url 'assignments:assign' %}?classroom={{ classroom.pk }}"><i aria-hidden="true" class="bi bi-plus-circle-fill"></i>Giao bài cho lớp</a>{% else %}<a class="btn-cta-orange" href="{% url 'submissions:student_home' %}"><i aria-hidden="true" class="bi bi-pencil-square"></i>Vào làm bài</a>{% endif %}
+    </div>
+    <div class="table-responsive"><table class="custom-data-table"><thead><tr><th>Bài tập</th><th>Kỹ năng</th><th>Hạn nộp</th><th>Nhận bài</th><th>Thao tác</th></tr></thead><tbody>
+        {% for a in assignments %}<tr><td class="fw-bold">{{ a.lesson.title }}</td><td>{{ a.lesson.get_skill_display }}</td><td>{{ a.due_at|date:'d/m/Y H:i' }}</td><td>{% if a.is_active %}Đang mở{% else %}Tạm dừng{% endif %}</td><td>{% if is_reporting_staff %}<a class="btn-action-edit" href="{% url 'assignments:assigned_detail' a.pk %}">Tình trạng nộp</a>{% else %}<a class="btn-action-edit" href="{% url 'submissions:student_home' %}">Xem bài tập</a>{% endif %}</td></tr>{% endfor %}
+    </tbody></table></div>
+</div>
+{% elif is_reporting_staff %}
+<div class="data-card-wrapper text-center"><p class="text-secondary">Lớp chưa có bài tập được giao.</p><a class="btn-cta-orange" href="{% url 'assignments:assign' %}?classroom={{ classroom.pk }}"><i aria-hidden="true" class="bi bi-plus-circle-fill"></i>Giao bài cho lớp</a></div>
+{% endif %}
+
+{% endblock %}

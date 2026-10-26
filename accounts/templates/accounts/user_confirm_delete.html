@@ -1,1 +1,36 @@
-{% extends 'base.html' %}{% block title %}Vô hiệu hóa tài khoản · Mr Bean{% endblock %}{% block content %}<div class="page-header"><div><div class="eyebrow">QUẢN LÝ TÀI KHOẢN</div><h1>Vô hiệu hóa tài khoản</h1><p>{{ target_user.get_full_name|default:target_user.username }} · {{ target_user.get_role_display }}</p></div></div><section class="panel form-panel"><p>Tài khoản sẽ không thể đăng nhập. Lịch sử lớp học, bài làm và điểm được giữ lại; quản trị viên có thể kích hoạt lại trong trang chỉnh sửa.</p><form method="post">{% csrf_token %}<div class="form-actions"><button class="btn danger" type="submit">Vô hiệu hóa</button><a class="btn secondary" href="{% url 'accounts:user_list' %}">Quay lại</a></div></form></section>{% endblock %}
+{% extends 'base.html' %}
+{% load ui %}
+
+{% block title %}Xác nhận vô hiệu hóa người dùng - MR BEAN ENGLISH{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-5">
+        <div class="card border-0 rounded-4 shadow-sm" style="background: #ffffff; border: 2px solid var(--color-burn-orange) !important;">
+            <div class="card-body p-4 text-center">
+                <div style="width: 60px; height: 60px; border-radius: 50%; background-color: rgba(212, 98, 26, 0.15); display: inline-flex; align-items: center; justify-content: center; margin-bottom: 1rem;">
+                    <i aria-hidden="true" class="bi bi-exclamation-triangle-fill fs-2" style="color: var(--color-burn-orange);"></i>
+                </div>
+                <h2 class="section-title-h2 mb-2">XÁC NHẬN VÔ HIỆU HÓA</h2>
+                <p class="text-secondary mb-3">
+                    Bạn có chắc chắn muốn vô hiệu hóa tài khoản <strong>{{ target_user.username }}</strong> 
+                    ({{ target_user.get_full_name|default:"Chưa đặt tên" }} - Vai trò: <strong>{{ target_user.get_role_display }}</strong>)?
+                </p>
+                <div class="p-3 rounded-3 text-start small mb-4" style="background-color: var(--color-light-cream); border: 1px dashed var(--color-burn-orange); color: var(--color-dark-brown);">
+                    <i aria-hidden="true" class="bi bi-info-circle me-1" style="color: var(--color-burn-orange);"></i>
+                    Tài khoản sẽ ngừng đăng nhập. Lịch sử lớp học, bài làm và điểm được giữ nguyên.
+                </div>
+                <form method="post" class="d-flex justify-content-center gap-2">
+                    {% csrf_token %}
+                    <a href="{% url 'accounts:user_list' %}" class="btn" style="background-color: var(--color-light-cream); color: var(--color-dark-brown); border: 1px solid rgba(42, 26, 14, 0.2); border-radius: 30px; font-weight: 600; padding: 0.5rem 1.25rem;">
+                        Hủy bỏ
+                    </a>
+                    <button type="submit" class="btn-cta-orange px-4">
+                        <i aria-hidden="true" class="bi bi-trash-fill me-1"></i>Xác nhận vô hiệu hóa
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

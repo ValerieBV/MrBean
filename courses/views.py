@@ -59,19 +59,27 @@ def class_list_view(request):
     if request.GET.get('status') == 'closed': rows = rows.filter(is_active=False)
     student_enrollments = Enrollment.objects.filter(student=request.user, status='active').select_related(
         'classroom__course', 'classroom__teacher', 'exemption_quota') if request.user.role == 'student' else None
+    student_exemptions = ExemptionRequest.objects.filter(enrollment__student=request.user).select_related(
+        'enrollment__classroom__course', 'reviewed_by', 'assignment__lesson') if student_enrollments is not None else None
     return render(request, 'courses/class_list.html', {'classes': Paginator(rows, 20).get_page(request.GET.get('page')),
-        'query': query, 'student_enrollments': student_enrollments})
+        'query': query, 'student_enrollments': student_enrollments,
+        'student_exemptions': Paginator(student_exemptions,20).get_page(request.GET.get('history_page'))
+            if student_exemptions is not None else None})
 
 
 @login_required
 def class_detail_view(request, class_id):
     classroom = get_object_or_404(classes_for(request.user).select_related('course', 'teacher'), pk=class_id)
     enrollments = classroom.enrollments.select_related('student', 'exemption_quota')
-    pending = classroom.enrollments.filter(exemption_requests__status='pending').count()
+    pending = ExemptionRequest.objects.filter(enrollment__classroom=classroom, status='pending').select_related(
+        'enrollment__student', 'enrollment__exemption_quota')
     if request.user.role == 'student' and not request.user.is_superuser:
         enrollments = enrollments.filter(student=request.user)
+    own_enrollment = enrollments.filter(student=request.user).first() if request.user.role == 'student' else None
     return render(request, 'courses/class_detail.html', {'classroom': classroom, 'enrollments': enrollments,
-        'can_manage': is_manager(request.user), 'pending_count': pending,
+        'can_manage': is_manager(request.user), 'pending_exemptions':pending,
+        'is_teacher_of_class':request.user.is_superuser or request.user.role == 'admin' or classroom.teacher_id == request.user.pk,
+        'student_quota':getattr(own_enrollment,'exemption_quota',None),
         'assignments': classroom.assignments.select_related('lesson').order_by('-assigned_at')[:20]})
 
 
@@ -99,7 +107,8 @@ def _class_form(request, classroom=None):
                 saved.enrollments.filter(status='active').update(status='completed')
         messages.success(request, 'Đã lưu thông tin lớp. Lớp ngừng hoạt động vẫn giữ đầy đủ điểm và lịch sử.')
         return redirect('courses:class_detail', class_id=saved.pk)
-    return render(request, 'core/form.html', {'form': form, 'title': 'Cập nhật lớp học' if classroom else 'Tạo lớp học',
+    return render(request, 'courses/class_form.html', {'form': form, 'classroom':classroom,
+        'title': 'Cập nhật lớp học' if classroom else 'Tạo lớp học',
         'back_url': reverse('courses:class_list')})
 
 
@@ -132,7 +141,8 @@ def assign_teacher_view(request, class_id):
             messages.success(request, 'Đã phân công giáo viên và cập nhật quyền chấm bài của lớp.')
             return redirect('courses:class_detail', class_id=class_id)
         except ValidationError as exc: form.add_error(None, exc)
-    return render(request, 'core/form.html', {'form': form, 'title': 'Phân công giáo viên · '+classroom.class_code,
+    return render(request, 'courses/assign_teacher.html', {'form': form, 'classroom':classroom,
+        'title': 'Phân công giáo viên · '+classroom.class_code,
         'back_url': reverse('courses:class_detail', args=[class_id])})
 
 
@@ -146,7 +156,8 @@ def enroll_student_view(request, class_id):
             messages.success(request, 'Đã ghi danh và đồng bộ các bài tập đang mở cho học viên.')
             return redirect('courses:class_detail', class_id=class_id)
         except ValidationError as exc: form.add_error(None, exc)
-    return render(request, 'core/form.html', {'form': form, 'title': 'Thêm học viên · '+classroom.class_code,
+    return render(request, 'courses/enroll_student.html', {'form': form, 'classroom':classroom,
+        'title': 'Thêm học viên · '+classroom.class_code,
         'back_url': reverse('courses:class_detail', args=[class_id])})
 
 
@@ -160,7 +171,8 @@ def remove_student_view(request, class_id, student_id):
             messages.success(request, 'Đã chuyển học viên sang trạng thái nghỉ học. Lịch sử được giữ nguyên.')
         except ValidationError as exc: messages.error(request, '; '.join(exc.messages))
         return redirect('courses:class_detail', class_id=class_id)
-    return render(request, 'core/confirm.html', {'title': 'Ngừng ghi danh',
+    return render(request, 'courses/student_confirm_remove.html', {'title': 'Ngừng ghi danh',
+        'student':enrollment.student, 'classroom':enrollment.classroom,
         'description': enrollment.student.username+' · '+enrollment.classroom.class_code,
         'back_url': reverse('courses:class_detail', args=[class_id])})
 
@@ -213,6 +225,7 @@ def exemption_review_view(request, exemption_id):
             return redirect('courses:exemption_list')
         except ValidationError as exc: form.add_error(None, exc)
     return render(request, 'courses/exemption_review.html', {'form': form, 'exemption': exemption,
+        'classroom':exemption.enrollment.classroom,
         'quota': exemption.enrollment.exemption_quota})
 
 

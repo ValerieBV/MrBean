@@ -1,28 +1,337 @@
 {% extends 'base.html' %}
-{% block title %}Lớp học · MR BEAN ENGLISH{% endblock %}
+{% load ui %}
+
+{% block title %}
+    {% if user.role == 'student' %}Khóa học của tôi{% else %}Quản lý Lớp học{% endif %} - MR BEAN ENGLISH
+{% endblock %}
+
 {% block content %}
-<div class="page-header reference-page-header class-list-heading">
-    <div><h1>{% if is_reporting_manager %}Quản lý lớp học{% elif user.role == 'teacher' %}LỚP HỌC ĐANG DẠY{% else %}KHÓA HỌC CỦA TÔI{% endif %}</h1><p>{% if is_reporting_manager %}Quản trị danh sách lớp, phân công giáo viên chấm bài và ghi danh học viên{% elif user.role == 'teacher' %}Danh sách lớp được phân công giảng dạy và chấm bài{% else %}Thông tin giáo viên và lớp đang theo học của bạn{% endif %}</p></div>
-    {% if is_reporting_manager %}<a class="btn" href="{% url 'courses:class_create' %}">{% include 'core/icon.html' with name='plus' %}+ Tạo lớp học mới</a>{% endif %}
+{% if user.role == 'student' %}
+<!-- ============================================================== -->
+<!-- GIAO DIỆN DÀNH RIÊNG CHO HỌC VIÊN: KHÓA HỌC & BÀI TẬP CỦA TÔI -->
+<!-- ============================================================== -->
+
+<div class="mb-4">
+    <h1 class="page-title-h1">KHÓA HỌC CỦA TÔI</h1>
+    <div class="text-muted small" style="color: #6d5b4e !important;">
+        Chào mừng <strong>{{ user.get_full_name|default:user.username }}</strong>! Dưới đây là các khóa học bạn đang theo học, các bài tập cần làm và hạn mức số buổi miễn làm BTVN (Speaking/Vocab).
+    </div>
 </div>
-{% if classes or query or request.GET.status %}
-<details class="list-filters" {% if query or request.GET.status %}open{% endif %}>
-    <summary>Tìm kiếm & lọc lớp học</summary>
-    <section class="panel"><form class="filters" method="get"><div class="filter search"><label for="class-query">Tìm lớp học</label><input type="search" id="class-query" name="q" value="{{ query }}" placeholder="Tên lớp, mã lớp, khóa học…"></div><div class="filter"><label for="class-status">Trạng thái lớp</label><select id="class-status" name="status"><option value="">Tất cả</option><option value="active" {% if request.GET.status == 'active' %}selected{% endif %}>Đang hoạt động</option><option value="closed" {% if request.GET.status == 'closed' %}selected{% endif %}>Đã kết thúc</option></select></div><button class="btn secondary" type="submit">Lọc danh sách</button></form></section>
-</details>
-{% endif %}
-{% if classes %}
-<div class="cards">
-    {% for classroom in classes %}
-    <article class="card"><div class="card-top"><span class="badge role-tag">{{ classroom.course.get_course_type_display }}</span><span class="badge {% if classroom.is_active %}green{% endif %}">{% if classroom.is_active %}Đang hoạt động{% else %}Đã kết thúc{% endif %}</span></div><h2>{{ classroom.name }}</h2><p class="class-code">Mã lớp: <strong>{{ classroom.class_code }}</strong></p><dl class="data-list"><div><dt>Chương trình</dt><dd>{{ classroom.course.name }}</dd></div><div><dt>Giáo viên chấm bài</dt><dd>{{ classroom.teacher.display_name|default:'Chưa phân công' }}</dd></div>{% if is_reporting_staff %}<div><dt>Sĩ số đang học</dt><dd>{{ classroom.active_students }} học viên</dd></div>{% endif %}<div><dt>Thời gian</dt><dd>{{ classroom.start_date|date:'d/m/Y'|default:'Chưa đặt' }} – {{ classroom.end_date|date:'d/m/Y'|default:'Chưa đặt' }}</dd></div></dl><div class="actions"><a class="btn secondary class-detail-button" href="{% url 'courses:class_detail' classroom.pk %}">Chi tiết lớp học</a></div></article>
+
+<!-- 1. KHU VỰC THỐNG KÊ HẠN MỨC MIỄN BTVN (SPEAKING/VOCAB) -->
+<div class="row g-3 mb-4">
+    {% for enrollment in student_enrollments %}
+    <div class="col-md-6 col-lg-6">
+        <div class="card border-0 rounded-4 shadow-sm h-100" style="background-color: var(--color-dark-brown); color: #ffffff;">
+            <div class="card-body p-4 d-flex flex-column justify-content-between">
+                <div>
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <span class="badge" style="background-color: var(--color-warm-orange); color: var(--color-dark-brown); font-weight: 800;">
+                            {{ enrollment.classroom.class_code }}
+                        </span>
+                        <span class="badge" style="background-color: rgba(254, 243, 226, 0.15); color: #ecd9c6;">
+                            {{ enrollment.classroom.course.get_course_type_display }}
+                        </span>
+                    </div>
+
+                    <h5 class="fw-bold mb-1" style="color: var(--color-warm-orange);">{{ enrollment.classroom.name }}</h5>
+                    <div class="small opacity-75 mb-3">
+                        <i aria-hidden="true" class="bi bi-person-workspace me-1"></i>Giáo viên: <strong>{% if enrollment.classroom.teacher %}{{ enrollment.classroom.teacher.get_full_name|default:enrollment.classroom.teacher.username }}{% else %}Chưa phân công{% endif %}</strong>
+                    </div>
+
+                    <!-- Thông số Quota -->
+                    {% if enrollment.exemption_quota %}
+                    <div class="p-3 rounded-3 mb-3" style="background-color: rgba(254, 243, 226, 0.08); border: 1px solid rgba(244, 174, 82, 0.2);">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="small" style="color: #ecd9c6;"><i aria-hidden="true" class="bi bi-shield-check me-1" style="color: var(--color-warm-orange);"></i>Hạn mức miễn BTVN (Speaking/Vocab):</span>
+                            <span class="fw-bold" style="color: var(--color-warm-orange); font-size: 1.1rem;">
+                                Còn lại: {{ enrollment.exemption_quota.remaining_quota }} / {{ enrollment.exemption_quota.max_quota }} buổi
+                            </span>
+                        </div>
+
+                        <!-- Thanh tiến trình bo tròn 2 màu -->
+                        <div class="custom-progress-track" style="height: 12px;" title="Đã dùng {{ enrollment.exemption_quota.used_quota }} / {{ enrollment.exemption_quota.max_quota }} buổi">
+                            {% widthratio enrollment.exemption_quota.used_quota enrollment.exemption_quota.max_quota 100 as pct_u %}
+                            <div class="custom-progress-fill" style="width: {{ pct_u }}%;"></div>
+                        </div>
+
+                        <div class="d-flex justify-content-between mt-2 small" style="color: #eddcd0; font-size: 0.76rem;">
+                            <span>Đã sử dụng: <strong style="color: var(--color-burn-orange);">{{ enrollment.exemption_quota.used_quota }} buổi</strong></span>
+                            <span>Định mức theo Mã ({{ user.student_code|default:"-" }}): <strong>{{ enrollment.exemption_quota.max_quota }} buổi</strong></span>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="d-flex gap-2 mt-2">
+                    <a href="{% url 'courses:class_detail' enrollment.classroom.id %}" class="btn w-50 py-2 fw-bold" style="background-color: var(--color-light-cream); color: var(--color-dark-brown); border-radius: 30px; font-size: 0.85rem;">
+                        <i aria-hidden="true" class="bi bi-door-open-fill me-1"></i>Vào lớp học
+                    </a>
+                    {% if enrollment.exemption_quota and enrollment.exemption_quota.remaining_quota > 0 %}
+                    <a href="{% url 'courses:request_exemption' enrollment.classroom.id %}" class="btn-cta-orange w-50 py-2 justify-content-center" style="font-size: 0.85rem;">
+                        <i aria-hidden="true" class="bi bi-file-earmark-plus"></i> Xin miễn BTVN
+                    </a>
+                    {% else %}
+                    <button class="btn btn-secondary w-50 py-2" disabled style="border-radius: 30px; font-size: 0.85rem; opacity: 0.5;">
+                        Đã hết lượt miễn
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12 text-center py-5">
+        <i aria-hidden="true" class="bi bi-journal-x fs-1 d-block mb-2" style="color: var(--color-warm-orange);"></i>
+        <h5 class="text-secondary">Bạn hiện chưa được ghi danh vào khóa học nào.</h5>
+    </div>
     {% endfor %}
 </div>
-{% include 'core/pagination.html' with page=classes %}
-{% else %}
-<div class="reference-empty-state">
-    {% include 'core/icon.html' with name='folder-empty' %}
-    <h2>{% if query or request.GET.status %}Không tìm thấy lớp học phù hợp.{% elif is_reporting_manager %}Chưa có lớp học nào trong hệ thống.{% elif user.role == 'teacher' %}Chưa có lớp học nào được phân công.{% else %}Bạn chưa được ghi danh vào lớp học.{% endif %}</h2>
+
+<!-- 2. CÁC BÀI TẬP CẦN LÀM & QUY ĐỊNH HỆ THỐNG -->
+<div class="data-card-wrapper mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="section-title-h2 mb-0" style="color: var(--color-burn-orange);">
+            <i aria-hidden="true" class="bi bi-list-task me-2"></i>CÁC BÀI TẬP VỀ NHÀ CẦN HOÀN THÀNH
+        </h2><a class="btn-cta-orange" href="{% url 'submissions:student_home' %}">Vào làm bài <i aria-hidden="true" class="bi bi-arrow-right"></i></a>
+    </div>
+
+    <div class="row g-3">
+        <!-- Loại 1: Bài tập Listening (BẮT BUỘC) -->
+        <div class="col-md-4">
+            <div class="p-3 rounded-4 h-100" style="background-color: var(--color-light-cream); border: 2px solid #ef4444;">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <div style="width: 36px; height: 36px; border-radius: 50%; background-color: var(--color-dark-brown); color: var(--color-warm-orange); display: flex; align-items: center; justify-content: center;">
+                        <i aria-hidden="true" class="bi bi-headphones"></i>
+                    </div>
+                    <div>
+                        <h6 class="fw-bold mb-0 text-dark">1. Bài tập Nghe (Listening)</h6>
+                        <span class="badge" style="background-color: #fee2e2; color: #b91c1c; font-weight: 700;">BẮT BUỘC - KHÔNG MIỄN</span>
+                    </div>
+                </div>
+                <p class="small text-secondary mb-3">
+                    Luyện nghe theo format đề thi.
+                    <strong>Bắt buộc hoàn thành 100%, hệ thống không cho phép miễn.</strong>
+                </p>
+                <div class="alert alert-danger py-1 px-2 small mb-0" style="font-size: 0.75rem;">
+                    <i aria-hidden="true" class="bi bi-exclamation-octagon-fill me-1"></i>Bắt buộc làm Listening cho mọi học viên
+                </div>
+            </div>
+        </div>
+
+        <!-- Loại 2: Bài tập Speaking (ĐƯỢC XIN MIỄN) -->
+        <div class="col-md-4">
+            <div class="p-3 rounded-4 h-100" style="background-color: var(--color-light-cream); border: 2px solid var(--color-warm-orange);">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <div style="width: 36px; height: 36px; border-radius: 50%; background-color: var(--color-burn-orange); color: #ffffff; display: flex; align-items: center; justify-content: center;">
+                        <i aria-hidden="true" class="bi bi-mic-fill"></i>
+                    </div>
+                    <div>
+                        <h6 class="fw-bold mb-0 text-dark">2. Bài tập Nói (Speaking)</h6>
+                        <span class="badge" style="background-color: #e6f6ec; color: #15803d; font-weight: 700;">ĐƯỢC ÁP DỤNG MIỄN</span>
+                    </div>
+                </div>
+                <p class="small text-secondary mb-3">
+                    Xem video mẫu và ghi âm trực tiếp khi đọc lại. <strong>Có nút xin miễn</strong> trong hạn mức quy định.
+                </p>
+                <div class="alert alert-warning py-1 px-2 small mb-0" style="font-size: 0.75rem;">
+                    <i aria-hidden="true" class="bi bi-info-circle me-1"></i>Hạn mức theo Mã: 8 buổi (T/V) &bull; 5 buổi (B)
+                </div>
+            </div>
+        </div>
+
+        <!-- Loại 3: Bài tập Vocabulary (ĐƯỢC XIN MIỄN) -->
+        <div class="col-md-4">
+            <div class="p-3 rounded-4 h-100" style="background-color: var(--color-light-cream); border: 2px solid var(--color-warm-orange);">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <div style="width: 36px; height: 36px; border-radius: 50%; background-color: var(--color-dark-brown); color: var(--color-light-cream); display: flex; align-items: center; justify-content: center;">
+                        <i aria-hidden="true" class="bi bi-book-half"></i>
+                    </div>
+                    <div>
+                        <h6 class="fw-bold mb-0 text-dark">3. Bài tập Từ vựng (Vocabulary)</h6>
+                        <span class="badge" style="background-color: #e6f6ec; color: #15803d; font-weight: 700;">ĐƯỢC ÁP DỤNG MIỄN</span>
+                    </div>
+                </div>
+                <p class="small text-secondary mb-3">
+                    Viết đủ từ và số lượt theo yêu cầu; nộp nội dung hoặc ảnh bài viết. <strong>Có nút xin miễn</strong> trong hạn mức quy định.
+                </p>
+                <div class="alert alert-warning py-1 px-2 small mb-0" style="font-size: 0.75rem;">
+                    <i aria-hidden="true" class="bi bi-info-circle me-1"></i>Hạn mức theo Mã: 8 buổi (T/V) &bull; 5 buổi (B)
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
+
+<!-- 3. LỊCH SỬ CÁC ĐƠN XIN MIỄN BTVN ĐÃ GỬI -->
+<div class="data-card-wrapper">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="section-title-h2 mb-0">LỊCH SỬ ĐƠN XIN MIỄN BTVN CỦA TÔI</h2>
+    </div>
+
+    <div class="table-responsive">
+        <table class="custom-data-table">
+            <thead>
+                <tr>
+                    <th>Lớp học</th>
+                    <th>Buổi / Bài tập xin miễn</th>
+                    <th>Lý do xin miễn</th>
+                    <th>Trạng thái xét duyệt</th>
+                    <th>Giáo viên phản hồi</th>
+                    <th>Thời gian gửi</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for req in student_exemptions %}
+                <tr>
+                    <td>
+                        <span class="badge" style="background-color: var(--color-dark-brown); color: var(--color-warm-orange); font-weight: 700;">
+                            {{ req.enrollment.classroom.class_code }}
+                        </span>
+                    </td>
+                    <td>
+                        <strong>{{ req.session_title }}</strong>
+                        <div class="small fw-semibold" style="color: var(--color-burn-orange);">
+                            {% if req.homework_type == 'speaking' %}
+                                <i aria-hidden="true" class="bi bi-mic-fill me-1"></i>Speaking
+                            {% elif req.homework_type == 'vocabulary' %}
+                                <i aria-hidden="true" class="bi bi-book-half me-1"></i>Vocabulary
+                            {% else %}
+                                <i aria-hidden="true" class="bi bi-headphones me-1"></i>Listening
+                            {% endif %}
+                        </div>
+                    </td>
+                    <td class="small text-secondary" style="max-width: 250px;">{{ req.reason }}</td>
+                    <td>
+                        {% if req.status == 'approved' %}
+                            <span class="badge" style="background-color: #e6f6ec; color: #15803d; font-weight: 700; border-radius: 20px; padding: 0.35rem 0.75rem;"> Đã chấp thuận</span>
+                        {% elif req.status == 'rejected' %}
+                            <span class="badge" style="background-color: #fee2e2; color: #b91c1c; font-weight: 700; border-radius: 20px; padding: 0.35rem 0.75rem;"> Bị từ chối</span>
+                        {% elif req.status == 'cancelled' %}
+                            <span class="badge bg-secondary">Đã hủy</span>
+                        {% else %}
+                            <span class="badge" style="background-color: #fff7ed; color: var(--color-burn-orange); border: 1px solid var(--color-warm-orange); font-weight: 700; border-radius: 20px; padding: 0.35rem 0.75rem;"> Đang chờ duyệt</span>
+                        {% endif %}
+                    </td>
+                    <td class="small">
+                        {% if req.reviewed_by %}
+                            <div class="fw-bold" style="color: var(--color-dark-brown);">{{ req.reviewed_by.get_full_name|default:req.reviewed_by.username }}</div>
+                            {% if req.review_note %}
+                                <div class="text-muted fst-italic">"{{ req.review_note }}"</div>
+                            {% endif %}
+                        {% else %}
+                            <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td class="small text-muted">{{ req.created_at|date:"d/m/Y H:i" }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center py-4 text-muted">
+                        <i aria-hidden="true" class="bi bi-shield-check fs-2 d-block mb-1" style="color: var(--color-warm-orange);"></i>
+                        Bạn chưa nộp đơn xin miễn bài tập nào.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% include 'core/source_pagination.html' with page=student_exemptions page_key='history_page' %}
+
+{% else %}
+<!-- ============================================================== -->
+<!-- GIAO DIỆN QUẢN TRỊ DÀNH CHO ADMIN, QUẢN LÝ VÀ GIÁO VIÊN -->
+<!-- ============================================================== -->
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="page-title-h1">
+            {% if user.role == 'teacher' %}LỚP HỌC ĐANG PHỤ TRÁCH GIẢNG DẠY{% else %}QUẢN LÝ LỚP HỌC{% endif %}
+        </h1>
+        <div class="text-muted small" style="color: #6d5b4e !important;">
+            {% if user.role == 'teacher' %}
+                Danh sách các lớp bạn được phân công giảng dạy, chấm bài và duyệt miễn BTVN Speaking/Vocabulary
+            {% else %}
+                Quản trị danh sách lớp, phân công giáo viên chấm bài và ghi danh học viên
+            {% endif %}
+        </div>
+    </div>
+    {% if user.is_superuser or user.role == 'admin' or user.role == 'manager' %}
+    <a href="{% url 'courses:class_create' %}" class="btn-cta-orange">
+        <i aria-hidden="true" class="bi bi-plus-circle-fill"></i>
+        <span>+ Tạo lớp học mới</span>
+    </a>
+    {% endif %}
+</div>
+
+{% if classes.paginator.count or query or request.GET.status %}
+<details class="mb-4"><summary class="small fw-semibold">Tìm kiếm và lọc lớp học</summary><form class="d-flex flex-wrap gap-2 mt-2" method="get"><input name="q" value="{{ query }}" class="search-box-rounded" aria-label="Tìm lớp" placeholder="Tìm mã lớp, tên lớp…"><select name="status" class="form-select w-auto" aria-label="Trạng thái lớp"><option value="">Tất cả trạng thái</option><option value="active" {% if request.GET.status == 'active' %}selected{% endif %}>Đang mở</option><option value="closed" {% if request.GET.status == 'closed' %}selected{% endif %}>Đã kết thúc</option></select><button type="submit" class="btn-action-edit">Tìm kiếm</button></form></details>
 {% endif %}
-{% if student_enrollments %}<section class="panel student-quota-panel"><h2>Hạn mức miễn bài của tôi</h2><p class="subtle">Listening bắt buộc. Bạn có thể xin miễn bài Speaking hoặc Vocabulary chưa nộp, theo hạn mức của mã học viên.</p>{% for enrollment in student_enrollments %}<div class="panel-head"><div><strong>{{ enrollment.classroom.class_code }}</strong><p>Còn {{ enrollment.exemption_quota.remaining_quota }}/{{ enrollment.exemption_quota.max_quota }} lượt miễn</p></div><a class="btn secondary small" href="{% url 'courses:request_exemption' enrollment.classroom_id %}">Xin miễn bài</a></div>{% endfor %}</section>{% endif %}
+<div class="row g-4">
+    {% for c in classes %}
+    <div class="col-md-6 col-lg-4">
+        <div class="card h-100 border-0 rounded-4 shadow-sm" style="background: #ffffff; border: 1px solid rgba(212, 98, 26, 0.25) !important;">
+            <div class="card-body p-4 d-flex flex-column">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <span class="badge" style="background-color: var(--color-warm-orange); color: var(--color-dark-brown); font-weight: 800; font-size: 0.8rem; border-radius: 8px;">
+                        {{ c.course.code }}
+                    </span>
+                    {% if c.is_active %}
+                        <span class="badge" style="background-color: #e6f6ec; color: #15803d; font-weight: 700; border-radius: 20px;">
+                            Đang mở
+                        </span>
+                    {% else %}
+                        <span class="badge" style="background-color: #f3f4f6; color: #6b7280; font-weight: 700; border-radius: 20px;">
+                            Đã kết thúc
+                        </span>
+                    {% endif %}
+                </div>
+
+                <h5 class="fw-bold mb-1" style="color: var(--color-dark-brown);">{{ c.name }}</h5>
+                <div class="small mb-3" style="color: var(--color-burn-orange); font-weight: 600;">Mã lớp: <code>{{ c.class_code }}</code></div>
+
+                <div class="rounded-3 p-3 mb-3 small" style="background-color: var(--color-light-cream); border: 1px dashed rgba(212, 98, 26, 0.25);">
+                    <div class="mb-2">
+                        <i aria-hidden="true" class="bi bi-mortarboard-fill me-2" style="color: var(--color-burn-orange);"></i>Chương trình:
+                        <strong>{{ c.course.name }}</strong>
+                    </div>
+                    <div class="mb-2">
+                        <i aria-hidden="true" class="bi bi-person-check-fill me-2" style="color: var(--color-dark-brown);"></i>Giáo viên chấm bài:
+                        {% if c.teacher %}
+                            <strong style="color: var(--color-burn-orange);">{{ c.teacher.get_full_name|default:c.teacher.username }}</strong>
+                        {% else %}
+                            <span class="text-danger fw-bold">Chưa phân công</span>
+                        {% endif %}
+                    </div>
+                    <div class="mb-2">
+                        <i aria-hidden="true" class="bi bi-people-fill me-2" style="color: var(--color-dark-brown);"></i>Sĩ số:
+                        <strong>{{ c.total_students }} học viên</strong>
+                    </div>
+                    <div>
+                        <i aria-hidden="true" class="bi bi-headphones me-2" style="color: var(--color-burn-orange);"></i>Định mức miễn Speaking/Vocab:
+                        <span class="badge" style="background-color: var(--color-dark-brown); color: var(--color-warm-orange); font-weight: 700;">
+                            {{ c.course.default_listening_exemption_quota }} buổi
+                        </span>
+                    </div>
+                </div>
+
+                <div class="mt-auto pt-2">
+                    <a href="{% url 'courses:class_detail' c.id %}" class="btn w-100 fw-bold" style="background-color: var(--color-dark-brown); color: #ffffff; border-radius: 30px; font-size: 0.88rem;">
+                        <i aria-hidden="true" class="bi bi-eye me-1"></i>Chi tiết lớp học
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12 text-center py-5">
+        <i aria-hidden="true" class="bi bi-folder-x fs-1 d-block mb-2" style="color: var(--color-warm-orange);"></i>
+        <h5 class="text-secondary">Chưa có lớp học nào trong hệ thống.</h5>
+    </div>
+    {% endfor %}
+</div>
+{% include 'core/source_pagination.html' with page=classes %}
+{% endif %}
 {% endblock %}
