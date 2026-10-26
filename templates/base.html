@@ -85,6 +85,8 @@
                 </li>
                 {% endif %}
                 {% if user.is_authenticated %}
+                <li class="sidebar-menu-item {% if request.resolver_match.app_name == 'support' and not support_is_contact %}active{% endif %}"><a href="{% url 'support:knowledge_list' %}"><i class="bi bi-chat-dots-fill" aria-hidden="true"></i><span>{% if user.role == 'student' %}HỎI ĐÁP KIẾN THỨC{% else %}CÂU HỎI HỌC VIÊN{% endif %}</span></a></li>
+                <li class="sidebar-menu-item {% if request.resolver_match.app_name == 'support' and support_is_contact %}active{% endif %}"><a href="{% url 'support:contact_list' %}"><i class="bi bi-envelope-fill" aria-hidden="true"></i><span>LIÊN HỆ & PHẢN ÁNH</span></a></li>
                 <li class="sidebar-menu-item integration-menu">
                     <details {% if request.resolver_match.app_name == 'dashboard' or request.resolver_match.app_name == 'assignments' or request.resolver_match.app_name == 'submissions' or request.resolver_match.url_name == 'course_list' %}open{% endif %}>
                         <summary><i aria-hidden="true" class="bi bi-grid-fill"></i><span>BÀI TẬP & BÁO CÁO</span></summary>

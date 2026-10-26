@@ -1,0 +1,10 @@
+{% extends 'base.html' %}{% load static %}
+{% block title %}Tạo liên hệ · Mr Bean{% endblock %}
+{% block page_class %}support-content{% endblock %}
+{% block content %}
+<div class="row justify-content-center"><div class="col-md-10 col-lg-7">
+    <div class="mb-4"><h1 class="page-title-h1">LIÊN HỆ & PHẢN ÁNH</h1><p class="small text-secondary">Chọn giáo viên phụ trách lớp hoặc quản lý. Nội dung được gửi trực tiếp cho người phụ trách và không chuyển sang AI.</p></div>
+    <div class="data-card-wrapper"><form method="post" data-support-form>{% csrf_token %}{% include 'core/bootstrap_fields.html' %}<div class="d-flex flex-wrap justify-content-between gap-2 mt-4"><a class="btn-action-edit" href="{% url 'support:contact_list' %}">Quay lại</a><button class="btn-cta-orange" type="submit">Gửi liên hệ</button></div><p class="small text-secondary mt-3 mb-0" data-support-status role="status"></p></form></div>
+</div></div>
+{% endblock %}
+{% block extra_js %}<script src="{% static 'support/forms.js' %}" defer></script>{% endblock %}

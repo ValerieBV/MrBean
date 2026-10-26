@@ -11,4 +11,5 @@ urlpatterns = [
     path('hoc-tap/', include('submissions.urls')),
     path('ai/', include('ai_core.urls')),
     path('dashboard/', include('dashboard.urls')),
+    path('ho-tro/', include('support.urls')),
 ]

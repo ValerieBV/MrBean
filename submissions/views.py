@@ -98,6 +98,7 @@ def result(request, job_id):
     listening_details = [{**row,'question_text':questions.get(row.get('question_id'),{}).get('question_text','')}
         for row in job.result.get('details',[]) if isinstance(row,dict)] if job.kind=='listening' else []
     return render(request, 'submissions/result.html', {'job': job, 'can_review': can_review, 'published':report_job(job),
+        'can_ask_tutor':request.user.role=='student' and not request.user.is_superuser and job.status=='graded',
         'reference_video_url':video_url, 'listening_details':listening_details})
 
 

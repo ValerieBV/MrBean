@@ -46,7 +46,8 @@ INSTALLED_APPS = [
     'assignments',
     'submissions',
     'ai_core',
-    'dashboard'
+    'dashboard',
+    'support.apps.SupportConfig',
 ]
 
 MIDDLEWARE = [
@@ -150,6 +151,9 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY', '')
 OPENAI_TEXT_MODEL = os.getenv('OPENAI_TEXT_MODEL', 'gpt-6-luna')
 OPENAI_TRANSCRIBE_MODEL = os.getenv('OPENAI_TRANSCRIBE_MODEL', 'gpt-transcribe')
+OPENAI_TUTOR_MODEL = os.getenv('OPENAI_TUTOR_MODEL', OPENAI_TEXT_MODEL)
+AI_TUTOR_TIMEOUT_SECONDS = 20
+AI_TUTOR_DAILY_LIMIT = 30
 AI_DEADLINE_SECONDS = 300
 AI_REQUEST_TIMEOUT_SECONDS = 120
 AI_MAX_AUDIO_BYTES = 20 * 1024 * 1024

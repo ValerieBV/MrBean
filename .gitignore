@@ -4,7 +4,10 @@ __pycache__/
 db.sqlite3
 media/
 .idea/
-.envnode_modules/
+.env
+.env.*
+!.env.example
+node_modules/
 staticfiles/
 browser-output/
 playwright-report/

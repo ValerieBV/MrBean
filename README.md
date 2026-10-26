@@ -115,6 +115,9 @@ Chi tiết cấu hình, prompt, thang điểm, API và nhập kết quả cũ: [
 
 ## 4. Quy trình vận hành
 
+Hỏi đáp sau khi có kết quả và mục liên hệ riêng đã có trong menu:
+[Hướng dẫn hỏi AI, hỏi giáo viên và liên hệ quản lý](docs/AI_TUTOR_AND_CONTACT.md).
+
 1. **Admin/quản lý:** tạo khóa → tạo lớp → phân công giáo viên → tạo tài khoản học viên → ghi danh.
 2. **Giáo viên/admin/quản lý:** tạo buổi trong ngân hàng → thêm câu hỏi/đáp án, từ vựng hoặc video/lời mẫu → giao cho đúng lớp, đặt hạn và quy định nộp.
 3. **Học viên:** xem bài của mình → làm theo thứ tự → lưu nháp nghe/từ vựng → nộp.
