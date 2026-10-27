@@ -129,3 +129,76 @@ class FinalScoreReportingTests(IntegratedFixture):
         self.assertEqual(data['final_score'], 10)
         self.assertEqual(metrics_for(self.student)['average_score'], 10)
         self.assertNotIn('suggested_score', data)
+
+    def test_teacher_ai_trial_remains_separate_after_final_confirmation(self):
+        job=self.pending()
+        self.client.force_login(self.teacher)
+        url=reverse('submissions:result',args=[job.pk])
+        response=self.client.get(url)
+        self.assertContains(response,'data-ai-trial-score')
+        self.assertContains(response,'9,99')
+        self.assertContains(response,'Internal draft feedback')
+        self.assertIsNone(response.context['published']['final_score'])
+        response=self.client.post(reverse('ai_core:review',args=[job.pk]),
+            {'score':7.5,'feedback':'Final teacher assessment'},content_type='application/json')
+        self.assertEqual(response.status_code,200)
+        response=self.client.get(url)
+        self.assertEqual(response.context['ai_trial']['score'],9.99)
+        self.assertEqual(response.context['published']['final_score'],7.5)
+        self.assertEqual(response.context['ai_trial']['feedback'],'Internal draft feedback')
+        self.assertNotContains(response,'id="reviewForm"')
+
+    def test_zero_ai_trial_score_is_displayed_as_a_real_result(self):
+        job=self.pending()
+        GradingJob.objects.filter(pk=job.pk).update(suggested_score=0)
+        self.client.force_login(self.teacher)
+        response=self.client.get(reverse('submissions:result',args=[job.pk]))
+        self.assertTrue(response.context['ai_trial']['available'])
+        self.assertContains(response,'data-ai-trial-score')
+        self.assertContains(response,'0,00')
+        self.assertNotContains(response,'data-ai-trial-empty')
+
+    def test_student_and_manager_never_receive_the_ai_trial_panel(self):
+        job=self.graded()
+        for user in [self.student,self.manager]:
+            with self.subTest(role=user.role):
+                self.client.force_login(user)
+                response=self.client.get(reverse('submissions:result',args=[job.pk]))
+                self.assertIsNone(response.context['ai_trial'])
+                self.assertNotContains(response,'data-ai-trial')
+                self.assertNotContains(response,'Internal model feedback')
+                self.assertContains(response,'Teacher confirmed feedback')
+
+    def test_ai_trial_requires_grading_access_and_is_not_used_for_listening(self):
+        from ai_core.services import enqueue_submission
+        job=self.pending()
+        self.client.force_login(self.other_teacher)
+        self.assertEqual(self.client.get(reverse('submissions:result',args=[job.pk])).status_code,404)
+        self.client.force_login(self.admin)
+        self.assertContains(self.client.get(reverse('submissions:result',args=[job.pk])),'data-ai-trial-score')
+        listening,_=enqueue_submission(task=self.listening_task,submission_key='no-ai-panel',
+            answers={str(self.q1.pk):'B',str(self.q2.pk):'A'})
+        response=self.client.get(reverse('submissions:result',args=[listening.pk]))
+        self.assertIsNone(response.context['ai_trial'])
+        self.assertNotContains(response,'data-ai-trial')
+
+    def test_pending_manual_and_legacy_attempts_do_not_invent_an_ai_trial_grade(self):
+        job=self.pending()
+        self.client.force_login(self.teacher)
+        for status in ['queued','processing','manual','graded']:
+            with self.subTest(status=status):
+                GradingJob.objects.filter(pk=job.pk).update(status=status,
+                    suggested_score=None if status=='graded' else 9.99)
+                response=self.client.get(reverse('submissions:result',args=[job.pk]))
+                self.assertFalse(response.context['ai_trial']['available'])
+                self.assertIsNone(response.context['ai_trial']['score'])
+                self.assertContains(response,'data-ai-trial-empty')
+                self.assertNotContains(response,'data-ai-trial-score')
+
+    def test_ai_trial_feedback_is_escaped(self):
+        job=self.pending()
+        GradingJob.objects.filter(pk=job.pk).update(result={'feedback':'<script>alert("AI")</script>'})
+        self.client.force_login(self.teacher)
+        response=self.client.get(reverse('submissions:result',args=[job.pk]))
+        self.assertNotContains(response,'<script>alert("AI")</script>')
+        self.assertContains(response,'&lt;script&gt;alert(&quot;AI&quot;)&lt;/script&gt;')

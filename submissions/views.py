@@ -114,6 +114,12 @@ def result(request, job_id):
     job = get_object_or_404(GradingJob.objects.select_related('task__learner','task__assignment__classroom').filter(
         task__in=tasks_for(request.user)), pk=job_id)
     can_review = (request.user.is_superuser or request.user.role in ('admin','teacher')) and job.status in ('manual','ai_reviewed')
+    ai_trial = None
+    if (request.user.is_superuser or request.user.role in ('admin','teacher')) and job.kind in ('speaking','vocabulary'):
+        available = job.status in ('ai_reviewed','graded') and job.suggested_score is not None
+        ai_trial = {'available': available, 'score': job.suggested_score if available else None,
+                    'feedback': job.result.get('feedback','') if available else '',
+                    'pending': job.status in ('queued','processing'), 'status': job.status}
     from assignments.video import youtube_embed
     try: video_url = youtube_embed(job.rubric_snapshot.get('youtube_url',''))
     except (ValidationError, ValueError): video_url = ''
@@ -121,6 +127,7 @@ def result(request, job_id):
     listening_details = [{**row,'question_text':questions.get(row.get('question_id'),{}).get('question_text','')}
         for row in job.result.get('details',[]) if isinstance(row,dict)] if job.kind=='listening' else []
     return render(request, 'submissions/result.html', {'job': job, 'can_review': can_review, 'published':report_job(job),
+        'ai_trial':ai_trial,
         'staff_grading_state':staff_grading_state(job) if request.user.is_superuser or request.user.role in ('admin','manager','teacher') else None,
         'can_ask_tutor':request.user.role=='student' and not request.user.is_superuser and job.status=='graded',
         'reference_video_url':video_url, 'listening_details':listening_details})

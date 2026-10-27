@@ -159,6 +159,18 @@ Bài đã sang `manual` không tự chạy lại khi đổi key; giáo viên có
 công hoặc học viên nộp lần mới theo quy định của bài. Không tự đổi ngày nộp,
 reset bài cũ hoặc gọi lại API âm thầm.
 
+### Điểm AI chấm thử trên trang chấm bài
+
+Giáo viên phụ trách lớp hoặc admin mở trang kết quả/chấm bài sẽ thấy mục
+**Kết quả AI chấm thử** ngay trước biểu mẫu xác nhận điểm. Bài nói và từ vựng
+hiển thị điểm gợi ý trên thang10 cùng nhận xét AI khi có kết quả hợp lệ;
+điểm0 vẫn hiển thị đúng. Bài đang xử lý hoặc chuyển thủ công hiển thị trạng
+thái chưa có điểm, không tự thay bằng0. Bài nghe trắc nghiệm không có khối này.
+
+Điểm chấm thử giữ nguyên để đối chiếu sau khi giáo viên công bố một điểm cuối
+cùng khác. Học viên và quản lý theo dõi không thấy khối này; dashboard, CSV
+và API kết quả của học viên vẫn chỉ công bố điểm cuối cùng.
+
 ### Xử lý lỗi thường gặp
 
 - `Chưa có OPENAI_API_KEY`: kiểm tra tên `.env` (không phải `.env.txt`), thư mục

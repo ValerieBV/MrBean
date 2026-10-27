@@ -1,0 +1,26 @@
+{% if ai_trial %}
+<section class="panel" aria-labelledby="ai-trial-title" data-ai-trial data-ai-trial-state="{{ ai_trial.status }}">
+    <div class="panel-head">
+        <div>
+            <h2 id="ai-trial-title">Kết quả AI chấm thử</h2>
+            <p class="report-subtle">Dùng để tham khảo. Giáo viên kiểm tra bài làm và xác nhận điểm cuối cùng.</p>
+        </div>
+        <span class="badge yellow">Điểm tham khảo</span>
+    </div>
+    {% if ai_trial.available %}
+    <div class="row g-4">
+        <div class="col-md-4">
+            <div class="report-card h-100" data-ai-trial-score>
+                <div><span>Điểm AI chấm thử / 10</span><strong>{{ ai_trial.score|floatformat:2 }}</strong></div>
+            </div>
+        </div>
+        <div class="col-md-8">
+            <h3>Nhận xét AI</h3>
+            <p class="report-feedback" data-ai-trial-feedback>{{ ai_trial.feedback|default:'AI chưa có nhận xét bằng văn bản. Giáo viên kiểm tra bài làm trước khi xác nhận.' }}</p>
+        </div>
+    </div>
+    {% else %}
+    <p class="report-subtle" data-ai-trial-empty>{% if ai_trial.pending %}AI chưa hoàn tất xử lý. Điểm và nhận xét chấm thử sẽ hiển thị khi có kết quả.{% else %}Bài này chưa có kết quả AI chấm thử hợp lệ. Giáo viên chấm theo bài làm gốc.{% endif %}</p>
+    {% endif %}
+</section>
+{% endif %}
