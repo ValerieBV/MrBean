@@ -3,14 +3,14 @@ from dashboard.testutils import IntegratedFixture
 
 
 class RecordingFormTests(IntegratedFixture):
-    def test_readalong_page_has_mic_and_reference_without_typed_or_file_fallback(self):
+    def test_readalong_page_has_mic_without_reference_or_typed_or_file_fallback(self):
         self.client.force_login(self.student)
         response=self.client.get(reverse('submissions:do_task',args=[self.task.pk]))
         for text in ['id="recordStart"','id="recordStop"','id="recordPreview"',
-                     'https://www.youtube-nocookie.com/embed/abcdefghijk','My hobby is reading.',
+                     'https://www.youtube-nocookie.com/embed/abcdefghijk',
                      'submissions/submit.js']:
             self.assertContains(response,text)
-        for text in ['name="text"','name="audio"','type="file"']:
+        for text in ['My hobby is reading.','Lời mẫu cần đọc','name="text"','name="audio"','type="file"']:
             self.assertNotContains(response,text)
 
     def test_legacy_assignment_waits_for_teacher_reference(self):

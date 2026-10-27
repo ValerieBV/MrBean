@@ -161,7 +161,9 @@ phải được giáo viên bổ sung trước khi giao theo yêu cầu trắc n
    chép vào trường lời mẫu khi thực sự là câu cần đọc.
 2. Giao bài cho lớp để chụp lại video/lời mẫu trong rubric. Học viên xem video,
    tạm dừng video, bấm **Bắt đầu ghi âm → Dừng ghi âm**, nghe lại hoặc ghi lại,
-   rồi nộp. Không có ô nhập transcript hay chọn file ghi âm có sẵn trong UI.
+   rồi nộp. Lời mẫu được giữ ở backend để chấm và cho giáo viên đối chiếu,
+   không hiển thị trên trang làm bài hoặc kết quả của học viên. Không có ô
+   nhập transcript hay chọn file ghi âm có sẵn trong UI.
    API yêu cầu audio và từ chối `text` do học viên nhập, kể cả khi kèm audio.
 3. Trình duyệt cần HTTPS (hoặc localhost/127.0.0.1 khi phát triển), hỗ trợ
    MediaRecorder và được cấp quyền micro. File do trình duyệt tạo là
