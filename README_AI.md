@@ -121,6 +121,44 @@ chuyển manual.
 để xem điểm AI gợi ý; giáo viên xác nhận điểm chính thức. Nghe không cần key
 hay worker: chấm ngay bằng đáp án ở backend.
 
+### Đã kết nối API nhưng bài vẫn xuất hiện ở giáo viên
+
+`check_openai --live` chỉ kiểm tra một yêu cầu văn bản nhỏ. Nó không xác nhận
+worker đang chạy, worker đã đọc key mới, ảnh đọc được hoặc model chuyển ghi âm
+được cấp quyền. Sau khi sửa `.env`, dừng rồi khởi động lại cả web và worker.
+
+Worker nay in lúc khởi động, mã bài đang xử lý và kết quả: AI đã đánh giá/chờ
+xác nhận, hoặc chấm thủ công kèm mã nguyên nhân an toàn. Không in key, ảnh,
+transcript hoặc thông báo lỗi gốc từ OpenAI.
+
+Kiểm tra trạng thái, không gọi API hoặc thay đổi bài:
+
+```powershell
+python manage.py check_ai_queue
+python manage.py check_ai_queue --job MA_BAI_NOP
+```
+
+| Trạng thái | Ý nghĩa |
+| --- | --- |
+| `queued` / `processing` | Đang chờ/đang xử lý AI, chưa nằm trong hàng chấm của giáo viên. |
+| `ai_reviewed` | AI đã đánh giá thành công; giáo viên xác nhận điểm cuối cùng. |
+| `manual` | AI chưa hoàn tất; trang giáo viên hiển thị nguyên nhân dự phòng. |
+| `graded` | Đã có điểm cuối cùng; học viên nhận thông báo. |
+
+Hàng chấm giáo viên phân biệt **Chờ giáo viên xác nhận** với **Cần chấm thủ công**;
+trang kết quả có giải thích nội bộ theo trạng thái. Học viên vẫn chỉ xem điểm
+cuối cùng, không thấy nguyên nhân kỹ thuật hoặc phần đánh giá nội bộ.
+Các báo cáo không bổ sung cột điểm AI.
+
+Các mã thường gặp: `provider_not_configured` (worker chưa có key),
+`ai_authentication` (key bị từ chối), `ai_quota_exceeded` / `ai_rate_limited`,
+`ai_model_unavailable`, `ai_connection_error`, `ai_timeout`,
+`ai_deadline_exceeded` (quá 5 phút), `ai_uncertain_evidence` (bài chưa đọc rõ).
+Bài lỗi cũ có mã `ai_error` không đủ thông tin để xác định lại nguyên nhân.
+Bài đã sang `manual` không tự chạy lại khi đổi key; giáo viên có thể chấm thủ
+công hoặc học viên nộp lần mới theo quy định của bài. Không tự đổi ngày nộp,
+reset bài cũ hoặc gọi lại API âm thầm.
+
 ### Xử lý lỗi thường gặp
 
 - `Chưa có OPENAI_API_KEY`: kiểm tra tên `.env` (không phải `.env.txt`), thư mục

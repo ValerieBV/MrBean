@@ -10,6 +10,7 @@ from django.db import transaction
 from django.utils import timezone
 from .models import GradingJob, VocabularyPage
 from .providers import OpenAIGrader, validate_result
+from .diagnostics import failure_reason
 
 logger = logging.getLogger(__name__)
 
@@ -167,9 +168,10 @@ def process_job(job_id, provider=None):
                 message='Kiểm tra bản ghi hoặc ảnh và nhận xét trước khi xác nhận điểm chính thức.',
                 target_url=reverse('submissions:result',args=[job.pk]),event_key=f'ai-reviewed:{job.pk}')
     except Exception as exc:
-        logger.warning('AI fallback job=%s error_type=%s', job_id, type(exc).__name__)
+        reason = failure_reason(exc)
+        logger.warning('AI fallback job=%s reason=%s error_type=%s', job_id, reason, type(exc).__name__)
         GradingJob.objects.filter(pk=job_id, status='processing').update(
-            status='manual', fallback_reason='ai_timeout' if isinstance(exc, TimeoutError) else 'ai_error',
+            status='manual', fallback_reason=reason,
             transcript=job.transcript if isinstance(job.transcript, str) and len(job.transcript)<=20000 else '', finished_at=timezone.now())
         notify_manual_jobs()
     return True

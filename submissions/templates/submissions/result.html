@@ -1,5 +1,9 @@
 {% extends 'base.html' %}{% load l10n static %}{% block title %}Kết quả bài nộp{% endblock %}{% block page_class %}integration-content{% endblock %}{% block content %}
 <div class="page-header"><div><div class="eyebrow">KẾT QUẢ BÀI NỘP</div><h1>{{ job.task.title }}</h1><p>{{ job.task.learner.get_full_name|default:job.task.learner.username }} · Nộp {{ job.submitted_at|date:'d/m/Y H:i' }}</p></div><a class="btn secondary" href="{% url 'dashboard:index' %}">← Báo cáo học tập</a></div>
+{% if staff_grading_state %}<section class="panel" aria-labelledby="grading-state-title" data-grading-state="{{ staff_grading_state.status }}">
+<h2 id="grading-state-title">{{ staff_grading_state.title }}</h2><p>{{ staff_grading_state.message }}</p>
+{% if staff_grading_state.hint %}<p class="report-subtle" data-grading-reason="{{ staff_grading_state.reason }}">{{ staff_grading_state.hint }}</p>{% endif %}
+</section>{% endif %}
 <section class="report-panel">
 <p class="badge {{ job.status }}">{{ published.status_label }}</p>
 <div class="report-card" data-final-score>Điểm cuối cùng / 10<strong>{{ published.final_score|default_if_none:'—' }}</strong></div>

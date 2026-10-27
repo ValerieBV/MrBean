@@ -7,6 +7,7 @@ from django.utils.dateparse import parse_date
 from ai_core.models import GradingJob
 from ai_core.permissions import tasks_for, classes_for, is_manager
 from ai_core.reporting import report_job
+from ai_core.diagnostics import review_status_label
 from courses.models import Enrollment, ExemptionRequest
 from .models import LearningTask
 
@@ -143,6 +144,6 @@ def metrics_for(user, now=None, filters=None):
         'tasks':list(task_page), 'tasks_pagination':task_meta,
         'graded_report':[report_job(j) for j in graded_page], 'graded_count':grade_meta['total'], 'grades_pagination':grade_meta,
         'history':[report_job(j) for j in history_page], 'history_pagination':history_meta,
-        'review_queue':[report_job(j) for j in queue_page] if staff else [],
+        'review_queue':[dict(report_job(j), review_status_label=review_status_label(j)) for j in queue_page] if staff else [],
         'review_queue_count':queue_meta['total'] if staff else 0, 'queue_pagination':queue_meta,
         'at_risk_learners':risks}
