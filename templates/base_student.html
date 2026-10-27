@@ -9,17 +9,21 @@
     <link rel="stylesheet" href="{% static 'learning/fontawesome/css/all.min.css' %}">
     <link rel="stylesheet" href="{% static 'learning/fonts.css' %}"><link rel="stylesheet" href="{% static 'learning/source.css' %}">
     <style>
-        body { font-family:'Roboto',sans-serif; background:#f5f6f8; }
+        body { font-family:'Roboto',sans-serif; background:#FEF3E2; }
         h1,h2,h3,.font-title { font-family:'Montserrat',sans-serif; }
-        .tab-active { color:#fff; background:#c0392b; }
+        .tab-active { color:#fff; background:#2A1A0E; }
     </style>
+    {% include 'core/theme_head.html' %}
 </head>
-<body class="min-h-screen flex flex-col">
+<body class="mrbean-theme learning-student">
     
     <a class="source-skip" href="#main-content">Đi đến nội dung</a>
-    <div class="text-white text-sm" style="background:#1f3a93">
+    {% include 'core/sidebar.html' %}
+    <div class="learning-workspace">
+    <div class="student-banner text-white text-sm" style="background:#2A1A0E">
         <div class="max-w-6xl mx-auto px-4 py-2 flex items-center justify-between flex-wrap gap-y-1">
             <div class="flex items-center space-x-2 flex-wrap">
+                <button class="sidebar-toggle" type="button" data-menu-toggle aria-controls="sidebarMenu" aria-expanded="true" aria-label="Đóng điều hướng"><i class="bi bi-list" aria-hidden="true"></i></button>
                 <i class="fa-solid fa-graduation-cap text-amber-300"></i>
                 <span class="font-semibold">MR BEAN ENGLISH</span>
                 {% if student_info %}
@@ -41,7 +45,7 @@
     {% if current_class %}
     <div class="bg-white border-b">
         <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-            <h1 class="text-lg md:text-xl font-bold font-title" style="color:#1f7a3d">
+            <h1 class="text-lg md:text-xl font-bold font-title" style="color:#2A1A0E">
                 [{{ current_class.cert }}] {{ current_class.name }} <span class="text-gray-400 font-normal">[{{ current_class.code }}]</span>
             </h1>
             <a href="{% url 'submissions:dashboard' %}" class="text-xs text-gray-500 hover:text-amber-700"><i class="fa-solid fa-angle-left"></i> Đổi lớp</a>
@@ -50,7 +54,7 @@
     {% endif %}
 
     {% if current_class %}
-    <div id="sourceSkillBar" class="shadow" style="background:#e74c3c">
+    <div id="sourceSkillBar" class="shadow" style="background:#F4AE52">
         <div class="max-w-6xl mx-auto px-4 flex items-center space-x-1 text-sm font-semibold text-white/90">
             <a href="{% url 'submissions:student_home' %}" aria-label="Trang học tập" class="px-4 py-3 hover:bg-black/10"><i aria-hidden="true" class="fa-solid fa-house"></i></a>
             <a href="{% url 'submissions:student_skill' 'listening' %}" class="px-4 py-3 hover:bg-black/10 {% block tab_listening %}{% endblock %}">LISTENING</a>
@@ -68,6 +72,7 @@
         {% endif %}
         {% block content %}{% endblock %}
     </main>
+    </div>
     {% block scripts %}{% endblock %}
 </body>
 </html>

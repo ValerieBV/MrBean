@@ -1,0 +1,109 @@
+/* Shared Mr Bean palette. Page layouts and their existing font families remain intact. */
+@font-face{font-family:'Be Vietnam Pro';font-style:normal;font-weight:400;font-display:swap;src:url('fonts/BeVietnamPro-Regular.woff2') format('woff2')}
+@font-face{font-family:'Be Vietnam Pro';font-style:normal;font-weight:600;font-display:swap;src:url('fonts/BeVietnamPro-SemiBold.woff2') format('woff2')}
+@font-face{font-family:'Be Vietnam Pro';font-style:normal;font-weight:700;font-display:swap;src:url('fonts/BeVietnamPro-Bold.woff2') format('woff2')}
+:root{--mb-cream:#FEF3E2;--mb-gold:#F4AE52;--mb-orange:#D4621A;--mb-brown:#2A1A0E;--mb-sidebar-width:280px}
+.mrbean-theme{--color-light-cream:var(--mb-cream);--color-warm-orange:var(--mb-gold);--color-burn-orange:var(--mb-orange);--color-dark-brown:var(--mb-brown);--ink:var(--mb-brown);--paper:var(--mb-cream);--brand:var(--mb-orange);--brand-dark:var(--mb-brown);--muted:#6D5B4E;--line:rgba(42,26,14,.16);--green:var(--mb-brown);--green-bg:var(--mb-cream);--red:var(--mb-brown);--red-bg:var(--mb-cream);--blue:var(--mb-brown);--blue-bg:var(--mb-cream);--yellow:var(--mb-brown);--yellow-bg:var(--mb-gold);--bs-primary:#2A1A0E;--bs-body-color:#2A1A0E;--bs-body-bg:#FEF3E2;background:var(--mb-cream)!important;color:var(--mb-brown)}
+.mrbean-theme .app-layout{display:block;min-height:100vh}
+.mrbean-theme .app-main,.mrbean-theme .learning-workspace{margin-left:var(--mb-sidebar-width);width:calc(100% - var(--mb-sidebar-width));min-width:0;min-height:100vh;background:var(--mb-cream);transition:none}
+.mrbean-theme .learning-workspace{display:flex;flex-direction:column}
+.mrbean-theme .app-sidebar{position:fixed;inset:0 auto 0 0;left:0!important;width:var(--mb-sidebar-width);height:100vh;height:100dvh;display:flex;flex-direction:column;flex-shrink:0;overflow:hidden;z-index:1040;transform:translateX(0);visibility:visible;background:var(--mb-brown)!important;color:var(--mb-cream);font-family:'Be Vietnam Pro',sans-serif;box-shadow:4px 0 20px rgba(42,26,14,.12);transition:transform .2s ease,visibility .2s}
+.mrbean-theme .sidebar-brand{display:flex;align-items:center;justify-content:space-between;gap:.5rem;padding:1.4rem 1.1rem;border-bottom:1px solid rgba(254,243,226,.15);flex-shrink:0}
+.mrbean-theme .sidebar-brand-text{display:flex;align-items:center;gap:.65rem;color:var(--mb-gold)!important;text-decoration:none!important;font-size:1.1rem;font-weight:700;line-height:1.35;letter-spacing:.5px}
+.mrbean-theme .sidebar-brand-text i{font-size:1.6rem;color:var(--mb-gold)}
+.mrbean-theme .sidebar-close{display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;flex-shrink:0;border:1px solid rgba(244,174,82,.4);border-radius:10px;background:transparent;color:var(--mb-gold);font-size:1rem}
+.mrbean-theme .sidebar-close:hover{background:var(--mb-gold);color:var(--mb-brown)}
+.mrbean-theme .sidebar-navigation{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:var(--mb-gold) var(--mb-brown);padding:.8rem}
+.mrbean-theme .sidebar-menu{display:flex;flex-direction:column;gap:.35rem;list-style:none;padding:0;margin:0}
+.mrbean-theme .sidebar-menu-item{list-style:none;margin:0;padding:0}
+.mrbean-theme .sidebar-menu-item a{display:flex;align-items:center;gap:.85rem;min-height:49px;padding:.85rem .9rem;border-radius:12px;background:transparent;color:var(--mb-cream)!important;text-decoration:none!important;font-size:.88rem;font-weight:600;line-height:1.55;white-space:normal}
+.mrbean-theme .sidebar-menu-item a>i{width:23px;flex-shrink:0;font-size:1.25rem;color:var(--mb-gold)!important}
+.mrbean-theme .sidebar-menu-item a>span:not(.nav-count){min-width:0;overflow-wrap:anywhere}
+.mrbean-theme .sidebar-menu-item a:hover{background:rgba(244,174,82,.13)}
+.mrbean-theme .sidebar-menu-item.active a{background:var(--mb-gold)!important;color:var(--mb-brown)!important;box-shadow:0 4px 14px rgba(244,174,82,.16)}
+.mrbean-theme .sidebar-menu-item.active a>i{color:var(--mb-brown)!important}
+.mrbean-theme .nav-count{margin-left:auto;background:var(--mb-gold);color:var(--mb-brown);border:1px solid var(--mb-brown);border-radius:20px;padding:.05rem .4rem;font-size:.65rem;flex-shrink:0}
+.mrbean-theme .sidebar-footer{margin:0;padding:1rem 1.2rem;border-top:1px solid rgba(254,243,226,.15);background:var(--mb-brown);color:var(--mb-cream);text-align:left;font-size:.72rem;flex-shrink:0}
+.mrbean-theme .sidebar-profile{display:flex;align-items:center;gap:.7rem;color:var(--mb-cream)!important;text-decoration:none!important}
+.mrbean-theme .sidebar-profile>span:last-child{min-width:0}
+.mrbean-theme .sidebar-profile strong{display:block;font-size:.78rem;overflow-wrap:anywhere}
+.mrbean-theme .sidebar-profile small{display:block;margin-top:.2rem;font-size:.66rem;color:var(--mb-gold)}
+.mrbean-theme .sidebar-avatar{display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;background:var(--mb-gold);color:var(--mb-brown);font-weight:700;flex-shrink:0}
+.mrbean-theme .sidebar-logout{margin-top:.75rem;padding:0;border:0;background:transparent;color:var(--mb-cream);font-size:.72rem;cursor:pointer}
+.mrbean-theme .sidebar-logout i{color:var(--mb-gold);margin-right:.35rem}
+.mrbean-theme [data-menu-toggle]{display:inline-flex!important;align-items:center;justify-content:center;flex-shrink:0;width:42px;height:42px;padding:0;border:1px solid rgba(42,26,14,.2);border-radius:10px;background:var(--mb-cream);color:var(--mb-brown);font-size:1.4rem;line-height:1;cursor:pointer}
+.mrbean-theme [data-menu-toggle]:hover{background:var(--mb-gold)}
+.mrbean-theme .sidebar-shade{position:fixed;inset:0;width:100%;height:100%;border:0;border-radius:0;background:rgba(42,26,14,.48);z-index:1030}
+.mrbean-theme .sidebar-shade[hidden]{display:none!important}
+.mrbean-theme .app-topbar,.mrbean-theme .learning-header{background:var(--mb-cream)!important;border-bottom:1px solid rgba(42,26,14,.12)}
+.mrbean-theme .learning-header{display:flex;align-items:center;gap:1rem}
+.mrbean-theme .student-banner{background:var(--mb-brown)!important;color:var(--mb-cream)!important}
+.mrbean-theme .student-banner [data-menu-toggle]{background:transparent;border-color:var(--mb-gold);color:var(--mb-gold)}
+.mrbean-theme .student-banner a,.mrbean-theme .student-banner i{color:var(--mb-cream)!important}
+.mrbean-theme .student-banner [data-menu-toggle] i{color:var(--mb-gold)!important}
+.mrbean-theme .student-banner [data-menu-toggle]:hover{background:rgba(244,174,82,.15)}
+.mrbean-theme #sourceSkillBar{background:var(--mb-gold)!important}
+.mrbean-theme #sourceSkillBar a{color:var(--mb-brown)!important}
+.mrbean-theme #sourceSkillBar .tab-active{background:var(--mb-brown)!important;color:var(--mb-cream)!important}
+.mrbean-theme .user-avatar{background:var(--mb-brown);color:var(--mb-gold)}
+.mrbean-theme h1,.mrbean-theme h2,.mrbean-theme h3,.mrbean-theme .page-title-h1,.mrbean-theme .section-title-h2{color:var(--mb-brown)}
+.mrbean-theme main a{color:var(--mb-brown)}
+.mrbean-theme .btn-cta-orange,.mrbean-theme .btn-export-excel,.mrbean-theme .btn-brand,.mrbean-theme .btn-primary{background:var(--mb-gold)!important;color:var(--mb-brown)!important;border-color:var(--mb-gold)!important;box-shadow:0 4px 12px rgba(42,26,14,.08)}
+.mrbean-theme .btn-cta-orange:hover,.mrbean-theme .btn-export-excel:hover,.mrbean-theme .btn-brand:hover{background:var(--mb-brown)!important;color:var(--mb-cream)!important}
+.mrbean-theme .btn-action-edit,.mrbean-theme .integration-content .btn,.mrbean-theme .integration-content .report-button{background:var(--mb-brown)!important;color:var(--mb-cream)!important;border-color:var(--mb-brown)!important}
+.mrbean-theme .integration-content .btn.gold,.mrbean-theme .integration-content .btn.export{background:var(--mb-gold)!important;color:var(--mb-brown)!important;border-color:var(--mb-gold)!important}
+.mrbean-theme .integration-content .btn.secondary,.mrbean-theme .btn-outline-secondary{background:var(--mb-cream)!important;color:var(--mb-brown)!important;border:1px solid rgba(42,26,14,.4)!important}
+.mrbean-theme .btn-action-edit:hover,.mrbean-theme .integration-content .btn:hover{background:var(--mb-gold)!important;color:var(--mb-brown)!important}
+.mrbean-theme .overview-card,.mrbean-theme .integration-content .stat,.mrbean-theme .integration-content .report-card{background:var(--mb-brown)!important;color:var(--mb-cream)}
+.mrbean-theme .overview-number,.mrbean-theme .integration-content .stat-value,.mrbean-theme .integration-content .report-card strong{color:var(--mb-gold)!important}
+.mrbean-theme .overview-icon-wrapper,.mrbean-theme .integration-content .stat-icon{color:var(--mb-gold)!important;background:rgba(244,174,82,.14)}
+.mrbean-theme .data-card-wrapper,.mrbean-theme .integration-content .panel,.mrbean-theme .integration-content .report-panel{border-color:rgba(212,98,26,.25)}
+.mrbean-theme input,.mrbean-theme textarea,.mrbean-theme select{accent-color:var(--mb-brown)}
+.mrbean-theme input:focus,.mrbean-theme select:focus,.mrbean-theme textarea:focus{border-color:var(--mb-orange)!important;--tw-ring-color:#F4AE52;box-shadow:0 0 0 3px rgba(244,174,82,.2)}
+.mrbean-theme .badge,.mrbean-theme .support-status{background:var(--mb-cream);color:var(--mb-brown)}
+.mrbean-theme .support-status-waiting{background:var(--mb-gold);color:var(--mb-brown)}
+.mrbean-theme .support-status-answered{background:var(--mb-cream);color:var(--mb-brown);border:1px solid var(--mb-orange)}
+.mrbean-theme [class*="text-gray-"],.mrbean-theme [class*="text-amber-"],.mrbean-theme [class*="text-blue-"],.mrbean-theme [class*="text-purple-"],.mrbean-theme [class*="text-green-"],.mrbean-theme [class*="text-red-"],.mrbean-theme [class*="text-teal-"]{color:var(--mb-brown)!important}
+.mrbean-theme [class*="bg-blue-"],.mrbean-theme [class*="bg-purple-"],.mrbean-theme [class*="bg-green-"],.mrbean-theme [class*="bg-red-"],.mrbean-theme [class*="bg-teal-"],.mrbean-theme [class*="bg-amber-"],.mrbean-theme [class*="bg-yellow-"]{background-color:var(--mb-cream)!important;color:var(--mb-brown)!important}
+.mrbean-theme .text-white[style*="background"],.mrbean-theme .bg-amber-600{background:var(--mb-gold)!important;color:var(--mb-brown)!important}
+.mrbean-theme button.text-white,.mrbean-theme button.text-white[style]{background:var(--mb-brown)!important;color:var(--mb-cream)!important;filter:none!important}
+.mrbean-theme [style*="color:#D4621A"],.mrbean-theme [style*="color:#d35400"]{color:var(--mb-brown)!important}
+.mrbean-theme .student-banner{background:var(--mb-brown)!important;color:var(--mb-cream)!important}
+.mrbean-theme .student-banner i{color:var(--mb-gold)!important}
+.mrbean-theme [style*="background:#d97736"],.mrbean-theme [style*="background:#D4621A"]{background-color:var(--mb-orange)!important}
+.mrbean-theme .text-white[style*="background:#D4621A"]{background:var(--mb-gold)!important;color:var(--mb-brown)!important}
+.mrbean-theme button.text-white[style*="background:#D4621A"]{background:var(--mb-brown)!important;color:var(--mb-cream)!important}
+.mrbean-theme .alert{--bs-alert-bg:#FEF3E2;--bs-alert-color:#2A1A0E;--bs-alert-border-color:#D4621A}
+.mrbean-theme .alert-warning{--bs-alert-bg:#F4AE52}
+.mrbean-theme .form-errors,.mrbean-theme .report-error{color:var(--mb-brown);border-left:3px solid var(--mb-orange)}
+.mrbean-theme .badge-dot{background:var(--mb-orange)}
+.mrbean-theme .login-submit,.mrbean-theme .btn-login{background:var(--mb-gold)!important;color:var(--mb-brown)!important}
+.mrbean-theme a:focus-visible,.mrbean-theme button:focus-visible{outline:3px solid var(--mb-orange);outline-offset:3px}
+.mrbean-theme .app-sidebar a:focus-visible,.mrbean-theme .app-sidebar button:focus-visible{outline-color:var(--mb-gold)}
+@media(min-width:992px){.sidebar-collapsed .mrbean-theme .app-sidebar{transform:translateX(-100%);visibility:hidden}.sidebar-collapsed .mrbean-theme .app-main,.sidebar-collapsed .mrbean-theme .learning-workspace{margin-left:0;width:100%}}
+@media(max-width:991px){.mrbean-theme .app-main,.mrbean-theme .learning-workspace{margin-left:0;width:100%}.mrbean-theme .app-sidebar{width:min(var(--mb-sidebar-width),calc(100vw - 48px));transform:translateX(-100%);visibility:hidden}.sidebar-open .mrbean-theme .app-sidebar{transform:translateX(0);visibility:visible}.mrbean-theme .app-topbar{gap:.5rem}.mrbean-theme .learning-header{padding:.75rem 1rem}.mrbean-theme .sidebar-menu-item a{min-height:48px}}
+@media(prefers-reduced-motion:reduce){.mrbean-theme .app-sidebar,.mrbean-theme .app-main,.mrbean-theme .learning-workspace{transition:none}}
+
+.mrbean-theme .palette-login-art{background:var(--mb-brown)!important;color:var(--mb-cream)!important;border-left:8px solid var(--mb-orange)}
+.mrbean-theme .palette-login-art h1,.mrbean-theme .palette-login-art h2,.mrbean-theme .palette-login-art p{color:var(--mb-cream)!important}
+.mrbean-theme .palette-login-art [class*="text-amber-"]{color:var(--mb-gold)!important}
+.mrbean-theme .palette-login-submit{background:var(--mb-gold)!important;color:var(--mb-brown)!important}
+.mrbean-theme.palette-error{min-height:100vh;display:grid;place-items:center;padding:1.5rem;font-family:'Be Vietnam Pro',sans-serif}
+.palette-error main{max-width:700px;padding:2rem;background:white;border:1px solid var(--mb-orange);border-radius:16px}
+
+.mrbean-theme .student-banner.text-white[style],.mrbean-theme .palette-login-art.text-white[style]{background:var(--mb-brown)!important;color:var(--mb-cream)!important}
+
+.mrbean-theme .text-muted,.mrbean-theme .text-secondary,.mrbean-theme .user-role-sub,.mrbean-theme .subtle,.mrbean-theme .form-help{color:#6D5B4E!important}
+.mrbean-theme .role-tag-teacher{background:var(--mb-brown)!important;color:var(--mb-cream)!important}
+
+/* Keep small labels and status controls readable within the approved palette. */
+.mrbean-theme .section-title-h2,.mrbean-theme .tracker-student-class,.mrbean-theme code{color:var(--mb-brown)!important}
+.mrbean-theme [style*="color:var(--color-burn-orange)"],.mrbean-theme [style*="color: var(--color-burn-orange)"]{color:var(--mb-brown)!important}
+.mrbean-theme .text-danger,.mrbean-theme .text-success,.mrbean-theme .text-warning{color:var(--mb-brown)!important}
+.mrbean-theme .badge{background:var(--mb-cream)!important;color:var(--mb-brown)!important;border-color:var(--mb-gold)!important}
+.mrbean-theme .btn-action-delete{background:var(--mb-gold)!important;color:var(--mb-brown)!important}
+.mrbean-theme .btn-action-delete:hover{background:var(--mb-brown)!important;color:var(--mb-cream)!important}
+
+.mrbean-theme [style*="background-color: var(--color-dark-brown)"] strong[style*="color: var(--color-burn-orange)"],.mrbean-theme [style*="background-color:var(--color-dark-brown)"] strong[style*="color:var(--color-burn-orange)"]{color:var(--mb-gold)!important}
+
+.mrbean-theme .palette-login-card .palette-login-submit{background:var(--mb-gold)!important;color:var(--mb-brown)!important}

@@ -10,118 +10,19 @@
     <link rel="stylesheet" href="{% static 'core/reference.css' %}">
     <link rel="stylesheet" href="{% static 'core/app.css' %}">
     {% block extra_css %}{% endblock %}
+    {% include 'core/theme_head.html' %}
 </head>
-<body>
+<body class="mrbean-theme">
     <a class="skip-link" href="#main-content">Đi đến nội dung</a>
     <div class="app-layout">
-        <!-- A. Sidebar Navigation -->
-        <aside class="app-sidebar" id="sidebarMenu">
-            <div class="sidebar-brand">
-                <a href="{% if not user.is_authenticated %}{% url 'accounts:login' %}{% elif user.role == 'student' or user.role == 'teacher' %}{% url 'courses:class_list' %}{% else %}{% url 'accounts:user_list' %}{% endif %}" class="sidebar-brand-text">
-                    <i aria-hidden="true" class="bi bi-mortarboard-fill"></i>
-                    <span>MR BEAN ENGLISH</span>
-                </a>
-            </div>
-
-            <ul class="sidebar-menu">
-                {% if user.is_superuser or user.role == 'admin' or user.role == 'manager' %}
-                    <!-- Dành riêng cho Admin và Quản lý -->
-                    <li class="sidebar-menu-item {% if request.resolver_match.url_name == 'user_list' %}active{% endif %}">
-                        <a href="{% url 'accounts:user_list' %}">
-                            <i aria-hidden="true" class="bi bi-people-fill"></i>
-                            <span>QUẢN LÝ TÀI KHOẢN</span>
-                        </a>
-                    </li>
-                    <li class="sidebar-menu-item {% if 'courses:class' in request.resolver_match.view_name %}active{% endif %}">
-                        <a href="{% url 'courses:class_list' %}">
-                            <i aria-hidden="true" class="bi bi-collection-fill"></i>
-                            <span>QUẢN LÝ LỚP HỌC</span>
-                        </a>
-                    </li>
-                    <li class="sidebar-menu-item {% if 'exemption' in request.resolver_match.url_name %}active{% endif %}">
-                        <a href="{% url 'courses:exemption_list' %}">
-                            <i aria-hidden="true" class="bi bi-shield-check"></i>
-                            <span>KIỂM SOÁT MIỄN BTVN</span>
-                        </a>
-                    </li>
-                {% elif user.role == 'teacher' %}
-                    <!-- Dành riêng cho Giáo viên (KHÔNG có Quản lý tài khoản) -->
-                    <li class="sidebar-menu-item {% if 'courses:class' in request.resolver_match.view_name %}active{% endif %}">
-                        <a href="{% url 'courses:class_list' %}">
-                            <i aria-hidden="true" class="bi bi-collection-fill"></i>
-                            <span>LỚP HỌC ĐANG DẠY</span>
-                        </a>
-                    </li>
-                    <li class="sidebar-menu-item {% if 'exemption' in request.resolver_match.url_name %}active{% endif %}">
-                        <a href="{% url 'courses:exemption_list' %}">
-                            <i aria-hidden="true" class="bi bi-patch-check-fill"></i>
-                            <span>DUYỆT MIỄN BTVN</span>
-                        </a>
-                    </li>
-                {% elif user.role == 'student' %}
-                    <!-- Dành riêng cho Học viên (CHỈ THẤY KHÓA HỌC CỦA MÌNH) -->
-                    <li class="sidebar-menu-item {% if 'courses:class' in request.resolver_match.view_name %}active{% endif %}">
-                        <a href="{% url 'courses:class_list' %}">
-                            <i aria-hidden="true" class="bi bi-journal-bookmark-fill"></i>
-                            <span>KHÓA HỌC CỦA TÔI</span>
-                        </a>
-                    </li>
-                {% endif %}
-
-                <!-- Thông báo (Dành cho mọi người dùng) -->
-                <li class="sidebar-menu-item {% if request.resolver_match.url_name == 'notification_list' %}active{% endif %}">
-                    <a href="{% url 'accounts:notification_list' %}">
-                        <i aria-hidden="true" class="bi bi-bell-fill"></i>
-                        <span>THÔNG BÁO HỆ THỐNG</span>
-                    </a>
-                </li>
-
-                {% if user.is_staff %}
-                <li class="sidebar-menu-item">
-                    <a href="{% url 'admin:index' %}" target="_blank" rel="noopener">
-                        <i aria-hidden="true" class="bi bi-sliders"></i>
-                        <span>DJANGO ADMIN</span>
-                    </a>
-                </li>
-                {% endif %}
-                {% if user.is_authenticated %}
-                {% if user.role == 'student' %}<li class="sidebar-menu-item"><a href="{% url 'submissions:student_dashboard' %}"><i aria-hidden="true" class="bi bi-pencil-square"></i><span>HỌC TẬP & BÀI TẬP</span></a></li>{% endif %}
-                <li class="sidebar-menu-item {% if request.resolver_match.app_name == 'support' %}{% if support_is_contact or user.role != 'student' %}active{% endif %}{% endif %}"><a href="{% url 'support:contact_list' %}"><i class="bi bi-envelope-fill" aria-hidden="true"></i><span>LIÊN HỆ & PHẢN ÁNH</span></a></li>
-                <li class="sidebar-menu-item integration-menu">
-                    <details {% if request.resolver_match.app_name == 'dashboard' or request.resolver_match.app_name == 'assignments' or request.resolver_match.app_name == 'submissions' or request.resolver_match.url_name == 'course_list' %}open{% elif user.role == 'student' and request.resolver_match.app_name == 'support' and not support_is_contact %}open{% endif %}>
-                        <summary><i aria-hidden="true" class="bi bi-grid-fill"></i><span>BÀI TẬP & BÁO CÁO</span></summary>
-                        <ul>
-                            <li class="sidebar-menu-item {% if request.resolver_match.app_name == 'dashboard' %}active{% endif %}"><a href="{% url 'dashboard:index' %}"><i aria-hidden="true" class="bi bi-bar-chart-fill"></i><span>BÁO CÁO HỌC TẬP</span></a></li>
-                            {% if is_reporting_staff %}
-                            <li class="sidebar-menu-item {% if request.resolver_match.app_name == 'assignments' and request.resolver_match.url_name != 'assigned_list' and request.resolver_match.url_name != 'assigned_detail' and request.resolver_match.url_name != 'assigned_update' and request.resolver_match.url_name != 'assign' and request.resolver_match.url_name != 'reading_reference' %}active{% endif %}"><a href="{% url 'assignments:assignment_list' %}"><i aria-hidden="true" class="bi bi-journal-text"></i><span>NGÂN HÀNG BÀI TẬP</span></a></li>
-                            <li class="sidebar-menu-item {% if request.resolver_match.url_name == 'assigned_list' %}active{% endif %}"><a href="{% url 'assignments:assigned_list' %}"><i aria-hidden="true" class="bi bi-list-task"></i><span>BÀI TẬP ĐÃ GIAO</span></a></li>
-                            {% else %}
-                            <li class="sidebar-menu-item {% if request.resolver_match.app_name == 'submissions' %}active{% elif user.role == 'student' and request.resolver_match.app_name == 'support' and not support_is_contact %}active{% endif %}"><a href="{% url 'submissions:student_home' %}"><i aria-hidden="true" class="bi bi-pencil-square"></i><span>BÀI TẬP CỦA TÔI</span></a></li>
-                            <li class="sidebar-menu-item {% if request.resolver_match.url_name == 'exemption_list' %}active{% endif %}"><a href="{% url 'courses:exemption_list' %}"><i aria-hidden="true" class="bi bi-shield-check"></i><span>ĐƠN XIN MIỄN CỦA TÔI</span></a></li>
-                            {% endif %}
-                            {% if is_reporting_manager %}
-                            <li class="sidebar-menu-item {% if request.resolver_match.url_name == 'course_list' %}active{% endif %}"><a href="{% url 'courses:course_list' %}"><i aria-hidden="true" class="bi bi-journals"></i><span>DANH MỤC KHÓA HỌC</span></a></li>
-                            {% endif %}
-                        </ul>
-                    </details>
-                </li>
-                {% endif %}
-            </ul>
-
-            <div class="sidebar-footer">
-                <div>&copy; 2026 Mr Bean English Center</div>
-                <div class="small opacity-75">Hệ thống Quản trị & Vận hành</div>
-            </div>
-        </aside>
-
-        <button class="sidebar-shade" type="button" tabindex="-1" aria-label="Đóng điều hướng" hidden></button>
+        {% include 'core/sidebar.html' %}
 
         <!-- Main Workspace -->
         <div class="app-main">
             <!-- B. Topbar Header -->
             <header class="app-topbar">
                 <div class="topbar-left">
-                    <button class="btn btn-outline-dark d-lg-none py-1 px-2 border-0" type="button" data-menu-toggle aria-controls="sidebarMenu" aria-expanded="false" aria-label="Mở điều hướng">
+                    <button class="sidebar-toggle" type="button" data-menu-toggle aria-controls="sidebarMenu" aria-expanded="false" aria-label="Mở điều hướng">
                         <i aria-hidden="true" class="bi bi-list fs-3"></i>
                     </button>
                     <div>
@@ -130,6 +31,7 @@
                     </div>
                 </div>
 
+                {% if user.is_authenticated %}
                 <div class="topbar-right">
                     <!-- Biểu tượng thông báo (Chuông) -->
                     <a href="{% url 'accounts:notification_list' %}" class="btn-notification" title="Xem thông báo" aria-label="Xem thông báo">
@@ -163,6 +65,7 @@
                         </ul>
                     </div>
                 </div>
+                {% endif %}
             </header>
 
             <!-- Alerts / Messages -->

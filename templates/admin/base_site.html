@@ -7,16 +7,10 @@
 {% endblock %}
 
 {% block extrastyle %}{{ block.super }}
+<link rel="stylesheet" href="{% static 'core/palette.css' %}">
+
 <style>
-    :root { --primary:#d97736; --secondary:#311c11; --accent:#d97736;
-            --link-fg:#b45309; --header-bg:#311c11; }
-    #header { background:#311c11; color:#fff; }
-    #site-name a, #site-name a:link, #site-name a:visited { color:#f5c99b; font-weight:700; }
-    .module caption, .module h2 { background:#d97736; }
-    div.breadcrumbs { background:#5a3620; color:#fff; }
-    a.button, input[type=submit], input[type=button], .submit-row input, a.button.default,
-    .button.default, input[type=submit].default { background:#d97736; }
-    a.button:hover, input[type=submit]:hover { background:#c2652b; }
-    .selector-chosen h2 { background:#d97736; }
+    :root,html[data-theme="light"],html[data-theme="dark"]{--primary:#2A1A0E;--secondary:#2A1A0E;--accent:#F4AE52;--header-color:#FEF3E2;--header-branding-color:#F4AE52;--header-bg:#2A1A0E;--body-fg:#2A1A0E;--body-bg:#FEF3E2;--body-quiet-color:#6D5B4E;--body-loud-color:#2A1A0E;--darkened-bg:#FEF3E2;--selected-bg:#F4AE52;--selected-row:#FEF3E2;--link-fg:#2A1A0E;--link-hover-color:#2A1A0E;--breadcrumbs-bg:#2A1A0E;--breadcrumbs-fg:#FEF3E2;--button-fg:#FEF3E2;--button-bg:#2A1A0E;--button-hover-bg:#2A1A0E;--default-button-bg:#2A1A0E;--default-button-hover-bg:#2A1A0E;--close-button-bg:#2A1A0E}
+    body{font-family:'Be Vietnam Pro',sans-serif}#header,.module caption,.module h2,.selector-chosen h2,div.breadcrumbs{background:#2A1A0E;color:#FEF3E2}#site-name a,#site-name a:visited{color:#F4AE52}a.button,input[type=submit],input[type=button],.submit-row input,.button.default,input[type=submit].default{background:#2A1A0E;color:#FEF3E2}a.button:hover,input[type=submit]:hover{background:#F4AE52;color:#2A1A0E}#nav-sidebar{background:#FEF3E2}#toggle-nav-sidebar{background:#F4AE52;color:#2A1A0E}
 </style>
 {% endblock %}

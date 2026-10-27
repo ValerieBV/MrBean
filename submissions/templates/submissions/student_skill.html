@@ -12,7 +12,7 @@
         <div class="flex items-center space-x-4">
             <span class="w-11 h-11 rounded-xl grid place-items-center text-white
                 {% if row.completed %}bg-green-500{% elif row.unlocked %}{% else %}bg-gray-300{% endif %}"
-                {% if not row.completed and row.unlocked %}style="background:#d97736"{% endif %}>
+                {% if not row.completed and row.unlocked %}style="background:#D4621A"{% endif %}>
                 {% if row.completed %}<i class="fa-solid fa-check"></i>{% elif row.unlocked %}<i class="fa-solid fa-play"></i>{% else %}<i class="fa-solid fa-lock"></i>{% endif %}
             </span>
             <div>
@@ -26,7 +26,7 @@
                 <span class="text-green-600 text-sm font-medium mr-2">{% if row.task.exemption_id %}Đã miễn{% else %}Đã nộp{% endif %}</span>
                 {% if row.result_id %}<a href="{% url 'submissions:result' row.result_id %}" class="text-sm text-gray-500 hover:text-amber-700 underline">Xem kết quả</a>{% endif %}<a href="{% url 'submissions:do_task' row.task.pk %}" class="text-sm text-gray-500 hover:text-amber-700 underline ml-2">Xem lại</a>
             {% elif row.unlocked %}
-                <a href="{% url 'submissions:do_task' row.task.pk %}" class="text-white px-4 py-2 rounded-lg text-sm font-medium" style="background:#d97736">Làm bài</a>
+                <a href="{% url 'submissions:do_task' row.task.pk %}" class="text-white px-4 py-2 rounded-lg text-sm font-medium" style="background:#D4621A">Làm bài</a>
             {% else %}
                 <span class="text-gray-500 text-sm"><i class="fa-solid fa-lock" aria-hidden="true"></i> {{ row.reason }}</span>
             {% endif %}

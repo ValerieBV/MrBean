@@ -172,3 +172,5 @@ hoạt động, giám sát cả ba tiến trình và giữ media riêng tư; `ru
 Thông tin nhánh nguồn và cách hòa giải code: [docs/INTEGRATION.md](docs/INTEGRATION.md).
 
 Giao diện tích hợp các nhánh và luồng sử dụng: [Đối chiếu tích hợp ngày 27/10/2026](docs/INTEGRATION_REVIEW.md).
+
+Bảng màu và cách đóng/mở thanh bên: [Hướng dẫn giao diện](docs/UI_PALETTE_AND_NAVIGATION.md).
