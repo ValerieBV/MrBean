@@ -1,0 +1,81 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Quản lý{% endblock %} · Mr Bean English</title>
+    <link rel="stylesheet" href="{% static 'learning/tailwind.css' %}">
+    <link rel="stylesheet" href="{% static 'learning/fontawesome/css/all.min.css' %}">
+    <link rel="stylesheet" href="{% static 'learning/fonts.css' %}"><link rel="stylesheet" href="{% static 'learning/source.css' %}">
+    <style>
+        body { font-family: 'Roboto', sans-serif; }
+        h1,h2,h3,.font-title { font-family: 'Montserrat', sans-serif; }
+        .bg-sidebar { background-color: #311c11; }
+        .bg-main { background-color: #fcf6eb; }
+        .btn-brand { background-color: #d97736; }
+        .btn-brand:hover { background-color: #c2652b; }
+        .active-menu { background-color: #d97736; color: #fff; }
+    </style>
+</head>
+<body class="bg-main min-h-screen flex flex-col md:flex-row">
+    
+    <a class="source-skip" href="#main-content">Đi đến nội dung</a>
+    <aside class="w-full md:w-64 bg-sidebar text-white flex flex-col justify-between shrink-0 md:min-h-screen">
+        <div>
+            <div class="p-6 flex items-center space-x-3 border-b border-[#4a2e1d]">
+                <div class="text-[#f59e0b] text-2xl"><i class="fa-solid fa-graduation-cap"></i></div>
+                <div>
+                    <h1 class="font-bold text-lg tracking-wider leading-tight">MR BEAN</h1>
+                    <span class="text-xs font-semibold tracking-widest text-amber-400">ENGLISH</span>
+                </div>
+            </div>
+            <button type="button" id="sourceNavToggle" aria-controls="sourceRoleNav" aria-expanded="false" class="source-mobile-toggle">Điều hướng quản lý <i class="fa-solid fa-bars" aria-hidden="true"></i></button>
+            <nav id="sourceRoleNav" class="mt-6 px-3 space-y-2" aria-label="Điều hướng quản lý">
+                <a href="{% url 'assignments:assignment_list' %}" class="flex items-center space-x-3 px-4 py-3 rounded-lg active-menu font-medium text-sm"><i class="fa-solid fa-book-open w-5" aria-hidden="true"></i><span>NGÂN HÀNG BÀI TẬP</span></a>
+                <a href="{% url 'assignments:assigned_list' %}" class="source-nav-link">BÀI TẬP ĐÃ GIAO</a>
+                <a href="{% url 'courses:class_list' %}" class="source-nav-link">LỚP HỌC</a>
+                {% if user.role == 'admin' or user.role == 'manager' or user.is_superuser %}<a href="{% url 'accounts:user_list' %}" class="source-nav-link">QUẢN LÝ TÀI KHOẢN</a>{% endif %}
+                <a href="{% url 'courses:exemption_list' %}" class="source-nav-link">ĐƠN MIỄN BÀI TẬP</a>
+                <a href="{% url 'dashboard:index' %}" class="source-nav-link">BÁO CÁO HỌC TẬP</a>
+                <a href="{% url 'support:contact_list' %}" class="source-nav-link">LIÊN HỆ & PHẢN ÁNH</a>
+                <a href="{% url 'accounts:notification_list' %}" class="source-nav-link">THÔNG BÁO</a>
+                {% if user.is_staff %}<a href="{% url 'admin:index' %}" class="source-nav-link">DJANGO ADMIN</a>{% endif %}
+            </nav>
+        </div>
+        <div class="p-4 border-t border-[#4a2e1d] text-xs text-gray-400 flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+                <div class="w-8 h-8 rounded-full bg-amber-600 flex items-center justify-center text-white font-bold">
+                    {% if user.is_authenticated %}{{ user.username|slice:":2"|upper }}{% else %}MB{% endif %}
+                </div>
+                <div>
+                    <p class="font-semibold text-white">{% if user.is_authenticated %}{{ user.username }}{% else %}Khách{% endif %}</p>
+                    <p class="text-[10px]">{{ user.get_role_display|default:"Quản trị" }}</p>
+                </div>
+            </div>
+            <a href="{% url 'accounts:logout' %}" onclick="event.preventDefault();document.getElementById('logout-form').submit();" class="fa-solid fa-right-from-bracket cursor-pointer hover:text-white" title="Đăng xuất" aria-label="Đăng xuất"></a>
+            <form id="logout-form" method="post" action="{% url 'accounts:logout' %}" class="hidden">{% csrf_token %}</form>
+        </div>
+    </aside>
+
+    <main id="main-content" class="flex-1 flex flex-col min-w-0">
+        <header class="bg-white/60 border-b border-amber-900/10 px-6 py-3 flex items-center justify-between text-sm">
+            <div class="flex items-center space-x-2 font-medium text-gray-700">
+                <span class="text-amber-800 font-semibold">Trang quản lý</span>
+                <span class="text-gray-400">-</span>
+                <span class="text-gray-500 italic">Hệ thống bài tập phân loại theo Buổi</span>
+            </div>
+        </header>
+        <div class="p-6 md:p-10 flex-1">
+            {% if messages %}
+                {% for m in messages %}
+                <div class="mb-4 px-4 py-3 rounded-lg text-sm {% if m.tags == 'error' %}bg-red-100 text-red-700{% else %}bg-green-100 text-green-700{% endif %}">{{ m }}</div>
+                {% endfor %}
+            {% endif %}
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+    <script src="{% static 'learning/dialogs.js' %}" defer></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

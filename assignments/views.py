@@ -38,10 +38,17 @@ def assignment_list(request, skill=None):
     staff(request.user)
     lessons = Lesson.objects.all().select_related('created_by').order_by('skill', 'program', 'order')
     skill = skill or request.GET.get('skill', '')
+    if not skill and not request.GET.get('q'):
+        return render(request,'assignments/assignment_list.html',{'cards':[
+            {'skill':value,'label':label,'count':lessons.filter(skill=value).count()} for value,label in Skill.choices]})
     if skill in Skill.values: lessons = lessons.filter(skill=skill)
     query = request.GET.get('q', '').strip()[:100]
     if query: lessons = lessons.filter(Q(title__icontains=query) | Q(description__icontains=query))
-    return render(request, 'assignments/list.html', {'lessons': Paginator(lessons, 20).get_page(request.GET.get('page')),
+    page=Paginator(lessons,20).get_page(request.GET.get('page'))
+    for lesson in page:
+        lesson.can_edit_contents=(is_manager(request.user) or lesson.created_by_id==request.user.pk) and not (lesson.class_assignments.exists() or lesson.progress.exists())
+    return render(request, 'assignments/skill_lessons.html' if skill in Skill.values else 'assignments/list.html', {
+        'lessons':page,'skill':skill,'skill_label':dict(Skill.choices).get(skill,''),
         'skill_filter': skill, 'query': query, 'skill_choices': Skill.choices})
 
 
@@ -53,7 +60,8 @@ def lesson_create(request, skill=None):
         lesson = form.save(commit=False); lesson.created_by = request.user; lesson.save()
         messages.success(request, 'Đã tạo buổi học. Thêm nội dung trước khi giao cho lớp.')
         return redirect('assignments:lesson_detail', pk=lesson.pk)
-    return render(request, 'assignments/form.html', {'form': form, 'title': 'Tạo buổi học',
+    return render(request, 'assignments/lesson_form.html', {'form': form, 'title': 'Tạo buổi học',
+        'skill':skill or form['skill'].value(),'skill_label':dict(Skill.choices).get(skill or form['skill'].value(),''),
         'back_url': reverse('assignments:assignment_list')})
 
 
@@ -68,7 +76,8 @@ def lesson_update(request, pk):
     if request.method == 'POST' and form.is_valid():
         form.save(); messages.success(request, 'Đã cập nhật buổi học.')
         return redirect('assignments:lesson_detail', pk=pk)
-    return render(request, 'assignments/form.html', {'form': form, 'title': 'Chỉnh sửa buổi học',
+    return render(request, 'assignments/lesson_form.html', {'form': form, 'title': 'Chỉnh sửa buổi học',
+        'skill':lesson.skill,'skill_label':lesson.get_skill_display(),
         'back_url': reverse('assignments:lesson_detail', args=[pk])})
 
 
@@ -85,7 +94,7 @@ def lesson_detail(request, pk):
             item = form.save(commit=False); item.lesson = lesson; item.save()
             messages.success(request, 'Đã thêm nội dung.')
             return redirect('assignments:lesson_detail', pk=pk)
-    return render(request, 'assignments/detail.html', {'lesson': lesson, 'items': getattr(lesson, relation).all(),
+    return render(request, 'assignments/lesson_detail.html', {'lesson': lesson, 'items': getattr(lesson, relation).all(),
         'form': form, 'can_edit': can_edit,
         'reading_assignments': lesson.class_assignments.filter(classroom__in=classes_for(request.user)).select_related('classroom')})
 
@@ -100,7 +109,7 @@ def lesson_delete(request, pk):
     if request.method == 'POST':
         lesson.delete(); messages.success(request, 'Đã xóa buổi chưa giao.')
         return redirect('assignments:assignment_list')
-    return render(request, 'core/confirm.html', {'title': 'Xóa buổi học chưa giao', 'description': str(lesson),
+    return render(request, 'assignments/confirm_delete.html', {'title': 'Xóa buổi học chưa giao', 'description': str(lesson),
         'back_url': reverse('assignments:lesson_detail', args=[pk])})
 
 

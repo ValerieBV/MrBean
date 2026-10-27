@@ -4,4 +4,5 @@ from django.shortcuts import redirect
 
 @login_required
 def home(request):
-    return redirect('dashboard:index')
+    from accounts.views import home_for
+    return redirect(home_for(request.user))

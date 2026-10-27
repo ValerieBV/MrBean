@@ -1,0 +1,99 @@
+{% extends 'base_admin.html' %}
+{% load static %}{% block title %}{{ lesson.title }}{% endblock %}
+{% block content %}
+<div class="mb-6 flex items-center justify-between">
+    <div>
+        <a href="{% url 'assignments:skill_lessons' lesson.skill %}" class="text-amber-700 text-sm hover:underline"><i class="fa-solid fa-angle-left"></i> {{ lesson.get_skill_display }}</a>
+        <h2 class="text-2xl font-bold text-gray-900 mt-1 font-title">Buổi {{ lesson.order }}: {{ lesson.title }}</h2>
+        <p class="text-gray-500 text-sm">{{ lesson.get_skill_display }} · {{ lesson.get_program_display }}
+            {% if lesson.skill == 'listening' %} · {{ lesson.get_listening_type_display }}{% endif %}</p>
+    </div>
+    {% if can_edit %}<button type="button" onclick="show('itemModal')" class="btn-brand text-white px-4 py-2.5 rounded-lg font-medium text-sm flex items-center space-x-2 shadow-sm">
+        <i class="fa-solid fa-circle-plus"></i>
+        <span>{% if lesson.skill == 'vocabulary' %}Thêm từ vựng{% elif lesson.skill == 'listening' %}Thêm câu hỏi{% else %}Thêm câu nói{% endif %}</span>
+    </button>{% endif %}
+</div>
+
+<div class="flex flex-wrap gap-3 mb-5 text-sm"><a class="btn-brand text-white px-4 py-2 rounded-lg" href="{% url 'assignments:assign' %}?lesson={{ lesson.pk }}">Giao cho lớp</a><a class="text-amber-800 underline" href="{% url 'assignments:lesson_clone' lesson.pk %}">Sao chép</a>{% if can_edit %}<a class="text-amber-800 underline" href="{% url 'assignments:lesson_update' lesson.pk %}">Chỉnh sửa buổi học</a>{% endif %}</div>
+{% if not can_edit %}<p class="bg-amber-50 border rounded-lg p-4 mb-5 text-sm">Nội dung đã giao được giữ nguyên. Dùng sao chép để tạo phiên bản mới.</p>{% endif %}
+{% if lesson.skill == 'speaking' and lesson.reference_transcript %}<details class="bg-white rounded-xl border p-4 mb-5"><summary>Lời mẫu cần đọc</summary><p class="whitespace-pre-wrap mt-2">{{ lesson.reference_transcript }}</p></details>{% endif %}
+{% for a in reading_assignments %}<a class="block text-sm text-amber-800 underline mb-3" href="{% url 'assignments:reading_reference' a.pk %}">Cập nhật video & lời mẫu — {{ a.classroom.class_code }}</a>{% endfor %}
+{% if lesson.skill == 'listening' and lesson.audio_file %}
+<div class="bg-white rounded-xl border border-amber-900/5 p-4 mb-5"><p class="text-sm font-medium mb-2">File nghe của buổi:</p><audio controls src="{% url 'assignments:lesson_media' lesson.pk 'audio' %}" class="w-full"></audio></div>
+{% endif %}
+{% if lesson.skill == 'speaking' and lesson.youtube_url %}
+<div class="bg-white rounded-xl border border-amber-900/5 p-4 mb-5 text-sm">Video: <a href="{{ lesson.youtube_url }}" target="_blank" class="text-amber-700 underline">{{ lesson.youtube_url }}</a></div>
+{% endif %}
+
+<div class="space-y-3">
+    {% for item in items %}
+    <div class="bg-white rounded-xl shadow-sm border border-amber-900/5 p-4 flex justify-between items-start">
+        <div class="text-sm">
+            {% if lesson.skill == 'vocabulary' %}
+                <b class="text-amber-800">{{ item.word }}</b> <span class="text-gray-400">{{ item.word_type }}</span><br>
+                <span class="text-gray-700">{{ item.meaning }}</span>
+                {% if item.example %}<div class="text-gray-500 italic mt-1">{{ item.example }}</div>{% endif %}
+            {% elif lesson.skill == 'listening' %}
+                <b class="text-amber-800">Câu {{ item.order }}.</b> {{ item.question_text }}
+                {% if item.image %}<div class="mt-2"><img src="{% url 'assignments:question_image' item.pk %}" class="h-24 rounded border" alt="Hình câu hỏi {{ item.order }}"></div>{% endif %}
+                {% if item.correct_option %}
+                    <div class="mt-1 text-gray-600 text-xs">A. {{ item.option_a }} | B. {{ item.option_b }} | C. {{ item.option_c }} | D. {{ item.option_d }}
+                    <span class="text-green-600 font-semibold">(Đúng: {{ item.correct_option }})</span></div>
+                {% else %}
+                    <div class="mt-1 text-gray-500 text-xs">Đáp án tham khảo: {{ item.correct_answer|default:"—" }}</div>
+                {% endif %}
+            {% else %}
+                <b class="text-amber-800">Câu {{ item.order }}.</b> {{ item.sentence }}
+            {% endif %}
+        </div>
+        {% if can_edit %}<a href="{% url 'assignments:item_edit' lesson.skill item.pk %}" class="ml-3 text-amber-700 text-sm">Sửa</a><button type="button" class="text-gray-400 hover:text-red-600 ml-3" title="Xóa"
+            onclick="openDelete('{% url 'assignments:item_delete' lesson.skill item.pk %}')"><i class="fa-solid fa-trash-can"></i></button>{% endif %}
+    </div>
+    {% empty %}
+    <div class="bg-white rounded-xl border border-dashed border-amber-900/20 p-10 text-center text-gray-400">Chưa có nội dung. Bấm nút thêm ở trên.</div>
+    {% endfor %}
+</div>
+
+<div id="itemModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl max-h-[90vh] overflow-y-auto">
+        <div class="flex justify-between items-center mb-4 border-b pb-3">
+            <h3 class="text-lg font-bold text-gray-800 font-title">
+                {% if lesson.skill == 'vocabulary' %}Thêm từ vựng{% elif lesson.skill == 'listening' %}Thêm câu hỏi{% else %}Thêm câu nói{% endif %}
+            </h3>
+            <button type="button" onclick="closeModal('itemModal')" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark text-xl"></i></button>
+        </div>
+        <form method="post" enctype="multipart/form-data" class="space-y-3">{% if form.non_field_errors %}<div class="text-red-700" role="alert">{{ form.non_field_errors }}</div>{% endif %}
+            {% csrf_token %}
+            {% for f in form %}
+            <div>
+                <label for="{{ f.id_for_label }}" class="block text-xs font-medium text-gray-600 mb-1">{{ f.label }}</label>
+                {{ f }}
+                {% for e in f.errors %}<p class="text-red-600 text-xs">{{ e }}</p>{% endfor %}
+            </div>
+            {% endfor %}
+            <div class="flex justify-end space-x-3 pt-4 border-t">
+                <button type="button" onclick="closeModal('itemModal')" class="px-4 py-2 border rounded-lg text-gray-600 hover:bg-gray-50 text-sm">Hủy</button>
+                <button type="submit" class="btn-brand text-white px-5 py-2 rounded-lg text-sm font-medium">Thêm</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="deleteModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl">
+        <h3 class="text-lg font-bold text-gray-800 mb-2 font-title">Xác nhận xóa</h3>
+        <p class="text-gray-600 text-sm mb-5">Xóa nội dung này? Thao tác không thể hoàn tác.</p>
+        <div class="flex justify-end space-x-3">
+            <button type="button" onclick="closeModal('deleteModal')" class="px-4 py-2 border rounded-lg text-gray-600 hover:bg-gray-50 text-sm">Hủy</button>
+            <form id="deleteItemForm" method="post">{% csrf_token %}<button type="submit" class="bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-lg text-sm font-medium">Xóa</button></form>
+        </div>
+    </div>
+</div>
+
+<script>
+function show(id){const m=document.getElementById(id);m.classList.remove('hidden');m.classList.add('flex');}
+function closeModal(id){const m=document.getElementById(id);m.classList.add('hidden');m.classList.remove('flex');}
+function openDelete(url){document.getElementById('deleteItemForm').action=url;show('deleteModal');}
+{% if form.errors %}show('itemModal');{% endif %}
+</script>
+{% endblock %}

@@ -1,0 +1,159 @@
+{% extends 'base_admin.html' %}
+{% load static %}{% block title %}{{ skill_label }}{% endblock %}
+{% block content %}
+<div class="mb-6 flex items-center justify-between">
+    <div>
+        <a href="{% url 'assignments:assignment_list' %}" class="text-amber-700 text-sm hover:underline"><i class="fa-solid fa-angle-left"></i> Ngân hàng bài tập</a>
+        <h2 class="text-2xl font-bold text-gray-900 mt-1 font-title">{{ skill_label }} — Danh sách Buổi</h2>
+    </div>
+    <button type="button" onclick="openCreate()" class="btn-brand text-white px-4 py-2.5 rounded-lg font-medium text-sm flex items-center space-x-2 shadow-sm">
+        <i class="fa-solid fa-circle-plus"></i><span>Tạo buổi tập {{ skill_label|lower }}</span>
+    </button>
+</div>
+
+<div class="bg-white rounded-xl shadow-sm border border-amber-900/5 overflow-x-auto">
+    <table class="w-full text-sm">
+        <thead class="bg-amber-50 text-amber-900 text-xs uppercase">
+            <tr>
+                <th class="text-left px-5 py-3">Buổi</th>
+                <th class="text-left px-5 py-3">Tên buổi</th>
+                <th class="text-left px-5 py-3">Chương trình</th>
+                <th class="text-left px-5 py-3">Số nội dung</th>
+                <th class="text-center px-5 py-3">Trạng thái</th>
+                <th class="text-right px-5 py-3">Thao tác</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+            {% for lesson in lessons %}
+            <tr class="hover:bg-amber-50/40">
+                <td class="px-5 py-3 font-bold text-amber-800">Buổi {{ lesson.order }}</td>
+                <td class="px-5 py-3">{{ lesson.title }}</td>
+                <td class="px-5 py-3"><span class="px-2 py-0.5 rounded bg-amber-100 text-amber-800 text-xs">{{ lesson.get_program_display }}</span></td>
+                <td class="px-5 py-3">{{ lesson.item_count }}</td>
+                <td class="px-5 py-3 text-center">{% if lesson.is_active %}<span class="text-green-600">● Mở</span>{% else %}<span class="text-gray-400">● Ẩn</span>{% endif %}</td>
+                <td class="px-5 py-3 text-right whitespace-nowrap">
+                    <a href="{% url 'assignments:lesson_detail' lesson.pk %}" class="text-amber-700 hover:text-amber-900 mr-2" title="Nội dung"><i class="fa-solid fa-list-check"></i></a>
+                    {% if lesson.can_edit_contents %}<button type="button" class="text-gray-500 hover:text-amber-700 mr-2" title="Sửa"
+                        onclick="openEdit(this)"
+                        data-pk="{{ lesson.pk }}" data-order="{{ lesson.order }}" data-title="{{ lesson.title }}"
+                        data-desc="{{ lesson.description }}" data-program="{{ lesson.program }}"
+                        data-ltype="{{ lesson.listening_type }}" data-youtube="{{ lesson.youtube_url }}"
+                        data-reference="{{ lesson.reference_transcript }}" data-active="{{ lesson.is_active|yesno:'1,0' }}"><i class="fa-solid fa-pen"></i></button>
+                    <button type="button" class="text-gray-500 hover:text-red-600" title="Xóa"
+                        onclick="openDelete('{% url 'assignments:lesson_delete' lesson.pk %}', 'Buổi {{ lesson.order }}: {{ lesson.title|escapejs }}')"><i class="fa-solid fa-trash-can"></i></button>{% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="6" class="px-5 py-10 text-center text-gray-400">Chưa có buổi nào. Bấm "Tạo buổi" để thêm.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% include 'submissions/_learning_pagination.html' with page=lessons %}
+<div id="lessonModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl max-h-[90vh] overflow-y-auto">
+        <div class="flex justify-between items-center mb-4 border-b pb-3">
+            <h3 id="lessonModalTitle" class="text-lg font-bold text-gray-800 font-title">Tạo buổi mới</h3>
+            <button aria-label="Đóng biểu mẫu" type="button" onclick="closeModal('lessonModal')" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark text-xl"></i></button>
+        </div>
+        <form id="lessonForm" method="post" enctype="multipart/form-data" class="space-y-3">
+            {% csrf_token %}
+            <input type="hidden" name="skill" value="{{ skill }}">
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1" for="f_program">Chương trình</label>
+<select name="program" id="f_program" class="w-full px-3 py-2 border rounded-lg text-sm">
+                        <option value="CHUNG">Dùng chung</option>
+                        <option value="TOEIC">TOEIC</option>
+                        <option value="B1">B1</option>
+                        <option value="B2">B2</option>
+                        <option value="VSTEP">VSTEP</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1" for="f_order">Buổi số</label>
+<input type="number" name="order" id="f_order" required class="w-full px-3 py-2 border rounded-lg text-sm">
+                </div>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1" for="f_title">Tên buổi</label>
+<input type="text" name="title" id="f_title" required class="w-full px-3 py-2 border rounded-lg text-sm">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1" for="f_desc">Mô tả</label>
+<textarea name="description" id="f_desc" rows="2" class="w-full px-3 py-2 border rounded-lg text-sm"></textarea>
+            </div>
+            {% if skill == 'listening' %}
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1" for="f_ltype">Loại bài nghe</label>
+<select name="listening_type" id="f_ltype" class="w-full px-3 py-2 border rounded-lg text-sm">
+                    <option value="part12">Nghe chọn đáp án (ABCD, có hình ảnh)</option>
+                    <option value="part34">Dữ liệu nghe cũ (lượt giao mới dùng trắc nghiệm)</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">File nghe (mp3/wav)</label>
+                <input type="file" name="audio_file" aria-label="File nghe" class="w-full px-3 py-2 border rounded-lg text-sm">
+            </div>
+            {% elif skill == 'speaking' %}
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1" for="f_youtube">Link YouTube</label>
+<input type="url" name="youtube_url" id="f_youtube" placeholder="https://youtube.com/..." class="w-full px-3 py-2 border rounded-lg text-sm">
+            </div>
+            <div class="mt-3"><label for="f_video" class="block text-sm font-medium text-gray-700 mb-1">Hoặc tải video mẫu</label><input id="f_video" type="file" name="video_file" accept="video/mp4,video/webm"></div>
+            <div class="mt-3"><label for="f_reference" class="block text-sm font-medium text-gray-700 mb-1">Lời mẫu chính xác của video</label><textarea id="f_reference" name="reference_transcript" rows="4" maxlength="20000" class="w-full px-3 py-2 border rounded-lg text-sm"></textarea></div>
+            {% endif %}
+            <label class="flex items-center space-x-2 text-sm"><input type="checkbox" name="is_active" id="f_active" checked> <span>Đang mở cho học viên</span></label>
+            <div class="flex justify-end space-x-3 pt-4 border-t">
+                <button type="button" onclick="closeModal('lessonModal')" class="px-4 py-2 border rounded-lg text-gray-600 hover:bg-gray-50 text-sm">Hủy</button>
+                <button type="submit" class="btn-brand text-white px-5 py-2 rounded-lg text-sm font-medium">Lưu lại</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="deleteModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl">
+        <h3 class="text-lg font-bold text-gray-800 mb-2 font-title">Xác nhận xóa</h3>
+        <p class="text-gray-600 text-sm mb-5">Xóa <b id="deleteName"></b>? Thao tác không thể hoàn tác.</p>
+        <form id="deleteForm" method="post" class="flex justify-end space-x-3">
+            {% csrf_token %}
+            <button type="button" onclick="closeModal('deleteModal')" class="px-4 py-2 border rounded-lg text-gray-600 hover:bg-gray-50 text-sm">Hủy</button>
+            <button type="submit" class="bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-lg text-sm font-medium">Xóa</button>
+        </form>
+    </div>
+</div>
+
+<script>
+const CREATE_URL = "{% url 'assignments:lesson_create' skill %}";
+function show(id){const m=document.getElementById(id);m.classList.remove('hidden');m.classList.add('flex');}
+function closeModal(id){const m=document.getElementById(id);m.classList.add('hidden');m.classList.remove('flex');}
+function openCreate(){
+    const f=document.getElementById('lessonForm');
+    f.action=CREATE_URL; f.reset();
+    document.getElementById('lessonModalTitle').textContent='Tạo buổi mới';
+    show('lessonModal');
+}
+function openEdit(btn){
+    const d=btn.dataset;
+    const f=document.getElementById('lessonForm');
+    f.action='/quan-ly/bai-tap/lesson/'+d.pk+'/edit/';
+    document.getElementById('lessonModalTitle').textContent='Sửa buổi học';
+    document.getElementById('f_order').value=d.order;
+    document.getElementById('f_title').value=d.title;
+    document.getElementById('f_desc').value=d.desc;
+    document.getElementById('f_program').value=d.program;
+    if(document.getElementById('f_ltype')) document.getElementById('f_ltype').value=d.ltype;
+    if(document.getElementById('f_reference')) document.getElementById('f_reference').value=d.reference;
+    if(document.getElementById('f_youtube')) document.getElementById('f_youtube').value=d.youtube;
+    document.getElementById('f_active').checked = d.active==='1';
+    show('lessonModal');
+}
+function openDelete(url,name){
+    document.getElementById('deleteForm').action=url;
+    document.getElementById('deleteName').textContent=name;
+    show('deleteModal');
+}
+</script>
+{% endblock %}

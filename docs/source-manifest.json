@@ -1096,5 +1096,70 @@
       "path": "templates/base.html",
       "sha": "83ca529ee3c40f65f01389e57e4c4a72ea500428"
     }
-  ]
+  ],
+  "assignments_templates_2026_10_27": {
+    "commit": "9a52078b6c60082c54245718f06aa10f56f1ab91",
+    "files": [
+      {
+        "path": "assignments/templates/assignments/assignment_list.html",
+        "source_sha": "92b685a0011ae57bc6c90366a1a0fbc4fed7772c"
+      },
+      {
+        "path": "assignments/templates/assignments/confirm_delete.html",
+        "source_sha": "f8f30be884142cd7ce351a30742ae23a7421dd0b"
+      },
+      {
+        "path": "assignments/templates/assignments/lesson_detail.html",
+        "source_sha": "bbe0b30dfd68f1a4dc526eef8ea06eb27e19d78e"
+      },
+      {
+        "path": "assignments/templates/assignments/lesson_form.html",
+        "source_sha": "f30199e86991582e66de17f949726c6275c3fb60"
+      },
+      {
+        "path": "assignments/templates/assignments/skill_lessons.html",
+        "source_sha": "d21856acbedc86bff4e8e341defc07a229f2bc10"
+      },
+      {
+        "path": "submissions/templates/submissions/do_listening.html",
+        "source_sha": "16a357eed976fec07c97cbecd64066a40c1db5b7"
+      },
+      {
+        "path": "submissions/templates/submissions/do_speaking.html",
+        "source_sha": "3b8d346afba3015f222f124287895abc199437c2"
+      },
+      {
+        "path": "submissions/templates/submissions/do_vocab.html",
+        "source_sha": "bf52bfe6bbdc99de24cba74c3942ff3ceda1b3d0"
+      },
+      {
+        "path": "submissions/templates/submissions/student_dashboard.html",
+        "source_sha": "d05366153f79147ceaeeb57585f4527ba88ed79d"
+      },
+      {
+        "path": "submissions/templates/submissions/student_home.html",
+        "source_sha": "4ed5641ab0897977b25a450c826664da7ff781e4"
+      },
+      {
+        "path": "submissions/templates/submissions/student_skill.html",
+        "source_sha": "b49c28af260ec2e7e597ebbb086a53666c6c798c"
+      },
+      {
+        "path": "templates/admin/base_site.html",
+        "source_sha": "0ddf52b8f98da48f84c8ef6fbf35123473443102"
+      },
+      {
+        "path": "templates/base_admin.html",
+        "source_sha": "3deef53836c143b551f285175d3db2feb4a5bf05"
+      },
+      {
+        "path": "templates/base_student.html",
+        "source_sha": "1c144af2800f291fce80b42051e615ccf0a6749c"
+      },
+      {
+        "path": "templates/registration/login.html",
+        "source_sha": "3de505bec1c7ef2c5c04a4eb7995e0c20112cd8d"
+      }
+    ]
+  }
 }

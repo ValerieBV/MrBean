@@ -44,7 +44,7 @@ quyền xem/chấm chuyển theo giáo viên hiện tại, người đã chấm 
 
 ## 2. Biên soạn và giao bài
 
-Giáo viên mở **Ngân hàng bài tập → Tạo buổi học**, chọn kỹ năng, chương trình và thứ tự.
+Giáo viên mở **Ngân hàng bài tập → kỹ năng → Tạo buổi tập**, chọn chương trình và thứ tự.
 Mỗi kỹ năng/chương trình/thứ tự là duy nhất.
 
 - **Listening:** thêm câu hỏi và các lựa chọn có dùng, đặt đáp án A–D hợp lệ, tải file nghe
@@ -72,7 +72,8 @@ lượt nộp từ trang cũ bị yêu cầu tải lại.
 
 ## 3. Học viên làm và nộp bài
 
-Học viên mở **Bài tập của tôi**, chọn kỹ năng hoặc xem bài trên dashboard.
+Học viên đăng nhập vào **Học tập & bài tập**, chọn lớp đã ghi danh, chọn kỹ năng,
+rồi chọn buổi đã được giao. Báo cáo xem riêng qua **Báo cáo học tập**.
 Bài chỉ xuất hiện khi đến thời điểm giao. Nếu bật mở theo thứ tự, cần nộp hoặc được
 miễn các bài trước cùng kỹ năng/chương trình/lớp. Không bắt chờ giáo viên chấm bài trước.
 

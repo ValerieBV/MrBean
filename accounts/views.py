@@ -14,9 +14,13 @@ from .forms import CustomUserCreationForm, CustomUserUpdateForm, ProfileForm
 from .permissions import role_required, admin_required
 
 
-def user_login_view(request):
+def home_for(user):
+    return 'submissions:student_dashboard' if user.role=='student' and not user.is_superuser else 'dashboard:index'
+
+
+def user_login_view(request, template_name='accounts/login.html'):
     if request.user.is_authenticated:
-        return redirect('dashboard:index')
+        return redirect(home_for(request.user))
     form = AuthenticationForm(request, data=request.POST or None)
     target = request.POST.get('next') or request.GET.get('next','')
     if request.method == 'POST' and form.is_valid():
@@ -25,8 +29,8 @@ def user_login_view(request):
         messages.success(request, f"Chào mừng {user.username} [{user.get_role_display()}] quay trở lại!")
         if target and url_has_allowed_host_and_scheme(target,{request.get_host()},require_https=request.is_secure()):
             return redirect(target)
-        return redirect('dashboard:index')
-    return render(request,'accounts/login.html',{'form':form,'next':target})
+        return redirect(home_for(user))
+    return render(request,template_name,{'form':form,'next':target})
 
 
 @login_required

@@ -1,0 +1,29 @@
+{% extends 'base_student.html' %}
+{% load static %}{% block title %}Trang chủ{% endblock %}
+{% block content %}
+<h2 class="text-xl font-bold text-gray-800 mb-1 font-title">Chào mừng quay trở lại, {{ user.get_full_name|default:user.username }}! 👋</h2>
+<p class="text-gray-500 text-sm mb-6">Chọn kỹ năng để bắt đầu làm bài tập về nhà.</p>
+
+<div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+    {% for c in cards %}
+    <a href="{% url 'submissions:student_skill' c.skill %}" class="bg-white rounded-xl shadow-sm border p-6 hover:shadow-md transition block">
+        <div class="flex items-center space-x-3 mb-4">
+            <span class="w-12 h-12 rounded-xl grid place-items-center text-white text-xl"
+                  style="background:{% if c.skill == 'listening' %}#2980b9{% elif c.skill == 'speaking' %}#8e44ad{% else %}#16a085{% endif %}">
+                {% if c.skill == 'listening' %}<i class="fa-solid fa-headphones"></i>
+                {% elif c.skill == 'speaking' %}<i class="fa-solid fa-microphone"></i>
+                {% else %}<i class="fa-solid fa-book"></i>{% endif %}
+            </span>
+            <h3 class="text-lg font-bold text-gray-800 font-title">{{ c.label }}</h3>
+        </div>
+        <div class="flex items-center justify-between text-sm">
+            <span class="text-gray-500">Đã xong <b class="text-gray-800">{{ c.done }}</b>/{{ c.total }} buổi</span>
+            <span class="text-amber-700 font-semibold">Vào học <i class="fa-solid fa-angle-right"></i></span>
+        </div>
+        <div class="mt-3 h-2 bg-gray-100 rounded-full overflow-hidden">
+            <div class="h-full rounded-full" style="width:{{ c.pct }}%;background:#d97736"></div>
+        </div>
+    </a>
+    {% endfor %}
+</div>
+{% endblock %}

@@ -4,6 +4,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.paginator import Paginator
 from django.db import transaction
+from django.db.models import Q
 from django.http import JsonResponse, Http404
 from django.shortcuts import render, get_object_or_404, redirect
 from django.utils import timezone
@@ -26,7 +27,11 @@ def own_task(request, task_id):
 
 @login_required
 def student_dashboard(request):
-    return redirect('dashboard:index')
+    student_only(request.user)
+    from courses.models import Enrollment
+    classes=[{'code':e.classroom.class_code,'name':e.classroom.name,'term':e.classroom.course.name,
+              'color':'#1f3a93'} for e in Enrollment.objects.filter(student=request.user,status='active').select_related('classroom__course')]
+    return render(request,'submissions/student_dashboard.html',{'classes':classes,'current_class':None})
 
 
 @login_required
@@ -34,12 +39,25 @@ def student_home(request, skill=None):
     student_only(request.user)
     from assignments.models import Skill
     from dashboard.services import annotated_tasks
-    rows = annotated_tasks(request.user, request.GET)
+    from .context import current_enrollment
+    enrollment=current_enrollment(request)
+    rows = annotated_tasks(request.user, {}).filter(assignment__isnull=False)
+    rows=rows.filter(assignment__classroom_id=enrollment.classroom_id) if enrollment else rows.none()
+    if skill is None:
+        cards=[]
+        for value,label in Skill.choices:
+            items=rows.filter(assignment__lesson__skill=value)
+            total=items.count();done=items.filter(Q(latest_job_id__isnull=False)|Q(exemption__isnull=False)).count()
+            cards.append({'skill':value,'label':label,'total':total,'done':done,'pct':round(done*100/total) if total else 0})
+        return render(request,'submissions/student_home.html',{'cards':cards})
+    if skill not in Skill.values:raise Http404
     if skill in Skill.values: rows = rows.filter(assignment__lesson__skill=skill)
     page = Paginator(rows.order_by('assignment__lesson__skill', 'assignment__lesson__order', 'pk'), 20).get_page(request.GET.get('page'))
     for task in page:
         task.blocked_reason = submission_problem(task)
-    return render(request, 'submissions/task_list.html', {'tasks': page, 'skill_choices': Skill.choices, 'skill_filter': skill or ''})
+    return render(request, 'submissions/student_skill.html', {'tasks':page,'skill':skill,'skill_label':dict(Skill.choices)[skill],
+        'rows':[{'task':task,'lesson':task.assignment.lesson,'completed':bool(task.latest_job_id or task.exemption_id),
+                 'unlocked':not task.blocked_reason,'reason':task.blocked_reason,'result_id':task.latest_job_id} for task in page]})
 
 
 @login_required
@@ -47,7 +65,8 @@ def enter_class(request, code):
     student_only(request.user)
     from courses.models import Enrollment
     enrollment = get_object_or_404(Enrollment, student=request.user, status='active', classroom__class_code=code)
-    return redirect('courses:class_detail', class_id=enrollment.classroom_id)
+    request.session['learning_class_id']=enrollment.classroom_id
+    return redirect('submissions:student_home')
 
 
 @login_required
@@ -76,11 +95,14 @@ def do_task(request, task_id):
     questions = [{**{k: q.get(k, '') for k in ('id','question_text','option_a','option_b','option_c','option_d')},
         'has_image': bool(q.get('image_name')), 'selected': answers.get(str(q['id']), '')}
         for q in rubric.get('questions', [])]
-    return render(request, 'submissions/do_task.html', {'task': task, 'rubric': rubric, 'questions': questions,
+    from ai_core.reporting import report_job
+    jobs=list(task.jobs.order_by('-submitted_at','-pk')[:10])
+    for job in jobs:job.public_status=report_job(job)['status_label']
+    return render(request, 'submissions/do_'+{'listening':'listening','speaking':'speaking','vocabulary':'vocab'}[rubric['skill']]+'.html', {'task': task, 'lesson':task.assignment.lesson, 'rubric': rubric, 'questions': questions,
         'video_embed_url': video_embed_url, 'reading_ready': reading_ready,
         'blocked_reason': submission_problem(task), 'is_late': task.due_at < timezone.now(),
         'pending_exemption': task.assignment.exemption_requests.filter(enrollment__student=request.user, status='pending').first(),
-        'jobs': task.jobs.order_by('-submitted_at', '-pk')[:10],
+        'jobs':jobs,'word_details':rubric.get('word_details') or [{'word':word} for word in rubric.get('words',[])],
         'submission_key': uuid.uuid4().hex, 'draft_text': draft.get('text', ''),
         'draft_saved_at': progress.draft_saved_at if draft else None})
 

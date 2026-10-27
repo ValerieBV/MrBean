@@ -85,6 +85,7 @@
                 </li>
                 {% endif %}
                 {% if user.is_authenticated %}
+                {% if user.role == 'student' %}<li class="sidebar-menu-item"><a href="{% url 'submissions:student_dashboard' %}"><i aria-hidden="true" class="bi bi-pencil-square"></i><span>HỌC TẬP & BÀI TẬP</span></a></li>{% endif %}
                 <li class="sidebar-menu-item {% if request.resolver_match.app_name == 'support' %}{% if support_is_contact or user.role != 'student' %}active{% endif %}{% endif %}"><a href="{% url 'support:contact_list' %}"><i class="bi bi-envelope-fill" aria-hidden="true"></i><span>LIÊN HỆ & PHẢN ÁNH</span></a></li>
                 <li class="sidebar-menu-item integration-menu">
                     <details {% if request.resolver_match.app_name == 'dashboard' or request.resolver_match.app_name == 'assignments' or request.resolver_match.app_name == 'submissions' or request.resolver_match.url_name == 'course_list' %}open{% elif user.role == 'student' and request.resolver_match.app_name == 'support' and not support_is_contact %}open{% endif %}>

@@ -168,3 +168,4 @@ AI_MAX_IMAGE_BYTES = 8 * 1024 * 1024
 DATA_UPLOAD_MAX_MEMORY_SIZE = 50 * 1024 * 1024
 FILE_UPLOAD_MAX_MEMORY_SIZE = 2 * 1024 * 1024
 TEMPLATES[0]['OPTIONS']['context_processors'].append('dashboard.context.navigation')
+TEMPLATES[0]['OPTIONS']['context_processors'].append('submissions.context.student_info')

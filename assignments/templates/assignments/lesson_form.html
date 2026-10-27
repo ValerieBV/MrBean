@@ -1,0 +1,53 @@
+{% extends 'base_admin.html' %}
+{% load static %}{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<div class="mb-6">
+    <a href="{{ back_url }}" class="text-amber-700 text-sm hover:underline"><i class="fa-solid fa-angle-left"></i> {{ skill_label }}</a>
+    <h2 class="text-2xl font-bold text-gray-900 mt-1 font-title">{{ title }} — {{ skill_label }}</h2>
+</div>
+
+<form method="post" enctype="multipart/form-data" class="bg-white rounded-xl shadow-sm border border-amber-900/5 p-6 max-w-2xl space-y-4">
+    {% csrf_token %}
+    <div class="grid grid-cols-2 gap-4">
+        <div><label class="block text-sm font-medium text-gray-700 mb-1" for="id_skill">Kỹ năng</label>{{ form.skill }}</div>
+        <div><label class="block text-sm font-medium text-gray-700 mb-1" for="id_program">Chương trình</label>{{ form.program }}</div>
+    </div>
+    <div class="grid grid-cols-2 gap-4">
+        <div><label class="block text-sm font-medium text-gray-700 mb-1" for="id_order">Buổi số</label>{{ form.order }}</div>
+        <div><label class="block text-sm font-medium text-gray-700 mb-1" for="id_title">Tên buổi</label>{{ form.title }}</div>
+    </div>
+    <div><label class="block text-sm font-medium text-gray-700 mb-1" for="id_description">Mô tả</label>{{ form.description }}</div>
+
+    <div class="skill-block" data-for="listening">
+        <div class="mb-3"><label class="block text-sm font-medium text-gray-700 mb-1" for="id_listening_type">Loại bài nghe</label>{{ form.listening_type }}</div>
+        <div><label class="block text-sm font-medium text-gray-700 mb-1" for="id_audio_file">File nghe (mp3/wav)</label>{{ form.audio_file }}</div>
+    </div>
+    
+    <div class="skill-block" data-for="speaking">
+        <label class="block text-sm font-medium text-gray-700 mb-1" for="id_youtube_url">Link YouTube</label>{{ form.youtube_url }}
+        <div class="mt-3"><label for="id_video_file" class="block text-sm font-medium text-gray-700 mb-1">Hoặc tải video mẫu</label>{{ form.video_file }}</div>
+        <div class="mt-3"><label for="id_reference_transcript" class="block text-sm font-medium text-gray-700 mb-1">Lời mẫu chính xác của video</label>{{ form.reference_transcript }}</div>
+    </div>
+
+    <label class="flex items-center space-x-2 text-sm">{{ form.is_active }} <span>Đang mở cho học viên</span></label>
+
+    {% for e in form.non_field_errors %}<p class="text-red-600 text-sm">{{ e }}</p>{% endfor %}
+    {% for f in form %}{% for e in f.errors %}<p class="text-red-600 text-sm">{{ f.label }}: {{ e }}</p>{% endfor %}{% endfor %}
+
+    <div class="flex justify-end space-x-3 pt-4 border-t">
+        <a href="{{ back_url }}" class="px-4 py-2 border rounded-lg text-gray-600 hover:bg-gray-50 text-sm">Hủy</a>
+        <button type="submit" class="btn-brand text-white px-5 py-2 rounded-lg text-sm font-medium">Lưu buổi</button>
+    </div>
+</form>
+
+<script>
+    function toggleSkillBlocks() {
+        const skill = document.getElementById('id_skill').value;
+        document.querySelectorAll('.skill-block').forEach(b => {
+            b.style.display = (b.dataset.for === skill) ? 'block' : 'none';
+        });
+    }
+    document.getElementById('id_skill').addEventListener('change', toggleSkillBlocks);
+    toggleSkillBlocks();
+</script>
+{% endblock %}

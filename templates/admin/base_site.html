@@ -1,0 +1,22 @@
+{% extends "admin/base.html" %}
+
+{% load static %}{% block title %}{{ title }} | Mr Bean English{% endblock %}
+
+{% block branding %}
+<div id="site-name"><a href="{% url 'admin:index' %}">🎓 Mr Bean English</a></div>
+{% endblock %}
+
+{% block extrastyle %}{{ block.super }}
+<style>
+    :root { --primary:#d97736; --secondary:#311c11; --accent:#d97736;
+            --link-fg:#b45309; --header-bg:#311c11; }
+    #header { background:#311c11; color:#fff; }
+    #site-name a, #site-name a:link, #site-name a:visited { color:#f5c99b; font-weight:700; }
+    .module caption, .module h2 { background:#d97736; }
+    div.breadcrumbs { background:#5a3620; color:#fff; }
+    a.button, input[type=submit], input[type=button], .submit-row input, a.button.default,
+    .button.default, input[type=submit].default { background:#d97736; }
+    a.button:hover, input[type=submit]:hover { background:#c2652b; }
+    .selector-chosen h2 { background:#d97736; }
+</style>
+{% endblock %}

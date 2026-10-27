@@ -170,3 +170,5 @@ không chứng minh độ chính xác AI trên dữ liệu thật. Khi triển k
 hoạt động, giám sát cả ba tiến trình và giữ media riêng tư; `runserver` dành cho phát triển.
 
 Thông tin nhánh nguồn và cách hòa giải code: [docs/INTEGRATION.md](docs/INTEGRATION.md).
+
+Giao diện tích hợp các nhánh và luồng sử dụng: [Đối chiếu tích hợp ngày 27/10/2026](docs/INTEGRATION_REVIEW.md).
