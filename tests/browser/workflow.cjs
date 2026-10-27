@@ -129,9 +129,10 @@ for(const width of [1440,768,390]){
  await student.setViewportSize({width,height:1000});await student.goto(base+'/ho-tro/lien-he/');
  assert(await student.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'Contact inbox overflow '+width);
  await student.screenshot({path:`screenshots/student-contact-inbox-${width}.png`,fullPage:true});
- await fill(student,'q','Lỗi truy cập video UI '+stamp);await student.locator('[name=status]').selectOption('answered');await student.getByRole('button',{name:'Áp dụng',exact:true}).click();
- assert.equal(await student.locator('tbody tr').filter({hasText:'Lỗi truy cập video UI '+stamp}).count(),1);
- await student.getByRole('link',{name:'Mở trao đổi',exact:true}).click();assert.equal(student.url(),contactURL);
+ await fill(student,'q','Lỗi truy cập video UI '+stamp);await student.locator('[name=status]').selectOption('answered');
+ await Promise.all([student.waitForURL(url=>url.pathname==='/ho-tro/lien-he/'&&url.searchParams.get('q')==='Lỗi truy cập video UI '+stamp&&url.searchParams.get('status')==='answered'),student.getByRole('button',{name:'Áp dụng',exact:true}).click()]);
+ const filteredContact=student.locator('tbody tr').filter({hasText:'Lỗi truy cập video UI '+stamp});await filteredContact.waitFor({state:'visible'});assert.equal(await filteredContact.count(),1);
+ await Promise.all([student.waitForURL(contactURL),student.getByRole('link',{name:'Mở trao đổi',exact:true}).click()]);assert.equal(student.url(),contactURL);
  await student.goto(base+'/ho-tro/lien-he/moi/');assert(await student.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'Contact form overflow '+width);
  if(width===390)await student.screenshot({path:'screenshots/student-contact-form-mobile.png',fullPage:true});
 }
