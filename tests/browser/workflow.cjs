@@ -44,21 +44,48 @@ function makeTestPDF(filename){
 }
 makeTestPDF('listening-photographs.pdf');
 fs.writeFileSync('listening-key-part2.csv','number,answer\n'+Array.from({length:25},(_,i)=>(i+1)+',B').join('\n'));
-const listening=await createLesson('listening',Number(stamp),'Bài nghe UI '+stamp);
+await teacher.goto(base+'/quan-ly/bai-tap/');
+await teacher.getByRole('link',{name:'Xem buổi và thêm bài',exact:true}).click();
+await teacher.getByRole('button',{name:'Tạo buổi tập listening',exact:true}).click();
+await teacher.locator('#lessonModal [name=program]').selectOption('B1');
+await teacher.locator('#lessonModal [name=order]').fill(stamp);
+await teacher.locator('#lessonModal [name=title]').fill('Bài nghe UI '+stamp);
+await Promise.all([teacher.waitForURL('**/lesson/*/'),teacher.getByRole('button',{name:'Lưu buổi và thêm bài tập',exact:true}).click()]);
+const listening=teacher.url().match(/lesson\/(\d+)/)[1];
+await teacher.goto(base+'/quan-ly/bai-tap/skill/listening/');
+await teacher.screenshot({path:'screenshots/listening-bank-entry.png',fullPage:true});
+await teacher.locator('tbody tr').filter({hasText:'Bài nghe UI '+stamp}).getByRole('link',{name:'Quản lý bài tập',exact:true}).click();
+assert.equal(await teacher.locator('[data-add-listening-kind]').count(),4);
+await teacher.screenshot({path:'screenshots/listening-type-chooser.png',fullPage:true});
+await teacher.setViewportSize({width:390,height:920});
+await teacher.waitForFunction(()=>document.getElementById('sidebarMenu').getBoundingClientRect().right<=0);
+assert(await teacher.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
+await teacher.screenshot({path:'screenshots/listening-type-chooser-mobile.png',fullPage:true});
+await teacher.setViewportSize({width:1440,height:1000});
 assert.match(await teacher.locator('#main-content').innerText(),/Chưa thêm bài nghe/);
 for(const [index,kind,count] of [[1,'part1',6],[2,'part2',25],[3,'part3',39],[4,'part4',30]]){
- await teacher.getByRole('link',{name:'+ Thêm bài nghe',exact:true}).click();
+ await teacher.locator('[data-add-listening-kind='+kind+']').click();
  await teacher.waitForLoadState('domcontentloaded');
- await teacher.locator('[name=kind]').selectOption(kind);await fill(teacher,'order',String(index));await fill(teacher,'title','Dạng nghe '+index);
- await teacher.waitForFunction(expected=>document.querySelector('[name=question_count]').value===String(expected),count);assert.equal(await teacher.locator('[name=question_count]').inputValue(),String(count));
+ assert.equal(await teacher.locator('[name=kind]').inputValue(),kind);await fill(teacher,'order',String(index));await fill(teacher,'title','Dạng nghe '+index);
+ await teacher.waitForFunction(expected=>document.querySelector('[name=question_count]').value===String(expected)&&document.querySelector('[name=question_count]').readOnly,count);assert.equal(await teacher.locator('[name=question_count]').inputValue(),String(count));
  await teacher.locator('[name=audio_file]').setInputFiles('sample-listening.mp3');
  if(kind==='part1')await teacher.locator('[name=document_file]').setInputFiles('listening-photographs.pdf');
  if(kind==='part2')await teacher.locator('[name=answer_key_file]').setInputFiles('listening-key-part2.csv');else await fill(teacher,'answer_key',Array(count).fill('B').join(' '));
  if(kind==='part1')await teacher.screenshot({path:'screenshots/listening-bulk-authoring.png',fullPage:true});
+ if(kind==='part4'){
+  await teacher.screenshot({path:'screenshots/listening-part4-form.png',fullPage:true});
+  await teacher.setViewportSize({width:390,height:920});await teacher.waitForFunction(()=>document.getElementById('sidebarMenu').getBoundingClientRect().right<=0);assert(await teacher.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
+  await teacher.screenshot({path:'screenshots/listening-part4-form-mobile.png',fullPage:true});
+  await teacher.setViewportSize({width:1440,height:1000});
+ }
  await Promise.all([teacher.waitForURL('**/lesson/*/'),teacher.getByRole('button',{name:'Lưu bài nghe và đáp án',exact:true}).click()]);
 }
-assert.equal(await teacher.getByRole('link',{name:'+ Thêm bài nghe',exact:true}).count(),0);
+assert.equal(await teacher.getByRole('link',{name:'Thêm bài nghe',exact:true}).count(),0);
+assert.equal(await teacher.locator('[data-listening-kind]').count(),4);
 await teacher.screenshot({path:'screenshots/listening-four-exercises.png',fullPage:true});await assignLesson(listening);
+await teacher.getByRole('link',{name:'Quản lý bài tập của buổi',exact:true}).click();
+assert.equal(await teacher.locator('[data-add-listening-kind]').count(),0);
+assert.equal(await teacher.getByRole('link',{name:'Tạo bản sao để thêm bài tập',exact:true}).count(),1);
 const student=await session('ui_student'+stamp);await student.goto(base+'/hoc-tap/skill/listening/');await student.locator('.space-y-3 > div').filter({hasText:'Bài nghe UI '+stamp}).getByRole('link',{name:'Làm bài',exact:true}).click();
 const listeningTaskURL=student.url();
 assert.equal(await student.locator('[data-question]').count(),100);
@@ -194,13 +221,29 @@ for(const[p,role,urls]of [[teacher,'teacher',['/quan-ly/bai-tap/','/quan-ly/bai-
  for(const width of [1440,768,390])for(const url of urls){await p.setViewportSize({width,height:950});await p.goto(base+url);assert(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),role+' source overflow '+width+' '+url);if(width===390){await p.getByRole('button',{name:'Mở điều hướng',exact:true}).click();assert.equal(await p.locator('[data-menu-toggle]').getAttribute('aria-expanded'),'true');await p.locator('[data-menu-close]').click();assert.equal(await p.locator('[data-menu-toggle]').getAttribute('aria-expanded'),'false');}if(width===390)await p.screenshot({path:'screenshots/source-'+role+'-'+url.replace(/[^a-z]/g,'-')+'-mobile.png',fullPage:true});}
 }
 const unassignedListening=await createLesson('listening',Number(stamp)+10,'Đề nghe nháp UI '+stamp);
-const listeningFormURL=`/quan-ly/bai-tap/lesson/${unassignedListening}/listening/new/`;
+const listeningDraftURL=`/quan-ly/bai-tap/lesson/${unassignedListening}/`;
+const listeningFormURL=`/quan-ly/bai-tap/lesson/${unassignedListening}/listening/new/?kind=part4`;
+for(const p of [teacher,admin]){
+ for(const width of [1440,768,390]){
+  await p.setViewportSize({width,height:950});
+  for(const url of [listeningDraftURL,listeningFormURL]){
+   await p.goto(base+url);assert(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
+  }
+ }
+ await p.setViewportSize({width:1440,height:1000});await p.goto(base+listeningDraftURL);
+ assert.equal(await p.locator('[data-add-listening-kind]').count(),4);
+}
+await teacher.goto(base+listeningFormURL);await teacher.evaluate(()=>document.fonts.ready);
+const authoringStyle=await teacher.evaluate(()=>({body:getComputedStyle(document.body).fontFamily,heading:getComputedStyle(document.querySelector('h1')).fontFamily,background:getComputedStyle(document.body).backgroundColor,button:getComputedStyle(document.querySelector('.listening-button')).backgroundColor}));
+assert.match(authoringStyle.body,/Roboto/);assert.match(authoringStyle.heading,/Montserrat/);assert.equal(authoringStyle.background,'rgb(254, 243, 226)');
+results.authoringStyle=authoringStyle;
+results.authoring='Visible bank links and four type cards for teacher/admin; preselected 6/25/39/30 counts; assigned lesson copy action; 390/768/1440px layouts';
 const AxeBuilder=require('@axe-core/playwright').default;results.accessibility=[];results.accessibilityMode='prefers-contrast: more';
 const anonymousContext=await browser.newContext();const anon=await anonymousContext.newPage();await anon.emulateMedia({contrast:'more'});for(const url of ['/accounts/login/','/login/']){await anon.goto(base+url);await anon.screenshot({path:'screenshots/palette-login-'+(url==='/login/'?'learning':'admin')+'.png',fullPage:true});const anonymousReport=await new AxeBuilder({page:anon}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze();results.accessibility.push({role:'anonymous',url,violations:anonymousReport.violations.map(v=>({id:v.id,impact:v.impact}))});}await anonymousContext.close();
 for(const[role,p]of [['admin',admin],['teacher',teacher],['student',student]]){
  await p.setViewportSize({width:1440,height:1000});await p.emulateMedia({contrast:'more'});
  const urls=role==='admin'?['/dashboard/','/accounts/users/','/accounts/users/create/','/courses/catalog/','/courses/classes/create/','/accounts/notifications/','/accounts/profile/','/ho-tro/hoi-dap/','/ho-tro/lien-he/']:
- role==='teacher'?['/dashboard/','/quan-ly/bai-tap/','/quan-ly/bai-tap/new/','/quan-ly/bai-tap/assigned/','/quan-ly/bai-tap/assign/','/courses/exemptions/','/quan-ly/bai-tap/skill/listening/','/quan-ly/bai-tap/skill/speaking/',`/quan-ly/bai-tap/lesson/${listening}/`,listeningFormURL,'/ho-tro/hoi-dap/','/ho-tro/lien-he/',questionURL.replace(base,'')]:
+ role==='teacher'?['/dashboard/','/quan-ly/bai-tap/','/quan-ly/bai-tap/new/','/quan-ly/bai-tap/assigned/','/quan-ly/bai-tap/assign/','/courses/exemptions/','/quan-ly/bai-tap/skill/listening/','/quan-ly/bai-tap/skill/speaking/',`/quan-ly/bai-tap/lesson/${listening}/`,listeningDraftURL,listeningFormURL,'/ho-tro/hoi-dap/','/ho-tro/lien-he/',questionURL.replace(base,'')]:
  ['/dashboard/','/hoc-tap/','/hoc-tap/ky-nang/','/hoc-tap/skill/listening/','/hoc-tap/skill/speaking/',listeningTaskURL.replace(base,''),vocabTaskURL.replace(base,''),vocabSubmissionURL.replace(base,''),'/courses/',`/courses/classes/${classID}/`,`/hoc-tap/results/${jobID}/`,'/ho-tro/lien-he/','/ho-tro/lien-he/moi/',questionURL.replace(base,''),contactURL.replace(base,'')];
  for(const url of urls){await p.goto(base+url);if(url==='/dashboard/')await p.waitForFunction(()=>document.getElementById('rate').textContent!=='—');const report=await new AxeBuilder({page:p}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze();results.accessibility.push({role,url,violations:report.violations.map(v=>({id:v.id,impact:v.impact,targets:v.nodes.map(n=>n.target)}))});}
  await p.emulateMedia({contrast:'no-preference'});await p.goto(base+'/dashboard/');await p.waitForFunction(()=>document.getElementById('rate').textContent!=='—');await p.screenshot({path:`screenshots/${role}-desktop-final.png`,fullPage:true});

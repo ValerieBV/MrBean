@@ -1,5 +1,6 @@
 {% extends 'base_admin.html' %}
 {% load static %}{% block title %}{{ skill_label }}{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'assignments/listening.css' %}">{% endblock %}
 {% block content %}
 <div class="mb-6 flex items-center justify-between">
     <div>
@@ -10,6 +11,13 @@
         <i class="fa-solid fa-circle-plus"></i><span>Tạo buổi tập {{ skill_label|lower }}</span>
     </button>
 </div>
+
+{% if skill == 'listening' %}
+<div class="listening-bank-guide">
+    <span class="listening-type-icon" aria-hidden="true"><i class="fa-solid fa-headphones"></i></span>
+    <div><strong>Thêm bài nghe trong từng buổi học</strong><p>Mở <b>Quản lý bài tập</b> ở buổi bên dưới, chọn một trong 4 dạng rồi tải tài liệu và nhập đáp án. Mỗi buổi tự thêm từ 1 đến 4 bài.</p></div>
+</div>
+{% endif %}
 
 <div class="bg-white rounded-xl shadow-sm border border-amber-900/5 overflow-x-auto">
     <table class="w-full text-sm">
@@ -27,12 +35,13 @@
             {% for lesson in lessons %}
             <tr class="hover:bg-amber-50/40">
                 <td class="px-5 py-3 font-bold text-amber-800">Buổi {{ lesson.order }}</td>
-                <td class="px-5 py-3">{{ lesson.title }}</td>
+                <td class="px-5 py-3"><a class="lesson-title-link" href="{% url 'assignments:lesson_detail' lesson.pk %}">{{ lesson.title }}</a></td>
                 <td class="px-5 py-3"><span class="px-2 py-0.5 rounded bg-amber-100 text-amber-800 text-xs">{{ lesson.get_program_display }}</span></td>
-                <td class="px-5 py-3">{{ lesson.item_count }}</td>
+                <td class="px-5 py-3">{% if skill == 'listening' %}{{ lesson.listening_exercises.count }}/4 bài nghe<br><small>{{ lesson.item_count }} câu hỏi</small>{% else %}{{ lesson.item_count }}{% endif %}</td>
                 <td class="px-5 py-3 text-center">{% if lesson.is_active %}<span class="text-green-600">● Mở</span>{% else %}<span class="text-gray-400">● Ẩn</span>{% endif %}</td>
                 <td class="px-5 py-3 text-right whitespace-nowrap">
-                    <a href="{% url 'assignments:lesson_detail' lesson.pk %}" class="text-amber-700 hover:text-amber-900 mr-2" title="Nội dung"><i class="fa-solid fa-list-check"></i></a>
+                    <a href="{% url 'assignments:lesson_detail' lesson.pk %}" class="lesson-content-link"><i class="fa-solid fa-list-check" aria-hidden="true"></i><span>Quản lý bài tập</span></a>
+                    {% if skill == 'listening' and lesson.can_edit_contents and lesson.listening_exercises.count < 4 %}<a class="lesson-add-link" href="{% url 'assignments:lesson_detail' lesson.pk %}#them-bai-nghe"><i class="fa-solid fa-plus" aria-hidden="true"></i> Thêm bài nghe</a>{% endif %}
                     {% if lesson.can_edit_contents %}<button type="button" class="text-gray-500 hover:text-amber-700 mr-2" title="Sửa"
                         onclick="openEdit(this)"
                         data-pk="{{ lesson.pk }}" data-order="{{ lesson.order }}" data-title="{{ lesson.title }}"
@@ -85,7 +94,7 @@
 <textarea name="description" id="f_desc" rows="2" class="w-full px-3 py-2 border rounded-lg text-sm"></textarea>
             </div>
             {% if skill == 'listening' %}
-            <p class="bg-amber-50 border rounded-lg p-4 text-sm">Lưu buổi rồi tự thêm từ 1 đến 4 bài nghe. Chọn dạng, tải audio/PDF và dán đáp án hàng loạt cho từng bài.</p>
+            <div class="listening-note"><strong>Bước tiếp theo: thêm bài tập theo dạng</strong><p>Lưu buổi để mở màn hình quản lý bài tập. Tại đó có 4 dạng nghe: Mô tả tranh (6 câu), Hỏi - Đáp (25 câu), Cuộc hội thoại ngắn (39 câu) và Bài nói ngắn (30 câu). Bạn tự thêm 1–4 bài cho buổi.</p></div>
             {% elif skill == 'speaking' %}
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1" for="f_youtube">Link YouTube</label>
@@ -97,7 +106,7 @@
             <label class="flex items-center space-x-2 text-sm"><input type="checkbox" name="is_active" id="f_active" checked> <span>Đang mở cho học viên</span></label>
             <div class="flex justify-end space-x-3 pt-4 border-t">
                 <button type="button" onclick="closeModal('lessonModal')" class="px-4 py-2 border rounded-lg text-gray-600 hover:bg-gray-50 text-sm">Hủy</button>
-                <button type="submit" class="btn-brand text-white px-5 py-2 rounded-lg text-sm font-medium">Lưu lại</button>
+                <button type="submit" class="btn-brand text-white px-5 py-2 rounded-lg text-sm font-medium">{% if skill == 'listening' %}Lưu buổi và thêm bài tập{% else %}Lưu lại{% endif %}</button>
             </div>
         </form>
     </div>

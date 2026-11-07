@@ -11,6 +11,7 @@ from .models import Lesson, ClassAssignment, VocabWord, ListeningQuestion, Speak
 from .forms import (LessonForm, VocabWordForm, ListeningQuestionForm, SpeakingTaskForm,
                     AssignmentForm, AssignmentUpdateForm, ReadingReferenceForm, ListeningExerciseForm)
 from .services import assign_to_class, save_listening_exercise
+from .listening import LISTENING_SPECS
 
 ITEMS = {'vocabulary': (VocabWordForm, VocabWord, 'words'),
          'listening': (ListeningQuestionForm, ListeningQuestion, 'questions'),
@@ -36,7 +37,7 @@ def assert_editable(request, lesson):
 @login_required
 def assignment_list(request, skill=None):
     staff(request.user)
-    lessons = Lesson.objects.all().select_related('created_by').order_by('skill', 'program', 'order')
+    lessons = Lesson.objects.all().select_related('created_by').prefetch_related('listening_exercises').order_by('skill', 'program', 'order')
     skill = skill or request.GET.get('skill', '')
     if not skill and not request.GET.get('q'):
         return render(request,'assignments/assignment_list.html',{'cards':[
@@ -85,13 +86,28 @@ def lesson_update(request, pk):
 def lesson_detail(request, pk):
     staff(request.user)
     lesson = get_object_or_404(Lesson, pk=pk)
-    can_edit = (is_manager(request.user) or lesson.created_by_id == request.user.pk) and not (lesson.class_assignments.exists() or lesson.progress.exists())
+    used = lesson.class_assignments.exists() or lesson.progress.exists()
+    can_edit = (is_manager(request.user) or lesson.created_by_id == request.user.pk) and not used
     if lesson.skill == 'listening':
         if request.method == 'POST':
             raise PermissionDenied('Thêm câu hỏi bằng bảng đáp án trong từng bài nghe.')
+        exercises = list(lesson.listening_exercises.prefetch_related('questions'))
+        type_cards = []
+        for index, (kind, icon) in enumerate([
+                ('part1', 'image'), ('part2', 'circle-question'),
+                ('part3', 'comments'), ('part4', 'microphone-lines')], 1):
+            spec = LISTENING_SPECS[kind]
+            type_cards.append({
+                'kind': kind, 'label': spec['label'], 'number': index,
+                'count': spec['count'], 'choices': ' / '.join(spec['choices']),
+                'existing': sum(item.kind == kind for item in exercises),
+                'icon': icon, 'requires_pdf': kind == 'part1',
+            })
         return render(request, 'assignments/listening_lesson_detail.html', {
             'lesson': lesson, 'can_edit': can_edit,
-            'exercises': lesson.listening_exercises.prefetch_related('questions'),
+            'exercises': exercises, 'listening_types': type_cards,
+            'can_add_exercise': can_edit and len(exercises) < 4,
+            'lesson_used': used,
             'legacy_questions': lesson.questions.filter(exercise__isnull=True),
         })
     form_cls, _, relation = ITEMS[lesson.skill]
@@ -287,8 +303,14 @@ def listening_exercise_edit(request, lesson_id, pk=None):
         return redirect('assignments:lesson_detail', pk=lesson.pk)
     exercise = get_object_or_404(ListeningExercise, pk=pk, lesson=lesson) if pk else None
     used = set(lesson.listening_exercises.values_list('order', flat=True))
+    if not exercise and len(used) >= 4:
+        messages.info(request, 'Đã đủ 4 bài nghe trong buổi. Sửa hoặc xóa một bài trước khi thêm bài khác.')
+        return redirect('assignments:lesson_detail', pk=lesson.pk)
+    selected_kind = request.GET.get('kind', 'part1')
+    if selected_kind not in ('part1', 'part2', 'part3', 'part4'):
+        selected_kind = 'part1'
     initial = {'order': next((i for i in range(1, 5) if i not in used), 4),
-               'kind': 'part1', 'question_count': 6}
+               'kind': selected_kind, 'question_count': LISTENING_SPECS[selected_kind]['count']}
     form = ListeningExerciseForm(request.POST or None, request.FILES or None,
         instance=exercise, lesson=lesson, initial=initial if not exercise else None)
     if request.method == 'POST' and form.is_valid():
@@ -301,6 +323,7 @@ def listening_exercise_edit(request, lesson_id, pk=None):
             return redirect('assignments:lesson_detail', pk=lesson.pk)
     return render(request, 'assignments/listening_exercise_form.html', {
         'form': form, 'lesson': lesson, 'exercise': exercise,
+        'selected_spec': LISTENING_SPECS.get(form['kind'].value(), LISTENING_SPECS['part1']),
         'title': 'Chỉnh sửa bài nghe' if exercise else 'Thêm bài nghe vào buổi',
     })
 

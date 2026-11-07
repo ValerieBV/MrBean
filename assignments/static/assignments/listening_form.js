@@ -8,6 +8,11 @@
   count.readOnly=spec.count!==null;if(spec.count!==null)count.value=spec.count;
   pdf.required=kind.value==='part1'&&form.dataset.hasDocument!=='true';
   document.getElementById('kindHelp').textContent=(spec.count?spec.count+' câu · ': 'Nhập số câu · ')+spec.letters.split('').join(' / ')+(kind.value==='part1'?' · cần PDF đề bài':'');
+  document.getElementById('selectedKindTitle').textContent=kind.options[kind.selectedIndex].textContent;
+  document.getElementById('selectedKindMeta').textContent=(count.value?count.value+' câu · ':'')+spec.letters.length+' đáp án mỗi câu'+(kind.value==='part1'?' · cần file nghe và PDF':' · cần file nghe');
+  const total=Number(count.value)||6,example=Array.from({length:Math.min(total,6)},(_,i)=>(i+1)+'.'+spec.letters[i%spec.letters.length]);
+  document.getElementById('keyExample').textContent=example.join(' ')+(total>6?' … '+total+'.'+spec.letters[(total-1)%spec.letters.length]:'');
+  document.getElementById('keyExampleHelp').textContent='Cần đủ '+total+' đáp án. Có thể dán cả cột từ Excel hoặc tải CSV/TXT.';
   const entries=(key.value.toUpperCase().match(/[A-D](?=$|[\s,;|])/g)||[]).length;
   summary.textContent=key.value.trim()?'Đang có khoảng '+entries+' đáp án. Hệ thống sẽ kiểm tra đủ số câu và đáp án trước khi lưu.':'Dán bảng đáp án hoặc tải CSV/TXT để tạo toàn bộ câu hỏi cùng lúc.';
  }

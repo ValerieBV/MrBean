@@ -62,6 +62,56 @@ class ListeningExerciseTests(IntegratedFixture):
         self.assertContains(page, 'Chưa thêm bài nghe')
         self.assertContains(page, 'Thêm bài nghe')
 
+    def test_authoring_is_visible_from_bank_and_each_type_card_preselects_its_form(self):
+        self.client.force_login(self.teacher)
+        bank = self.client.get(reverse('assignments:skill_lessons', args=['listening']))
+        self.assertContains(bank, 'Quản lý bài tập')
+        self.assertContains(bank, reverse('assignments:lesson_detail', args=[self.lesson.pk]) + '#them-bai-nghe')
+        detail = self.client.get(reverse('assignments:lesson_detail', args=[self.lesson.pk]))
+        self.assertContains(detail, 'data-add-listening-kind=', count=4)
+        create_url = reverse('assignments:listening_exercise_create', args=[self.lesson.pk])
+        for kind, count in [('part1',6), ('part2',25), ('part3',39), ('part4',30)]:
+            with self.subTest(kind=kind):
+                self.assertContains(detail, create_url + '?kind=' + kind)
+                form_page = self.client.get(create_url, {'kind':kind})
+                self.assertEqual(form_page.context['form']['kind'].value(), kind)
+                self.assertEqual(form_page.context['form']['question_count'].value(), count)
+        self.assertEqual(self.lesson.listening_exercises.count(), 0)
+        fallback = self.client.get(create_url, {'kind':'legacy'})
+        self.assertEqual(fallback.context['form']['kind'].value(), 'part1')
+
+    def test_locked_lesson_keeps_type_cards_and_explains_how_to_add_with_a_copy(self):
+        self.save()
+        self.assign()
+        self.client.force_login(self.teacher)
+        page = self.client.get(reverse('assignments:lesson_detail', args=[self.lesson.pk]))
+        self.assertContains(page, 'data-listening-kind=', count=4)
+        self.assertNotContains(page, 'data-add-listening-kind=')
+        self.assertContains(page, 'Tạo bản sao để thêm bài tập')
+        self.assertContains(page, 'Buổi đã giao hoặc có lịch sử bài làm')
+        self.assertNotContains(page, 'Sửa tài liệu / đáp án')
+
+    def test_other_author_has_a_read_only_explanation_and_students_cannot_author(self):
+        self.client.force_login(self.other_teacher)
+        page = self.client.get(reverse('assignments:lesson_detail', args=[self.lesson.pk]))
+        self.assertContains(page, 'Bạn đang xem buổi do người khác biên soạn')
+        self.assertNotContains(page, 'data-add-listening-kind=')
+        self.assertNotContains(page, 'Buổi đã giao hoặc có lịch sử bài làm')
+        self.client.force_login(self.student)
+        self.assertEqual(self.client.get(reverse('assignments:lesson_detail', args=[self.lesson.pk])).status_code, 403)
+
+    def test_full_lesson_keeps_four_type_descriptions_and_blocks_the_fifth_form(self):
+        for order in range(1,5):
+            self.save(kind='part4', order=order)
+        self.client.force_login(self.teacher)
+        page = self.client.get(reverse('assignments:lesson_detail', args=[self.lesson.pk]))
+        self.assertContains(page, 'data-listening-kind=', count=4)
+        self.assertNotContains(page, 'data-add-listening-kind=')
+        self.assertContains(page, 'Đã đủ 4 bài nghe trong buổi')
+        self.assertRedirects(self.client.get(reverse('assignments:listening_exercise_create', args=[self.lesson.pk])),
+            reverse('assignments:lesson_detail', args=[self.lesson.pk]))
+        self.assertEqual(self.lesson.listening_exercises.count(), 4)
+
     def test_four_kinds_have_exact_counts_and_only_three_options_in_part2(self):
         for index, kind in enumerate(['part1','part2','part3','part4'], 1):
             exercise = self.save(kind=kind, order=index)

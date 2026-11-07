@@ -114,6 +114,7 @@ class ListeningExerciseForm(forms.ModelForm):
         self.fields['kind'].choices = [(k, v) for k, v in ListeningExercise.Kind.choices
             if k != 'legacy' or self.instance.pk and self.instance.kind == 'legacy']
         self.fields['question_count'].required = False
+        self.fields['question_count'].help_text = 'Số câu cố định theo dạng bài: 6 / 25 / 39 / 30.'
         self.fields['audio_file'].help_text = 'Tải file nghe đầy đủ cho bài này, tối đa 50 MiB.'
         self.fields['document_file'].help_text = 'Dạng 1 bắt buộc PDF đề bài; các dạng khác có thể thêm PDF. Không đưa đáp án vào PDF học viên xem.'
         if self.instance.pk:

@@ -50,7 +50,10 @@ Bộ kiểm tra tự tạo **database và media tạm riêng**, seed tài khoả
 chạy web tại `127.0.0.1:8765` rồi thực hiện:
 
 1. Admin tạo khóa, lớp, tài khoản, ghi danh.
-2. Giáo viên tự thêm bốn bài nghe 6/25/39/30 câu, tải audio/PDF, dán đáp án và nhập CSV.
+2. Giáo viên đi từ ngân hàng đến danh sách buổi, tạo buổi qua modal, mở nút Quản lý
+   bài tập và bốn thẻ Thêm dạng 1–4. Mỗi thẻ chọn sẵn đúng dạng/số câu; tải audio/PDF,
+   dán đáp án và nhập CSV. Kiểm tra giao diện soạn bài cả admin/giáo viên tại 390/768/1440 px,
+   font Roboto/Montserrat, màu nền chung và nút sao chép buổi đã giao.
 3. Học viên xem PDF trực tiếp, chọn đáp án/ghi câu trả lời ngắn, khôi phục nháp. Nộp
    thiếu câu trả lời dù được 10 điểm vẫn chưa hoàn thành; nộp đủ nhưng sai một câu
    được 9,9 điểm vẫn hoàn thành.

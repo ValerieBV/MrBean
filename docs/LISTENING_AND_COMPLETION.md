@@ -32,10 +32,14 @@ giáo viên chấm. Báo cáo vẫn giữ riêng số đã nộp để phân bi�
 
 ## 2. Giáo viên tạo một buổi nghe
 
-1. Mở **Ngân hàng bài tập → Listening → Tạo buổi tập**. Nhập chương trình, thứ tự,
-   tên và hướng dẫn, rồi lưu buổi.
-2. Bấm **+ Thêm bài nghe**. Mỗi buổi được thêm từ **1 đến 4 bài**; không tự tạo sẵn.
-3. Chọn dạng bài, đặt thứ tự 1–4 và tên riêng nếu cần.
+1. Mở **Ngân hàng bài tập → Listening (Xem buổi và thêm bài)**. Với buổi đã có,
+   bấm **Quản lý bài tập** hoặc **Thêm bài nghe** ngay trong hàng của buổi đó.
+   Với buổi mới, bấm **Tạo buổi tập listening**, nhập thông tin rồi bấm
+   **Lưu buổi và thêm bài tập** để đi thẳng đến màn hình quản lý nội dung.
+2. Trong phần **Thêm bài tập theo dạng**, có bốn thẻ hiển thị tên dạng, số câu,
+   các lựa chọn và tài liệu cần tải. Bấm **Thêm dạng 1 / 2 / 3 / 4** để mở đúng
+   biểu mẫu đã chọn. Mỗi buổi tự thêm từ **1 đến 4 bài**; không tự tạo sẵn.
+3. Biểu mẫu tự chọn dạng và số câu tương ứng. Đặt thứ tự bài 1–4 và tên riêng nếu cần.
 
 | Dạng | Số câu cố định | Lựa chọn | Tài liệu |
 | --- | --- | --- | --- |
@@ -60,6 +64,13 @@ theo dạng; backend từ chối số câu không đúng quy định.
 PDF được hiển thị trên web với nút chuyển trang, phóng to/thu nhỏ. Không cần tải về
 để làm bài. Bộ xem PDF được đóng gói sẵn trong mã nguồn, không cần cài thêm Python
 package hoặc tải thư viện từ CDN khi mở đề. Liên kết mở tab mới được giữ để xem rộng hơn.
+
+Nếu chưa thấy nút thêm: chức năng này nằm ở giao diện giáo viên/admin/quản lý trong
+ngân hàng bài tập. Buổi đã giao hoặc có bài làm sẽ hiển thị bốn dạng để tham khảo và
+nút **Tạo bản sao để thêm bài tập**. Tạo bản sao rồi biên soạn, giao buổi mới; đề và
+kết quả đã dùng trước đó được giữ nguyên. Buổi của giáo viên khác cũng có giải thích
+quyền xem và nút sao chép. Khi đủ bốn bài, màn hình báo rõ giới hạn và vẫn có nút sửa,
+xóa từng bài chưa giao.
 
 ## 3. Nhập đáp án thuận tiện
 
