@@ -44,14 +44,14 @@ class BranchInterfaceIntegrationTests(IntegratedFixture):
         self.assertRedirects(self.client.get(reverse('submissions:enter_class',args=[self.classroom.class_code])),reverse('submissions:student_home'))
         self.assertEqual(self.client.session['learning_class_id'],self.classroom.pk)
 
-    def test_skill_cards_count_submitted_work_and_exclude_unassigned_bank(self):
+    def test_skill_cards_count_only_completed_work_and_exclude_unassigned_bank(self):
         Lesson.objects.create(skill='vocabulary',program='B1',order=999,title='PRIVATE UNASSIGNED LESSON')
         enqueue_submission(task=self.listening_task,submission_key='source-card-complete',answers={str(self.q1.pk):'B'})
         self.client.force_login(self.student)
         response=self.client.get(reverse('submissions:student_home'))
         cards={c['skill']:c for c in response.context['cards']}
         self.assertEqual(cards['listening']['total'],1)
-        self.assertEqual(cards['listening']['done'],1)
+        self.assertEqual(cards['listening']['done'],0)
         self.assertEqual(cards['vocabulary']['total'],1)
         self.assertNotContains(response,'PRIVATE UNASSIGNED')
 

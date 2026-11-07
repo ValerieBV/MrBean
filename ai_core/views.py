@@ -4,7 +4,6 @@ from django.core.exceptions import ValidationError
 from django.http import FileResponse, JsonResponse
 from django.shortcuts import get_object_or_404
 from django.db import transaction
-from django.db.models import Q
 from django.utils import timezone
 from django.urls import reverse
 from django.views.decorators.http import require_GET, require_POST
@@ -21,8 +20,9 @@ def serialize(job, *, include_ai=True):
         'id': job.pk, 'submission_key': job.submission_key, 'task_id': job.task_id,
         'learner_id': job.task.learner_id, 'learner_name': job.task.learner.get_full_name() or job.task.learner.username,
         'title': job.task.title, 'kind': job.kind, 'status': job.status,
-        'status_label': job.get_status_display(), 'submitted_at': job.submitted_at.isoformat(),
+        'status_label': job.public_status_label, 'submitted_at': job.submitted_at.isoformat(),
         'result': job.result, 'suggested_score': job.suggested_score, 'final_score': job.final_score,
+        'completion_status': job.completion_status,
         'teacher_feedback': job.teacher_feedback, 'text': job.text, 'transcript': job.transcript,
         'reference_text': job.reference_text, 'grading_method': job.grading_method,
         'reviewed_at': job.finished_at.isoformat() if job.finished_at else None,
@@ -102,7 +102,9 @@ def review(request, job_id):
         return JsonResponse({'error': 'grading_for_teacher_or_admin'}, status=403)
     try:
         data = json.loads(request.body)
-        score, feedback = data['score'], data['feedback']
+        score, feedback, completion = data['score'], data['feedback'], data['completion_status']
+        if completion not in ('complete', 'incomplete'):
+            raise ValueError()
         if type(score) not in (int, float) or not math.isfinite(score) or not 0 <= score <= 10:
             raise ValueError()
         if not isinstance(feedback, str) or not feedback.strip() or len(feedback) > 10000:
@@ -115,16 +117,44 @@ def review(request, job_id):
             return JsonResponse({'error': 'not_reviewable'}, status=409)
         changed = GradingJob.objects.filter(pk=job.pk, status__in=['manual', 'ai_reviewed']).update(
             status='graded', final_score=score, teacher_feedback=feedback,
-            reviewed_by=request.user, finished_at=timezone.now(), grading_method='teacher')
+            reviewed_by=request.user, finished_at=timezone.now(), grading_method='teacher',
+            completion_status=completion, completion_confirmed_at=timezone.now(), completion_confirmed_by=request.user)
         if not changed:
             return JsonResponse({'error': 'not_reviewable'}, status=409)
         job.refresh_from_db()
-        if job.progress_id and not GradingJob.objects.filter(progress_id=job.progress_id,
-                submitted_at__gte=job.submitted_at).exclude(pk=job.pk).filter(Q(submitted_at__gt=job.submitted_at) | Q(pk__gt=job.pk)).exists():
-            type(job.progress).objects.filter(pk=job.progress_id).update(score=score*10)
+        from submissions.progress import sync_progress
+        sync_progress(job)
         from accounts.notifications import notify
         notify(recipient=job.task.learner, sender=request.user, title='Đã có điểm: '+job.task.title,
             message=feedback, target_url=reverse('submissions:result',args=[job.pk]), event_key=f'result:{job.pk}')
+    return JsonResponse(serialize(job))
+
+
+@require_POST
+@staff_required
+def confirm_completion(request, job_id):
+    if request.user.role == 'manager' and not request.user.is_superuser:
+        return JsonResponse({'error': 'grading_for_teacher_or_admin'}, status=403)
+    try:
+        completion = json.loads(request.body)['completion_status']
+        if completion not in ('complete', 'incomplete'):
+            raise ValueError()
+    except (ValueError, TypeError, KeyError):
+        return JsonResponse({'error': 'invalid_completion'}, status=400)
+    with transaction.atomic():
+        job = get_object_or_404(GradingJob.objects.select_for_update().filter(task__in=tasks_for(request.user)), pk=job_id)
+        if job.status != 'graded' or job.completion_status != 'pending':
+            return JsonResponse({'error': 'completion_already_confirmed'}, status=409)
+        job.completion_status = completion
+        job.completion_confirmed_at = timezone.now()
+        job.completion_confirmed_by = request.user
+        job.save(update_fields=['completion_status', 'completion_confirmed_at', 'completion_confirmed_by'])
+        from submissions.progress import sync_progress
+        sync_progress(job)
+        from accounts.notifications import notify
+        notify(recipient=job.task.learner, sender=request.user, title='Đã xác nhận mức hoàn thành: '+job.task.title,
+            message=job.get_completion_status_display(), target_url=reverse('submissions:result', args=[job.pk]),
+            event_key=f'completion:{job.pk}')
     return JsonResponse(serialize(job))
 
 
@@ -147,3 +177,23 @@ def private_path(name):
         return response
     except (FileNotFoundError,ValueError):
         return JsonResponse({'error':'file_missing'},status=404)
+
+
+def private_pdf(name):
+    response = private_path(name)
+    if response.status_code == 200:
+        response['Content-Type'] = 'application/pdf'
+        response['X-Frame-Options'] = 'SAMEORIGIN'
+    return response
+
+
+@require_GET
+def listening_material(request, job_id, exercise_id, kind):
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'authentication_required'}, status=401)
+    from django.http import Http404
+    job = get_object_or_404(GradingJob.objects.filter(task__in=tasks_for(request.user), kind='listening'), pk=job_id)
+    exercise = next((x for x in job.rubric_snapshot.get('exercises', []) if x['id'] == exercise_id), None)
+    if not exercise or kind not in ('audio', 'document'):
+        raise Http404
+    return private_pdf(exercise.get('document_name', '')) if kind == 'document' else private_path(exercise.get('audio_name', ''))

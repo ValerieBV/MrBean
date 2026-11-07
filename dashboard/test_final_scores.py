@@ -110,7 +110,7 @@ class FinalScoreReportingTests(IntegratedFixture):
         job=self.pending()
         self.client.force_login(self.teacher)
         response=self.client.post(reverse('ai_core:review',args=[job.pk]),
-            {'score':7.5, 'feedback':'Final teacher assessment'}, content_type='application/json')
+            {'score':7.5, 'feedback':'Final teacher assessment','completion_status':'complete'}, content_type='application/json')
         self.assertEqual(response.status_code, 200)
         for user in [self.admin, self.manager, self.teacher, self.student]:
             self.client.force_login(user)
@@ -140,7 +140,7 @@ class FinalScoreReportingTests(IntegratedFixture):
         self.assertContains(response,'Internal draft feedback')
         self.assertIsNone(response.context['published']['final_score'])
         response=self.client.post(reverse('ai_core:review',args=[job.pk]),
-            {'score':7.5,'feedback':'Final teacher assessment'},content_type='application/json')
+            {'score':7.5,'feedback':'Final teacher assessment','completion_status':'complete'},content_type='application/json')
         self.assertEqual(response.status_code,200)
         response=self.client.get(url)
         self.assertEqual(response.context['ai_trial']['score'],9.99)

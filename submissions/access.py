@@ -14,7 +14,8 @@ def is_unlocked(task, now=None):
         assignment__classroom_id=task.assignment.classroom_id, assignment__is_active=True,
         assignment__lesson__skill=lesson.skill, assignment__lesson__program=lesson.program,
         assignment__lesson__order__lt=lesson.order, assigned_at__lte=now, exemption__isnull=True)
-    return not earlier.filter(jobs__isnull=True).exists()
+    from .progress import unfinished_tasks
+    return not unfinished_tasks(earlier, now).exists()
 
 
 def submission_problem(task, now=None):
@@ -38,7 +39,7 @@ def submission_problem(task, now=None):
     if not assignment.allow_late_submission and task.due_at < now:
         return 'Bài đã hết hạn và không nhận nộp muộn.'
     if not is_unlocked(task, now):
-        return 'Hoàn thành các bài trước cùng kỹ năng để mở bài này.'
+        return 'Cần được xác nhận hoàn thành các bài trước cùng kỹ năng để mở bài này.'
     return ''
 
 

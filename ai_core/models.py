@@ -5,6 +5,11 @@ from django.utils import timezone
 
 
 class GradingJob(models.Model):
+    class Completion(models.TextChoices):
+        PENDING = 'pending', 'Chưa xác nhận hoàn thành'
+        COMPLETE = 'complete', 'Hoàn thành'
+        INCOMPLETE = 'incomplete', 'Bài làm bị thiếu'
+
     class Status(models.TextChoices):
         QUEUED = 'queued', 'Chờ AI'
         PROCESSING = 'processing', 'AI đang chấm'
@@ -30,9 +35,20 @@ class GradingJob(models.Model):
     result = models.JSONField(default=dict, blank=True)
     suggested_score = models.FloatField(null=True, blank=True)
     final_score = models.FloatField(null=True, blank=True)
+    completion_status = models.CharField(max_length=12, choices=Completion.choices, default=Completion.PENDING, db_index=True)
+    completion_confirmed_at = models.DateTimeField(null=True, blank=True)
+    completion_confirmed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='confirmed_completions')
     teacher_feedback = models.TextField(blank=True)
     reviewed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
     fallback_reason = models.CharField(max_length=64, blank=True)
+
+    @property
+    def public_status_label(self):
+        if self.status == self.Status.GRADED:
+            return self.get_completion_status_display() if self.completion_status != self.Completion.PENDING else 'Đã chấm · cần xác nhận hoàn thành'
+        from .reporting import REPORT_STATUS_LABELS
+        return REPORT_STATUS_LABELS.get(self.status, self.get_status_display())
 
     @property
     def ai_deadline(self):

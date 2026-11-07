@@ -11,21 +11,26 @@
     <div class="bg-white rounded-xl shadow-sm border p-4 flex flex-wrap gap-4 items-center justify-between">
         <div class="flex items-center space-x-4">
             <span class="w-11 h-11 rounded-xl grid place-items-center text-white
-                {% if row.completed %}bg-green-500{% elif row.unlocked %}{% else %}bg-gray-300{% endif %}"
+                {% if row.completed or row.task.exemption_id %}bg-green-500{% elif row.unlocked %}{% else %}bg-gray-300{% endif %}"
                 {% if not row.completed and row.unlocked %}style="background:#D4621A"{% endif %}>
-                {% if row.completed %}<i class="fa-solid fa-check"></i>{% elif row.unlocked %}<i class="fa-solid fa-play"></i>{% else %}<i class="fa-solid fa-lock"></i>{% endif %}
+                {% if row.completed or row.task.exemption_id %}<i class="fa-solid fa-check"></i>{% elif row.unlocked %}<i class="fa-solid fa-play"></i>{% else %}<i class="fa-solid fa-lock"></i>{% endif %}
             </span>
             <div>
                 <div class="font-semibold text-gray-800">Buổi {{ row.lesson.order }}: {{ row.lesson.title }}</div>
                 <div class="text-xs text-gray-500">Hạn nộp {{ row.task.due_at|date:"d/m/Y H:i" }}
-                    {% if row.lesson.skill == 'listening' %}· {{ row.lesson.get_listening_type_display }}{% endif %}</div>
+                    {% if row.lesson.skill == 'listening' %}· {{ row.task.assignment.rubric.exercises|length|default:"1" }} bài nghe{% endif %}</div>
             </div>
         </div>
         <div>
-            {% if row.completed %}
-                <span class="text-green-600 text-sm font-medium mr-2">{% if row.task.exemption_id %}Đã miễn{% else %}Đã nộp{% endif %}</span>
+            {% if row.completed or row.task.exemption_id %}
+                <span class="text-green-600 text-sm font-medium mr-2">{% if row.task.exemption_id %}Đã miễn{% else %}Hoàn thành{% endif %}</span>{% if row.pending %}<span class="text-sm">Lần nộp mới chờ chấm</span>{% endif %}
                 {% if row.result_id %}<a href="{% url 'submissions:result' row.result_id %}" class="text-sm text-gray-500 hover:text-amber-700 underline">Xem kết quả</a>{% endif %}<a href="{% url 'submissions:do_task' row.task.pk %}" class="text-sm text-gray-500 hover:text-amber-700 underline ml-2">Xem lại</a>
+            {% elif row.has_submission %}
+                <span class="text-sm font-medium mr-2" style="color:#9a3412">{% if row.incomplete %}Bài làm bị thiếu{% elif row.completion_pending %}Đã chấm · cần xác nhận hoàn thành{% else %}Đã nộp · chờ chấm{% endif %}</span>
+                {% if row.pending and row.incomplete %}<span class="text-sm">Lần nộp mới chờ chấm</span>{% endif %}<a href="{% url 'submissions:result' row.result_id %}" class="text-sm underline">Xem kết quả</a>
+                {% if row.unlocked %}<a href="{% url 'submissions:do_task' row.task.pk %}" class="text-sm underline ml-2">Bổ sung / nộp lại</a>{% endif %}
             {% elif row.unlocked %}
+                <span class="text-gray-500 text-sm mr-2">{% if row.task.has_draft %}Đang làm{% else %}Chưa làm{% endif %}</span>
                 <a href="{% url 'submissions:do_task' row.task.pk %}" class="text-white px-4 py-2 rounded-lg text-sm font-medium" style="background:#D4621A">Làm bài</a>
             {% else %}
                 <span class="text-gray-500 text-sm"><i class="fa-solid fa-lock" aria-hidden="true"></i> {{ row.reason }}</span>

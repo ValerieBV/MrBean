@@ -78,11 +78,13 @@ def enqueue_submission(*, task, submission_key, kind=None, text='', audio=None, 
             job.audio = audio
         if kind == 'listening':
             from submissions.grading import grade_listening
-            result = grade_listening(rubric.get('questions', []), answers or {})
-            job.answers = {str(row['question_id']): row['chosen'] for row in result['details']}
+            result = grade_listening(rubric.get('questions', []), {} if answers is None else answers)
+            job.answers = {str(row['question_id']): {'chosen': row['chosen'], 'short_answer': row['short_answer']} for row in result['details']}
             job.result, job.final_score = result, result['score']
             job.status, job.grading_method, job.finished_at = 'graded', 'answer_key', timezone.now()
             job.teacher_feedback = result['feedback']
+            job.completion_status = 'complete' if result['complete'] else 'incomplete'
+            job.completion_confirmed_at = job.finished_at
         job.save()
         for image in prepared:
             VocabularyPage.objects.create(job=job, image=image)
@@ -92,13 +94,11 @@ def enqueue_submission(*, task, submission_key, kind=None, text='', audio=None, 
             if kind == 'listening':
                 for row in job.result['details']:
                     QuestionResponse.objects.update_or_create(progress=progress, question_id=row['question_id'],
-                        defaults={'chosen_option': row['chosen'], 'is_correct': row['correct']})
-            progress.status, progress.completed_at, progress.draft = 'completed', job.submitted_at, {}
-            if job.final_score is not None:
-                progress.score = job.final_score * 10
-            progress.save()
+                        defaults={'chosen_option': row['chosen'], 'filled_text': row['short_answer'], 'is_correct': row['correct']})
             job.progress = progress
             job.save(update_fields=['progress'])
+            from submissions.progress import sync_progress
+            sync_progress(job, clear_draft=True)
         from accounts.notifications import notify
         from django.urls import reverse
         notify(recipient=task.assignment.classroom.teacher, sender=task.learner,

@@ -1,0 +1,14 @@
+<div class="pdf-document" data-pdf-url="{{ pdf_url }}" role="group" aria-label="{{ pdf_title }}">
+    <div class="pdf-toolbar">
+        <button type="button" data-pdf-prev aria-label="Trang PDF trước" disabled>←</button>
+        <span data-pdf-page>Đề bài PDF</span>
+        <button type="button" data-pdf-next aria-label="Trang PDF tiếp theo" disabled>→</button>
+        <button type="button" data-pdf-minus aria-label="Thu nhỏ PDF" disabled>−</button>
+        <button type="button" data-pdf-plus aria-label="Phóng to PDF" disabled>+</button>
+    </div>
+    <p class="listening-help pdf-message" data-pdf-status role="status">Đang mở đề bài…</p>
+    <div class="pdf-viewport"><canvas role="img" aria-label="{{ pdf_title }}" hidden></canvas></div>
+    <p class="pdf-accessible-text" data-pdf-text></p>
+    <p class="listening-help"><a href="{{ pdf_url }}" target="_blank" rel="noopener">Mở đề PDF trong tab mới</a></p>
+    <noscript><iframe class="listening-pdf" src="{{ pdf_url }}" title="{{ pdf_title }}"></iframe></noscript>
+</div>

@@ -7,10 +7,10 @@ from django.db.models import Q, Max, Count
 from django.shortcuts import render, get_object_or_404, redirect
 from django.urls import reverse
 from ai_core.permissions import is_manager, classes_for
-from .models import Lesson, ClassAssignment, VocabWord, ListeningQuestion, SpeakingTask, Skill
+from .models import Lesson, ClassAssignment, VocabWord, ListeningQuestion, SpeakingTask, Skill, ListeningExercise
 from .forms import (LessonForm, VocabWordForm, ListeningQuestionForm, SpeakingTaskForm,
-                    AssignmentForm, AssignmentUpdateForm, ReadingReferenceForm)
-from .services import assign_to_class
+                    AssignmentForm, AssignmentUpdateForm, ReadingReferenceForm, ListeningExerciseForm)
+from .services import assign_to_class, save_listening_exercise
 
 ITEMS = {'vocabulary': (VocabWordForm, VocabWord, 'words'),
          'listening': (ListeningQuestionForm, ListeningQuestion, 'questions'),
@@ -86,6 +86,14 @@ def lesson_detail(request, pk):
     staff(request.user)
     lesson = get_object_or_404(Lesson, pk=pk)
     can_edit = (is_manager(request.user) or lesson.created_by_id == request.user.pk) and not (lesson.class_assignments.exists() or lesson.progress.exists())
+    if lesson.skill == 'listening':
+        if request.method == 'POST':
+            raise PermissionDenied('Thêm câu hỏi bằng bảng đáp án trong từng bài nghe.')
+        return render(request, 'assignments/listening_lesson_detail.html', {
+            'lesson': lesson, 'can_edit': can_edit,
+            'exercises': lesson.listening_exercises.prefetch_related('questions'),
+            'legacy_questions': lesson.questions.filter(exercise__isnull=True),
+        })
     form_cls, _, relation = ITEMS[lesson.skill]
     form = form_cls(request.POST or None, request.FILES or None)
     if request.method == 'POST':
@@ -124,7 +132,17 @@ def lesson_clone(request, pk):
                     if f.name not in ('id', 'created_at', 'updated_at', 'created_by', 'order', 'title')}
             lesson = Lesson.objects.create(**data, order=maximum+1, title=(source.title+' (bản sao)')[:200], created_by=request.user)
             _, _, relation = ITEMS[source.skill]
+            exercise_map = {}
+            if source.skill == 'listening':
+                for exercise in source.listening_exercises.all():
+                    original_id = exercise.pk
+                    exercise.pk = None
+                    exercise.lesson = lesson
+                    exercise.save()
+                    exercise_map[original_id] = exercise
             for item in getattr(source, relation).all():
+                if source.skill == 'listening':
+                    item.exercise = exercise_map.get(item.exercise_id)
                 item.pk = None; item.lesson = lesson; item.save()
         messages.success(request, 'Đã sao chép thành buổi mới. Bản gốc và các lượt giao cũ được giữ nguyên.')
         return redirect('assignments:lesson_detail', pk=lesson.pk)
@@ -183,9 +201,12 @@ def assigned_detail(request, pk):
     staff(request.user)
     assignment = get_object_or_404(ClassAssignment.objects.select_related('lesson', 'classroom', 'classroom__teacher').filter(
         classroom__in=classes_for(request.user)), pk=pk)
-    from django.db.models import Prefetch
+    from django.db.models import Prefetch, OuterRef, Subquery
     from ai_core.models import GradingJob
-    tasks = assignment.tasks.select_related('learner', 'exemption').prefetch_related(Prefetch('jobs', queryset=GradingJob.objects.order_by('-submitted_at', '-pk')))
+    final = GradingJob.objects.filter(task_id=OuterRef('pk'), status='graded').order_by('-submitted_at', '-pk')
+    tasks = assignment.tasks.select_related('learner', 'exemption').annotate(
+        confirmed_completion=Subquery(final.values('completion_status')[:1])).prefetch_related(
+            Prefetch('jobs', queryset=GradingJob.objects.order_by('-submitted_at', '-pk')))
     return render(request, 'assignments/assigned_detail.html', {'assignment': assignment, 'tasks': tasks})
 
 
@@ -253,3 +274,66 @@ def question_image(request, pk):
     from django.http import Http404
     if not question.image: raise Http404
     return private_file(question.image)
+
+
+@login_required
+def listening_exercise_edit(request, lesson_id, pk=None):
+    staff(request.user)
+    lesson = get_object_or_404(editable_lessons(request.user), pk=lesson_id, skill='listening')
+    try:
+        assert_editable(request, lesson)
+    except ValidationError as exc:
+        messages.error(request, '; '.join(exc.messages))
+        return redirect('assignments:lesson_detail', pk=lesson.pk)
+    exercise = get_object_or_404(ListeningExercise, pk=pk, lesson=lesson) if pk else None
+    used = set(lesson.listening_exercises.values_list('order', flat=True))
+    initial = {'order': next((i for i in range(1, 5) if i not in used), 4),
+               'kind': 'part1', 'question_count': 6}
+    form = ListeningExerciseForm(request.POST or None, request.FILES or None,
+        instance=exercise, lesson=lesson, initial=initial if not exercise else None)
+    if request.method == 'POST' and form.is_valid():
+        try:
+            save_listening_exercise(actor=request.user, form=form)
+        except ValidationError as exc:
+            form.add_error(None, exc)
+        else:
+            messages.success(request, 'Đã lưu bài nghe và nhập toàn bộ đáp án.')
+            return redirect('assignments:lesson_detail', pk=lesson.pk)
+    return render(request, 'assignments/listening_exercise_form.html', {
+        'form': form, 'lesson': lesson, 'exercise': exercise,
+        'title': 'Chỉnh sửa bài nghe' if exercise else 'Thêm bài nghe vào buổi',
+    })
+
+
+@login_required
+def listening_exercise_delete(request, pk):
+    staff(request.user)
+    exercise = get_object_or_404(ListeningExercise.objects.select_related('lesson'), pk=pk)
+    try:
+        assert_editable(request, exercise.lesson)
+    except ValidationError as exc:
+        messages.error(request, '; '.join(exc.messages))
+        return redirect('assignments:lesson_detail', pk=exercise.lesson_id)
+    back = reverse('assignments:lesson_detail', args=[exercise.lesson_id])
+    if request.method == 'POST':
+        with transaction.atomic():
+            lesson = Lesson.objects.select_for_update().get(pk=exercise.lesson_id)
+            assert_editable(request, lesson)
+            exercise.delete()
+        messages.success(request, 'Đã xóa bài nghe chưa giao.')
+        return redirect(back)
+    return render(request, 'core/confirm.html', {
+        'title': 'Xóa bài nghe chưa giao', 'description': str(exercise), 'back_url': back})
+
+
+@login_required
+def listening_exercise_media(request, pk, kind):
+    staff(request.user)
+    from django.http import Http404
+    from ai_core.views import private_file, private_pdf
+    exercise = get_object_or_404(ListeningExercise, pk=pk)
+    if kind == 'document' and exercise.document_file:
+        return private_pdf(exercise.document_file.name)
+    if kind == 'audio' and exercise.audio_file:
+        return private_file(exercise.audio_file)
+    raise Http404

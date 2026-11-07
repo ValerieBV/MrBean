@@ -83,7 +83,7 @@ class CompleteWorkflowTests(IntegratedFixture):
         self.assertEqual(job.status,'ai_reviewed');self.assertEqual(job.suggested_score,10)
         self.assertIsNone(job.final_score)
         self.login(self.teacher)
-        response=self.post_json(reverse('ai_core:review',args=[job.pk]),{'score':10,'feedback':'Hoàn thành tốt, giữ thói quen luyện tập.'})
+        response=self.post_json(reverse('ai_core:review',args=[job.pk]),{'score':10,'feedback':'Hoàn thành tốt, giữ thói quen luyện tập.','completion_status':'complete'})
         self.assertEqual(response.status_code,200)
         self.login(learner)
         self.assertContains(self.client.get(reverse('submissions:result',args=[job.pk])),'Hoàn thành tốt')
@@ -142,12 +142,14 @@ class CompleteWorkflowTests(IntegratedFixture):
         with self.assertRaises(IntegrityError),transaction.atomic():
             Enrollment.objects.create(student=self.student,classroom=self.other_classroom)
 
-    def test_sequential_unlock_submission_then_next_lesson(self):
+    def test_sequential_unlock_requires_confirmed_completion(self):
         task=self.next_lesson()
         self.login(self.student)
-        self.assertContains(self.client.get(reverse('submissions:do_task',args=[task.pk])),'Hoàn thành các bài trước')
+        self.assertContains(self.client.get(reverse('submissions:do_task',args=[task.pk])),'xác nhận hoàn thành các bài trước')
         with self.assertRaises(ValidationError):enqueue_submission(task=task,submission_key='locked',audio=self.audio())
-        enqueue_submission(task=self.task,submission_key='prerequisite',audio=self.audio())
+        job,_=enqueue_submission(task=self.task,submission_key='prerequisite',audio=self.audio())
+        with self.assertRaises(ValidationError):enqueue_submission(task=task,submission_key='still-locked',audio=self.audio())
+        GradingJob.objects.filter(pk=job.pk).update(status='graded',final_score=7,completion_status='complete')
         self.assertEqual(enqueue_submission(task=task,submission_key='unlocked',audio=self.audio())[0].status,'queued')
 
     def test_other_program_does_not_lock_a_lesson(self):

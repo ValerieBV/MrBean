@@ -68,6 +68,8 @@ def failure_reason(error):
 
 
 def review_status_label(job):
+    if job.status == 'graded' and job.completion_status == 'pending':
+        return 'Cần xác nhận mức hoàn thành'
     return 'Chờ giáo viên xác nhận' if job.status == 'ai_reviewed' else 'Cần chấm thủ công'
 
 

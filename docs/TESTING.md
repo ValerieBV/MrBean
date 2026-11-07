@@ -50,8 +50,10 @@ Bộ kiểm tra tự tạo **database và media tạm riêng**, seed tài khoả
 chạy web tại `127.0.0.1:8765` rồi thực hiện:
 
 1. Admin tạo khóa, lớp, tài khoản, ghi danh.
-2. Giáo viên tạo bài, thêm câu hỏi, giao bài cho lớp.
-3. Học viên chọn đáp án, đợi autosave, tải lại khôi phục nháp, nộp và nhận điểm 10/10.
+2. Giáo viên tự thêm bốn bài nghe 6/25/39/30 câu, tải audio/PDF, dán đáp án và nhập CSV.
+3. Học viên xem PDF trực tiếp, chọn đáp án/ghi câu trả lời ngắn, khôi phục nháp. Nộp
+   thiếu câu trả lời dù được 10 điểm vẫn chưa hoàn thành; nộp đủ nhưng sai một câu
+   được 9,9 điểm vẫn hoàn thành.
 4. Học viên xin miễn từ vựng; giáo viên chấp thuận; mẫu số báo cáo thay đổi đúng.
 5. Giáo viên tải video kiểm thử, nhập lời mẫu, giao bài; học viên dùng micro giả lập của
    Chromium để ghi âm, nghe lại, nộp. Đây là fixture kỹ thuật, không phải bài nói đã xác minh.

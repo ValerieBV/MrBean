@@ -1,5 +1,8 @@
 from django.conf import settings
 from django.db import models
+from django.core.exceptions import ValidationError
+from django.core.validators import MinValueValidator, MaxValueValidator
+from .listening import LISTENING_SPECS, validate_listening_audio, validate_listening_pdf
 
 
 class Skill(models.TextChoices):
@@ -79,8 +82,49 @@ class VocabWord(models.Model):
         return self.word
 
 
+class ListeningExercise(models.Model):
+    class Kind(models.TextChoices):
+        PART1 = 'part1', 'Dạng 1 · Mô tả tranh'
+        PART2 = 'part2', 'Dạng 2 · Hỏi - Đáp'
+        PART3 = 'part3', 'Dạng 3 · Cuộc hội thoại ngắn'
+        PART4 = 'part4', 'Dạng 4 · Bài nói ngắn'
+        LEGACY = 'legacy', 'Bài nghe đã có'
+
+    lesson = models.ForeignKey(Lesson, on_delete=models.CASCADE, related_name='listening_exercises')
+    order = models.PositiveSmallIntegerField('Thứ tự bài trong buổi', validators=[MinValueValidator(1), MaxValueValidator(4)])
+    kind = models.CharField('Dạng bài', max_length=12, choices=Kind.choices)
+    title = models.CharField('Tên bài nghe', max_length=200, blank=True)
+    audio_file = models.FileField('File nghe', upload_to='assignments/listening/audio/', blank=True, validators=[validate_listening_audio])
+    document_file = models.FileField('Đề bài PDF xem trên web', upload_to='assignments/listening/documents/', blank=True, validators=[validate_listening_pdf])
+    question_count = models.PositiveSmallIntegerField('Số câu', validators=[MinValueValidator(1), MaxValueValidator(200)])
+
+    class Meta:
+        ordering = ['order', 'pk']
+        constraints = [models.UniqueConstraint(fields=['lesson', 'order'], name='unique_listening_exercise_order')]
+
+    @property
+    def choice_letters(self):
+        return LISTENING_SPECS[self.kind]['choices']
+
+    @property
+    def display_title(self):
+        return self.title or LISTENING_SPECS[self.kind]['label']
+
+    def clean(self):
+        super().clean()
+        if self.lesson_id and self.lesson.skill != Skill.LISTENING:
+            raise ValidationError('Chỉ thêm bài nghe vào buổi Listening.')
+        expected = LISTENING_SPECS.get(self.kind, {}).get('count')
+        if expected is not None and self.question_count != expected:
+            raise ValidationError({'question_count': f'Dạng này cần đúng {expected} câu.'})
+
+    def __str__(self):
+        return f'Bài {self.order}: {self.display_title}'
+
+
 class ListeningQuestion(models.Model):
     lesson = models.ForeignKey(Lesson, on_delete=models.CASCADE, related_name="questions")
+    exercise = models.ForeignKey(ListeningExercise, on_delete=models.CASCADE, related_name='questions', null=True, blank=True)
     order = models.PositiveIntegerField("Câu số", default=1)
     image = models.ImageField(
         "Hình ảnh (part 1-2)", upload_to="assignments/listening_img/", blank=True, null=True
@@ -101,6 +145,13 @@ class ListeningQuestion(models.Model):
 
     def __str__(self):
         return f"Câu {self.order} - {self.lesson.title}"
+
+    def clean(self):
+        super().clean()
+        if self.exercise_id and self.exercise.lesson_id != self.lesson_id:
+            raise ValidationError('Câu hỏi phải thuộc cùng buổi với bài nghe.')
+        if self.exercise_id and self.correct_option and self.correct_option not in self.exercise.choice_letters:
+            raise ValidationError({'correct_option': 'Đáp án không phù hợp dạng bài nghe.'})
 
 
 class SpeakingTask(models.Model):

@@ -122,9 +122,9 @@ Hỏi đáp sau khi có kết quả và mục liên hệ riêng đã có trong m
 2. **Giáo viên/admin/quản lý:** tạo buổi trong ngân hàng → thêm câu hỏi/đáp án, từ vựng hoặc video/lời mẫu → giao cho đúng lớp, đặt hạn và quy định nộp.
 3. **Học viên:** xem bài của mình → làm theo thứ tự → lưu nháp nghe/từ vựng → nộp.
 4. **Hệ thống:** chấm nghe ngay hoặc đưa vào AI; AI lỗi chuyển thủ công; lưu mọi lần nộp cùng đề đã dùng.
-5. **Giáo viên đúng lớp/admin:** xem bản ghi/ảnh/transcript → xác nhận điểm và nhận xét.
+5. **Giáo viên đúng lớp/admin:** xem bản ghi/ảnh/transcript → xác nhận điểm, nhận xét và mức hoàn thành (đủ yêu cầu/còn thiếu).
 6. **Học viên:** nhận thông báo → xem điểm/nhận xét/lịch sử → nộp lại nếu bài còn nhận.
-7. **Quản lý:** theo dõi tỷ lệ nộp, điểm chính thức, tiến độ, tín hiệu học viên cần hỗ trợ; xuất CSV.
+7. **Quản lý:** theo dõi tỷ lệ hoàn thành, số đã nộp, điểm chính thức, tiến độ, tín hiệu học viên cần hỗ trợ; xuất CSV.
 
 Nhánh có cả quản lý và admin như các model gốc. Quản lý tạo học viên, quản lý lớp,
 giao bài và theo dõi; quyền thay vai trò, đặt lại mật khẩu và xác nhận điểm được tách rõ.
@@ -132,6 +132,10 @@ giao bài và theo dõi; quyền thay vai trò, đặt lại mật khẩu và x�
 Xin miễn: chọn bài Speaking/Vocabulary chưa nộp → giáo viên duyệt đúng lớp → trừ
 một lượt và loại bài khỏi số phải nộp. Listening luôn bắt buộc. Có thể hủy đơn đang chờ.
 Hạn mức theo mã học viên: T/V 8 lượt, B 5 lượt, chưa có mã mặc định 8.
+
+Bài nghe mỗi buổi tự thêm 1–4 bài theo bốn dạng 6/25/39/30 câu; có nhập đáp án hàng
+loạt, PDF xem trực tiếp và câu trả lời ngắn. Chỉ bài đã chấm đủ yêu cầu mới tính hoàn
+thành; nộp bài chưa đồng nghĩa hoàn thành. Xem [hướng dẫn sử dụng](docs/LISTENING_AND_COMPLETION.md).
 
 Xem toàn bộ màn hình, quyền và trường hợp ngoại lệ ở [docs/WORKFLOWS.md](docs/WORKFLOWS.md).
 

@@ -47,9 +47,10 @@ quyền xem/chấm chuyển theo giáo viên hiện tại, người đã chấm 
 Giáo viên mở **Ngân hàng bài tập → kỹ năng → Tạo buổi tập**, chọn chương trình và thứ tự.
 Mỗi kỹ năng/chương trình/thứ tự là duy nhất.
 
-- **Listening:** thêm câu hỏi và các lựa chọn có dùng, đặt đáp án A–D hợp lệ, tải file nghe
-  hoặc ghi rõ nguồn nghe trong hướng dẫn. Đáp án được kiểm tra lại trước khi giao.
-  Trường điền từ cũ vẫn giữ để đọc dữ liệu cũ; lượt giao mới dùng trắc nghiệm.
+- **Listening:** lưu buổi rồi tự thêm 1–4 bài. Bốn dạng có 6/25/39/30 câu; dạng 2
+  chọn A–C, các dạng còn lại A–D. Tải audio cho từng bài, PDF bắt buộc với dạng 1
+  và hiển thị trực tiếp trên web. Dán cả cột đáp án hoặc nhập CSV/TXT để tạo câu hỏi
+  cùng lúc. Xem [hướng dẫn biên soạn và chấm hoàn thành](LISTENING_AND_COMPLETION.md).
 - **Đọc theo video/Speaking:** tải MP4/WebM tối đa 50 MiB hoặc điền URL YouTube HTTPS;
   nhập nguyên văn đoạn cần đọc, tối đa 1.500 từ/20.000 ký tự. Các câu SpeakingTask gốc
   vẫn hiển thị để tham khảo. Không tự dùng yêu cầu nói tự do làm lời mẫu.
@@ -74,11 +75,13 @@ lượt nộp từ trang cũ bị yêu cầu tải lại.
 
 Học viên đăng nhập vào **Học tập & bài tập**, chọn lớp đã ghi danh, chọn kỹ năng,
 rồi chọn buổi đã được giao. Báo cáo xem riêng qua **Báo cáo học tập**.
-Bài chỉ xuất hiện khi đến thời điểm giao. Nếu bật mở theo thứ tự, cần nộp hoặc được
-miễn các bài trước cùng kỹ năng/chương trình/lớp. Không bắt chờ giáo viên chấm bài trước.
+Bài chỉ xuất hiện khi đến thời điểm giao. Nếu bật mở theo thứ tự, các bài trước cùng
+kỹ năng/chương trình/lớp phải được xác nhận **hoàn thành** hoặc được miễn. Chỉ nộp bài
+chưa đủ điều kiện mở bài sau; bài còn thiếu cũng chưa được tính hoàn thành.
 
-Listening: nghe và chọn đáp án; câu bỏ trống tính sai. Văn bản từ vựng và lựa chọn nghe
-tự lưu nháp sau khi thay đổi, giữ trong 24 giờ. Ảnh và ghi âm không lưu nháp; cần chọn
+Listening: nghe, xem PDF và chọn đáp án kèm câu trả lời ngắn cho từng câu. Câu chọn
+sai ảnh hưởng điểm; bỏ lựa chọn hoặc câu trả lời ngắn ảnh hưởng mức hoàn thành. Văn
+bản từ vựng, lựa chọn nghe và câu trả lời ngắn tự lưu nháp sau thay đổi, giữ trong 24 giờ. Ảnh và ghi âm không lưu nháp; cần chọn
 hoặc ghi lại sau khi đóng trang. Bản nháp không được tính là đã nộp.
 
 Đọc theo video: xem mẫu → tạm dừng video → cho phép micro → ghi âm → dừng → nghe lại →
@@ -100,7 +103,9 @@ thì không nhận bài mới. Quá hạn vẫn nhận nếu giáo viên bật n
 ## 4. Chấm điểm và công bố
 
 Listening được backend chấm ngay theo snapshot đáp án: số câu đúng / tổng câu × 10.
-AI không được sử dụng để đoán đáp án.
+AI không được sử dụng để đoán đáp án. Đủ lựa chọn và câu trả lời ngắn cho mọi câu mới
+được tính hoàn thành, độc lập với số câu chọn đúng. Nội dung câu trả lời ngắn được
+lưu để giáo viên xem; hệ thống kiểm tra có điền, không tự chấm ngữ nghĩa của phần này.
 
 Bài đọc/từ vựng vào queue trong DB. Worker yêu cầu OpenAI theo deadline, nhận JSON
 có schema và kiểm tra lại kiểu dữ liệu. Bài đọc được chuyển từ audio sang transcript;
@@ -113,7 +118,9 @@ AI thành công → **AI đã nhận xét** và thông báo cho giáo viên. AI 
 độc lập với worker, kiểm tra mỗi giây; kết quả AI trả muộn không ghi đè trạng thái đã xử lý.
 
 Giáo viên mở **Tổng quan → Bài chờ chấm điểm**, nghe bản ghi/xem ảnh, đối chiếu
-lời mẫu và transcript, nhập điểm 0–10 cùng nhận xét, bấm **Xác nhận điểm**.
+lời mẫu và transcript, nhập điểm 0–10 cùng nhận xét, chọn mức **Hoàn thành/Bài làm bị thiếu**,
+rồi bấm **Xác nhận điểm**. Không suy ra thiếu bài chỉ từ điểm hoặc lỗi nhận dạng.
+Bài cũ đã có điểm nhưng chưa có mức hoàn thành có form xác nhận riêng, giữ nguyên điểm.
 Chỉ giáo viên lớp hiện tại hoặc admin được xác nhận; quản lý chỉ theo dõi.
 Điểm không được xác nhận hai lần trên cùng lần nộp.
 
@@ -143,11 +150,14 @@ Dashboard tự tải mỗi 10 giây, có trạng thái cập nhật/lỗi, lọc
 tên bài/học viên và phạm vi đang hoạt động/cả lịch sử. Các bảng phân trang. CSV áp dụng
 cùng phạm vi quyền và bộ lọc, bảo vệ giá trị có thể bị hiểu là công thức bảng tính.
 
-Tỷ lệ nộp = số lượt giao đã có ít nhất một lần nộp / số lượt phải nộp, loại bài miễn.
+Chỉ số chính là **tỷ lệ hoàn thành** = số lượt giao đã được xác nhận làm đủ / số lượt
+phải làm, loại bài miễn. Tỷ lệ nộp vẫn được giữ riêng: số lượt giao đã có ít nhất một
+lần nộp / số lượt phải nộp. Bản nháp và bài đang chờ chấm chưa được tính hoàn thành.
 Nộp lại không tăng mẫu số/tử số. Điểm trung bình lấy điểm chính thức gần nhất của từng
 lượt giao. Bảng lịch sử vẫn giữ từng lần nộp, có thể nhiều dòng cho một bài.
 
-Cảnh báo học viên cần hỗ trợ dùng bài quá hạn chưa nộp và thời gian ít hoạt động.
+Cảnh báo học viên cần hỗ trợ dùng bài quá hạn chưa nộp, bài đã chấm còn thiếu và thời
+gian ít hoạt động. Không quy trách nhiệm chậm tiến độ cho học viên chỉ vì đang chờ chấm.
 Loại bài được miễn, bài đang khóa theo thứ tự, đơn miễn chờ duyệt, lớp đóng, học viên
 nghỉ/đã ngừng tài khoản. Đây là dấu hiệu để giáo viên hỗ trợ, không phải kết luận bỏ học.
 Dashboard không có phần SLA.

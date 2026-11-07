@@ -1,6 +1,6 @@
 from django import forms
 
-from .models import Lesson, VocabWord, ListeningQuestion, SpeakingTask
+from .models import Lesson, VocabWord, ListeningQuestion, SpeakingTask, ListeningExercise
 
 INPUT = "w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm"
 
@@ -72,6 +72,98 @@ class ListeningQuestionForm(forms.ModelForm):
             "correct_option": forms.Select(attrs={"class": INPUT}),
             "correct_answer": forms.TextInput(attrs={"class": INPUT}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance.pk and self.instance.exercise_id:
+            self.fields['correct_option'].choices = [('', '---------')] + [
+                (c, c) for c in self.instance.exercise.choice_letters]
+            if self.instance.exercise.kind == 'part2':
+                self.fields['option_d'].widget = forms.HiddenInput()
+
+    def clean(self):
+        data = super().clean()
+        if self.instance.pk and self.instance.exercise_id and self.instance.exercise.kind == 'part2':
+            data['option_d'] = ''
+        return data
+
+
+class ListeningExerciseForm(forms.ModelForm):
+    answer_key = forms.CharField(label='Dán đáp án hàng loạt', required=False,
+        widget=forms.Textarea(attrs={'rows': 7, 'placeholder': '1.A 2.C 3.B 4.D 5.A 6.C', 'class': INPUT}),
+        help_text='Nhập số câu kèm đáp án, hoặc dán cả cột đáp án từ Excel. Không cần nhập từng câu.')
+    answer_key_file = forms.FileField(label='Hoặc tải bảng đáp án CSV / TXT', required=False,
+        widget=forms.ClearableFileInput(attrs={'accept': '.csv,.txt', 'class': INPUT}),
+        help_text='CSV UTF-8: number,answer. Có thể thêm question_text,A,B,C,D để nhập cả nội dung.')
+
+    class Meta:
+        model = ListeningExercise
+        fields = ['order', 'kind', 'title', 'audio_file', 'document_file', 'question_count']
+        widgets = {
+            'order': forms.NumberInput(attrs={'min': 1, 'max': 4, 'class': INPUT}),
+            'kind': forms.Select(attrs={'class': INPUT}),
+            'title': forms.TextInput(attrs={'class': INPUT}),
+            'audio_file': forms.ClearableFileInput(attrs={'accept': 'audio/*,.mp4,.webm', 'class': INPUT}),
+            'document_file': forms.ClearableFileInput(attrs={'accept': 'application/pdf,.pdf', 'class': INPUT}),
+            'question_count': forms.NumberInput(attrs={'min': 1, 'max': 200, 'class': INPUT}),
+        }
+
+    def __init__(self, *args, lesson, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.instance.lesson = lesson
+        self.fields['kind'].choices = [(k, v) for k, v in ListeningExercise.Kind.choices
+            if k != 'legacy' or self.instance.pk and self.instance.kind == 'legacy']
+        self.fields['question_count'].required = False
+        self.fields['audio_file'].help_text = 'Tải file nghe đầy đủ cho bài này, tối đa 50 MiB.'
+        self.fields['document_file'].help_text = 'Dạng 1 bắt buộc PDF đề bài; các dạng khác có thể thêm PDF. Không đưa đáp án vào PDF học viên xem.'
+        if self.instance.pk:
+            self.initial['answer_key'] = '\n'.join(f'{q.order}.{q.correct_option}' for q in self.instance.questions.all())
+
+    def clean(self):
+        from .listening import LISTENING_SPECS, parse_answer_key
+        data = super().clean()
+        spec = LISTENING_SPECS.get(data.get('kind'))
+        if not spec:
+            return data
+        if spec['count'] is not None:
+            if data.get('question_count') not in (None, spec['count']):
+                self.add_error('question_count', f'Dạng này cần đúng {spec["count"]} câu.')
+            data['question_count'] = spec['count']
+        elif not data.get('question_count'):
+            self.add_error('question_count', 'Nhập số câu của bài này.')
+        if not data.get('audio_file'):
+            self.add_error('audio_file', 'Cần tải file nghe cho bài này.')
+        if data.get('kind') == 'part1' and not data.get('document_file'):
+            self.add_error('document_file', 'Dạng Mô tả tranh cần PDF để học viên xem trên web.')
+        text = data.get('answer_key', '')
+        upload = data.get('answer_key_file')
+        if upload:
+            if upload.size > 1024 * 1024 or not upload.name.lower().endswith(('.csv', '.txt')):
+                self.add_error('answer_key_file', 'Chỉ nhận CSV/TXT tối đa 1 MiB.')
+                return data
+            try:
+                text = upload.read().decode('utf-8-sig')
+            except UnicodeDecodeError:
+                self.add_error('answer_key_file', 'Lưu bảng đáp án bằng CSV UTF-8.')
+                return data
+        if data.get('question_count') and 1 <= data['question_count'] <= 200:
+            try:
+                data['answer_rows'] = parse_answer_key(text, data['question_count'], spec['choices'])
+            except forms.ValidationError as exc:
+                self.add_error('answer_key_file' if upload else 'answer_key', exc)
+        return data
+
+    def clean_audio_file(self):
+        from .listening import validate_listening_audio
+        value = self.cleaned_data.get('audio_file')
+        validate_listening_audio(value)
+        return value
+
+    def clean_document_file(self):
+        from .listening import validate_listening_pdf
+        value = self.cleaned_data.get('document_file')
+        validate_listening_pdf(value)
+        return value
 
 
 class SpeakingTaskForm(forms.ModelForm):

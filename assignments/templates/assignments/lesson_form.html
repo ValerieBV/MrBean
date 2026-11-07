@@ -19,8 +19,8 @@
     <div><label class="block text-sm font-medium text-gray-700 mb-1" for="id_description">Mô tả</label>{{ form.description }}</div>
 
     <div class="skill-block" data-for="listening">
-        <div class="mb-3"><label class="block text-sm font-medium text-gray-700 mb-1" for="id_listening_type">Loại bài nghe</label>{{ form.listening_type }}</div>
-        <div><label class="block text-sm font-medium text-gray-700 mb-1" for="id_audio_file">File nghe (mp3/wav)</label>{{ form.audio_file }}</div>
+        <p class="bg-amber-50 border rounded-lg p-4 text-sm">Lưu thông tin buổi trước, sau đó tự thêm từ 1 đến 4 bài nghe. Chọn dạng, tải audio/PDF và nhập bảng đáp án cho từng bài. Không tạo sẵn bài mặc định.</p>
+        {% if form.instance.audio_file %}<details class="mt-3"><summary>File nghe cũ của buổi</summary>{{ form.listening_type }}{{ form.audio_file }}</details>{% endif %}
     </div>
     
     <div class="skill-block" data-for="speaking">

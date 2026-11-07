@@ -1,0 +1,7 @@
+<fieldset class="listening-question" data-question data-requires-short-answer="{{ q.requires_short_answer|yesno:'true,false' }}">
+<legend>Câu {{ q.number }}{% if q.question_text %} · {{ q.question_text }}{% endif %}</legend>
+{% if q.has_image %}<img src="{% url 'submissions:lesson_image' task.pk q.id %}" alt="Hình câu {{ q.number }}" style="max-height:240px;max-width:100%">{% endif %}
+<div class="listening-options">{% for option in q.options %}<label class="listening-option"><input type="radio" name="q_{{ q.id }}" value="{{ option.letter }}" {% if q.selected == option.letter %}checked{% endif %}><span>{{ option.letter }}{% if option.text != option.letter %}. {{ option.text }}{% endif %}</span></label>{% endfor %}</div>
+<label class="listening-answer-label" for="short_{{ q.id }}">Câu trả lời ngắn / nội dung em nghe được{% if not q.requires_short_answer %} (bổ sung){% endif %}</label>
+<input class="listening-answer" id="short_{{ q.id }}" name="s_{{ q.id }}" value="{{ q.short_answer }}" maxlength="255" placeholder="Ghi ngắn nội dung em nghe được..." autocomplete="off">
+</fieldset>

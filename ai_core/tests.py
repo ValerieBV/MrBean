@@ -124,7 +124,7 @@ class GradingTests(IntegratedFixture):
 
     def test_review_permissions_and_duplicate_review(self):
         job=self.job();GradingJob.objects.filter(pk=job.pk).update(status='manual')
-        url=f'/ai/jobs/{job.pk}/review/';body={'score':8,'feedback':'Đã kiểm tra.'}
+        url=f'/ai/jobs/{job.pk}/review/';body={'score':8,'feedback':'Đã kiểm tra.','completion_status':'complete'}
         for user,status in [(self.student,403),(self.manager,403),(self.other_teacher,404),(self.teacher,200)]:
             self.client.force_login(user);self.assertEqual(self.client.post(url,body,content_type='application/json').status_code,status)
         self.assertEqual(self.client.post(url,body,content_type='application/json').status_code,409)

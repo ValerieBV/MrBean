@@ -1,0 +1,21 @@
+{% extends 'base_admin.html' %}{% load static %}
+{% block title %}{{ title }}{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'assignments/listening.css' %}">{% endblock %}
+{% block content %}
+<div class="listening-page">
+<div class="listening-heading"><div><a href="{% url 'assignments:lesson_detail' lesson.pk %}">← {{ lesson.title }}</a><h1>{{ title }}</h1><p class="listening-muted">Tải tài liệu một lần, nhập toàn bộ đáp án cùng lúc.</p></div></div>
+<form id="listeningExerciseForm" method="post" enctype="multipart/form-data" data-has-document="{{ exercise.document_file|yesno:'true,false' }}" class="listening-panel">
+{% csrf_token %}{% if form.non_field_errors %}<div class="listening-errors" role="alert">{{ form.non_field_errors }}</div>{% endif %}
+<div class="listening-grid">
+<div><h2>1. Nội dung bài nghe</h2>{% for field in form %}{% if field.name != 'answer_key' and field.name != 'answer_key_file' %}<div class="listening-field"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{{ field.errors }}{% if field.help_text %}<p class="listening-help">{{ field.help_text }}</p>{% endif %}</div>{% endif %}{% endfor %}<p id="kindHelp" class="listening-note" role="status">Dạng 1: 6 câu · Dạng 2: 25 câu · Dạng 3: 39 câu · Dạng 4: 30 câu.</p></div>
+<div><h2>2. Đáp án hàng loạt</h2><p class="listening-muted">Nếu đề đã có trong PDF hoặc file nghe, chỉ cần nhập đáp án A/B/C/D. Dạng 2 chỉ nhận A/B/C.</p>
+<div class="listening-field"><label for="{{ form.answer_key.id_for_label }}">{{ form.answer_key.label }}</label>{{ form.answer_key }}{{ form.answer_key.errors }}<p class="listening-help">{{ form.answer_key.help_text }}</p></div>
+<div class="listening-note"><strong>Ví dụ Dạng 1</strong><p>1.A 2.C 3.B 4.D 5.A 6.C</p><p>Hoặc dán sáu ô Excel: A C B D A C.</p></div>
+<div class="listening-field"><label for="{{ form.answer_key_file.id_for_label }}">{{ form.answer_key_file.label }}</label>{{ form.answer_key_file }}{{ form.answer_key_file.errors }}<p class="listening-help">{{ form.answer_key_file.help_text }} Nếu tải file, hệ thống dùng bảng trong file thay phần dán.</p></div>
+<button type="button" id="downloadKeyTemplate" class="listening-button secondary">Tải mẫu CSV theo dạng bài</button><p id="keySummary" class="listening-help" role="status"></p>
+<p class="listening-note">Hệ thống kiểm tra số câu, câu bị thiếu hoặc trùng và lựa chọn hợp lệ trước khi lưu. Câu trả lời ngắn của học viên được lưu riêng; đáp án đúng không xuất hiện trong đề của học viên.</p>
+</div></div>
+<div class="listening-actions"><button class="listening-button" type="submit">Lưu bài nghe và đáp án</button><a href="{% url 'assignments:lesson_detail' lesson.pk %}">Hủy</a></div>
+</form></div>
+{% endblock %}
+{% block scripts %}<script src="{% static 'assignments/listening_form.js' %}" defer></script>{% endblock %}

@@ -8,6 +8,9 @@ from assignments.models import Lesson, ListeningQuestion, SpeakingTask
 class LessonProgress(models.Model):
     class Status(models.TextChoices):
         IN_PROGRESS = "in_progress", "Đang làm"
+        SUBMITTED = "submitted", "Đã nộp · chờ chấm"
+        ASSESSED = "assessed", "Đã chấm · cần xác nhận hoàn thành"
+        INCOMPLETE = "incomplete", "Bài làm bị thiếu"
         COMPLETED = "completed", "Hoàn thành"
 
     student = models.ForeignKey(

@@ -4,7 +4,6 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.paginator import Paginator
 from django.db import transaction
-from django.db.models import Q
 from django.http import JsonResponse, Http404
 from django.shortcuts import render, get_object_or_404, redirect
 from django.utils import timezone
@@ -47,8 +46,10 @@ def student_home(request, skill=None):
         cards=[]
         for value,label in Skill.choices:
             items=rows.filter(assignment__lesson__skill=value)
-            total=items.count();done=items.filter(Q(latest_job_id__isnull=False)|Q(exemption__isnull=False)).count()
-            cards.append({'skill':value,'label':label,'total':total,'done':done,'pct':round(done*100/total) if total else 0})
+            required=items.filter(exemption__isnull=True)
+            total=required.count();done=required.filter(confirmed_completion='complete').count()
+            cards.append({'skill':value,'label':label,'total':total,'done':done,
+                'exempt':items.filter(exemption__isnull=False).count(),'pct':round(done*100/total) if total else 0})
         return render(request,'submissions/student_home.html',{'cards':cards})
     if skill not in Skill.values:raise Http404
     if skill in Skill.values: rows = rows.filter(assignment__lesson__skill=skill)
@@ -56,7 +57,10 @@ def student_home(request, skill=None):
     for task in page:
         task.blocked_reason = submission_problem(task)
     return render(request, 'submissions/student_skill.html', {'tasks':page,'skill':skill,'skill_label':dict(Skill.choices)[skill],
-        'rows':[{'task':task,'lesson':task.assignment.lesson,'completed':bool(task.latest_job_id or task.exemption_id),
+        'rows':[{'task':task,'lesson':task.assignment.lesson,'completed':task.confirmed_completion=='complete',
+                 'incomplete':task.confirmed_completion=='incomplete',
+                 'has_submission':bool(task.latest_job_id), 'completion_pending':task.confirmed_completion=='pending',
+                 'pending':task.latest_status in ('queued','processing','ai_reviewed','manual'),
                  'unlocked':not task.blocked_reason,'reason':task.blocked_reason,'result_id':task.latest_job_id} for task in page]})
 
 
@@ -92,14 +96,28 @@ def do_task(request, task_id):
     progress = LessonProgress.objects.filter(student=request.user, lesson=task.assignment.lesson).first()
     draft = progress.draft if progress and progress.draft_valid and isinstance(progress.draft, dict) else {}
     answers = draft.get('answers', {})
-    questions = [{**{k: q.get(k, '') for k in ('id','question_text','option_a','option_b','option_c','option_d')},
-        'has_image': bool(q.get('image_name')), 'selected': answers.get(str(q['id']), '')}
-        for q in rubric.get('questions', [])]
+    questions = []
+    for q in rubric.get('questions', []):
+        saved = answers.get(str(q['id']), '')
+        selected = saved.get('chosen', '') if isinstance(saved, dict) else saved
+        row = {**{k: q.get(k, '') for k in ('id','question_text','option_a','option_b','option_c','option_d','exercise_id')},
+            'has_image':bool(q.get('image_name')), 'selected':selected,
+            'short_answer':saved.get('short_answer', '') if isinstance(saved, dict) else '',
+            'requires_short_answer':q.get('requires_short_answer', False), 'number':q.get('number', len(questions)+1)}
+        row['options'] = [{'letter':c, 'text':q.get('option_'+c.lower(), '')} for c in q.get('choice_letters','ABCD')
+            if q.get('option_'+c.lower())]
+        questions.append(row)
+    listening_exercises = [{**{k:e.get(k) for k in ('id','order','kind','label','title','question_count')},
+        'has_audio':bool(e.get('audio_name')), 'has_document':bool(e.get('document_name')),
+        'questions':[q for q in questions if q['exercise_id']==e['id']]} for e in rubric.get('exercises',[])]
+    if not listening_exercises and questions:
+        listening_exercises = [{'id':None, 'order':1, 'title':'Bài nghe', 'label':'Nội dung đã giao',
+            'has_audio':bool(rubric.get('audio_name')), 'has_document':False, 'questions':questions}]
     from ai_core.reporting import report_job
     jobs=list(task.jobs.order_by('-submitted_at','-pk')[:10])
     for job in jobs:job.public_status=report_job(job)['status_label']
     return render(request, 'submissions/do_'+{'listening':'listening','speaking':'speaking','vocabulary':'vocab'}[rubric['skill']]+'.html', {'task': task, 'lesson':task.assignment.lesson, 'rubric': rubric, 'questions': questions,
-        'video_embed_url': video_embed_url, 'reading_ready': reading_ready,
+        'video_embed_url': video_embed_url, 'reading_ready': reading_ready, 'listening_exercises':listening_exercises,
         'blocked_reason': submission_problem(task), 'is_late': task.due_at < timezone.now(),
         'pending_exemption': task.assignment.exemption_requests.filter(enrollment__student=request.user, status='pending').first(),
         'jobs':jobs,'word_details':rubric.get('word_details') or [{'word':word} for word in rubric.get('words',[])],
@@ -124,10 +142,12 @@ def result(request, job_id):
     try: video_url = youtube_embed(job.rubric_snapshot.get('youtube_url',''))
     except (ValidationError, ValueError): video_url = ''
     questions = {q['id']:q for q in job.rubric_snapshot.get('questions',[])}
-    listening_details = [{**row,'question_text':questions.get(row.get('question_id'),{}).get('question_text','')}
+    listening_details = [{**row,'question_text':questions.get(row.get('question_id'),{}).get('question_text',''),
+        'number':questions.get(row.get('question_id'),{}).get('number'),
+        'exercise_order':questions.get(row.get('question_id'),{}).get('exercise_order')}
         for row in job.result.get('details',[]) if isinstance(row,dict)] if job.kind=='listening' else []
     return render(request, 'submissions/result.html', {'job': job, 'can_review': can_review, 'published':report_job(job),
-        'ai_trial':ai_trial,
+        'ai_trial':ai_trial, 'can_confirm_completion':(request.user.is_superuser or request.user.role in ('admin','teacher')) and job.status=='graded' and job.completion_status=='pending',
         'staff_grading_state':staff_grading_state(job) if request.user.is_superuser or request.user.role in ('admin','manager','teacher') else None,
         'can_ask_tutor':request.user.role=='student' and not request.user.is_superuser and job.status=='graded',
         'reference_video_url':video_url, 'listening_details':listening_details})
@@ -154,8 +174,12 @@ def autosave(request, task_id=None, pk=None):
                 raise ValidationError('Đề đã được cập nhật. Hãy tải lại trang trước khi tiếp tục.')
             answers = data.get('answers', {})
             if not isinstance(answers, dict): raise ValueError()
-            valid_ids = {str(q['id']) for q in task.assignment.rubric.get('questions', [])}
-            if any(key not in valid_ids or value not in ('A','B','C','D') for key, value in answers.items()): raise ValueError()
+            if task.assignment.rubric.get('skill') == 'listening':
+                from .grading import grade_listening
+                result = grade_listening(task.assignment.rubric.get('questions', []), answers)
+                answers = {str(row['question_id']): {'chosen':row['chosen'], 'short_answer':row['short_answer']} for row in result['details']}
+            elif answers:
+                raise ValueError()
             draft = {'text': data.get('text','') if task.assignment.rubric.get('skill')=='vocabulary' else '', 'answers': answers}
             progress, _ = LessonProgress.objects.get_or_create(student=request.user, lesson=task.assignment.lesson)
             progress.draft, progress.draft_saved_at = draft, timezone.now()
@@ -206,3 +230,13 @@ def lesson_image(request, task_id, question_id):
     question = next((q for q in task.assignment.rubric.get('questions', []) if q['id']==question_id), None)
     if not question: raise Http404
     return private_path(question.get('image_name', ''))
+
+
+@login_required
+def listening_material(request, task_id, exercise_id, kind):
+    task = media_task(request, task_id)
+    from ai_core.views import private_path, private_pdf
+    exercise = next((x for x in task.assignment.rubric.get('exercises', []) if x['id']==exercise_id), None)
+    if not exercise or kind not in ('audio','document'):
+        raise Http404
+    return private_pdf(exercise.get('document_name', '')) if kind=='document' else private_path(exercise.get('audio_name', ''))

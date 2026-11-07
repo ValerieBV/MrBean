@@ -107,3 +107,5 @@
 .mrbean-theme [style*="background-color: var(--color-dark-brown)"] strong[style*="color: var(--color-burn-orange)"],.mrbean-theme [style*="background-color:var(--color-dark-brown)"] strong[style*="color:var(--color-burn-orange)"]{color:var(--mb-gold)!important}
 
 .mrbean-theme .palette-login-card .palette-login-submit{background:var(--mb-gold)!important;color:var(--mb-brown)!important}
+.mrbean-theme .badge.complete{background:var(--mb-brown)!important;color:var(--mb-cream)!important;border-color:var(--mb-brown)!important}
+.mrbean-theme .badge.incomplete{background:var(--mb-gold)!important;color:var(--mb-brown)!important;border-color:var(--mb-orange)!important}

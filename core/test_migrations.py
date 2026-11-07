@@ -63,12 +63,62 @@ class SourceDatabaseUpgradeTests(TransactionTestCase):
         job=GradingJob.objects.get(pk=job_id)
         self.assertEqual((job.final_score,job.transcript,job.teacher_feedback),(8.2,'Old transcript.','Old confirmed feedback'))
         self.assertEqual(job.rubric_snapshot['reference_transcript'],'Old exact sample.')
-        self.assertEqual(LessonProgress.objects.get(pk=progress_id).score,82)
+        self.assertEqual(job.completion_status, 'pending')
+        progress = LessonProgress.objects.get(pk=progress_id)
+        self.assertEqual(progress.score,82)
+        self.assertEqual(progress.status, 'assessed')
+        self.assertIsNone(progress.completed_at)
 
     def test_upgrade_retains_ids_scores_rubrics_and_quota(self):
         ids=self.seed_source_history()
         MigrationExecutor(connection).migrate(self.migrate_to)
         self.assert_history_after_upgrade(ids)
+
+    def test_listening_history_preserves_questions_and_derives_completion_from_work(self):
+        student_id, source_task_id, _, _ = self.seed_source_history()
+        get = self.old_apps.get_model
+        Lesson = get('assignments', 'Lesson'); Question = get('assignments', 'ListeningQuestion')
+        Assignment = get('assignments', 'ClassAssignment'); Task = get('dashboard', 'LearningTask')
+        Job = get('ai_core', 'GradingJob'); Progress = get('submissions', 'LessonProgress')
+        source = Task.objects.get(pk=source_task_id)
+        records = []
+        for index, (choices, expected, score) in enumerate([
+                (['B', 'B'], 'complete', 0), (['A', ''], 'incomplete', 10),
+                (['AB', 'A'], 'pending', 10)], 1):
+            lesson = Lesson.objects.create(skill='listening', program='B1', order=index,
+                title='Legacy listening ' + str(index), audio_file='lessons/audio/legacy.mp3')
+            questions = [Question.objects.create(lesson=lesson, order=n, correct_option='A',
+                option_a='A', option_b='B', option_c='C', option_d='D') for n in (1, 2)]
+            rubric = {'skill': 'listening', 'questions': [
+                {'id': q.pk, 'correct_option': 'A'} for q in questions]}
+            assignment = Assignment.objects.create(lesson=lesson, classroom_id=source.assignment.classroom_id,
+                assigned_at=source.assigned_at, due_at=source.due_at, rubric=rubric)
+            task = Task.objects.create(assignment=assignment, assignment_key='listen-' + str(index),
+                title=lesson.title, teacher_id=source.teacher_id, learner_id=student_id,
+                assigned_at=source.assigned_at, due_at=source.due_at)
+            progress = Progress.objects.create(student_id=student_id, lesson=lesson,
+                status='completed', score=score * 10)
+            job = Job.objects.create(task=task, progress=progress, submission_key='listen-' + str(index),
+                kind='listening', status='graded', final_score=score, rubric_snapshot=rubric,
+                teacher_feedback='Unchanged legacy feedback',
+                answers={str(q.pk): choice for q, choice in zip(questions, choices)}, finished_at=timezone.now())
+            records.append((lesson.pk, [q.pk for q in questions], job.pk, progress.pk, expected, score, rubric))
+        MigrationExecutor(connection).migrate(self.migrate_to)
+        from assignments.models import ListeningExercise, ListeningQuestion
+        from ai_core.models import GradingJob
+        from submissions.models import LessonProgress
+        for lesson_id, question_ids, job_id, progress_id, expected, score, rubric in records:
+            exercise = ListeningExercise.objects.get(lesson_id=lesson_id)
+            self.assertEqual((exercise.kind, exercise.question_count), ('legacy', 2))
+            self.assertEqual(exercise.audio_file.name, 'lessons/audio/legacy.mp3')
+            self.assertEqual(list(ListeningQuestion.objects.filter(exercise=exercise).values_list('pk', flat=True)), question_ids)
+            job = GradingJob.objects.get(pk=job_id)
+            self.assertEqual((job.completion_status, job.final_score), (expected, score))
+            self.assertEqual(job.rubric_snapshot, rubric)
+            self.assertEqual(job.teacher_feedback, 'Unchanged legacy feedback')
+            progress = LessonProgress.objects.get(pk=progress_id)
+            self.assertEqual(progress.status, {'complete':'completed', 'incomplete':'incomplete', 'pending':'assessed'}[expected])
+            self.assertEqual(progress.score, score * 10)
 
     def test_duplicate_active_enrollment_requires_review_without_deleting_data(self):
         ids=self.seed_source_history(duplicate=True)

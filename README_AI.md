@@ -191,12 +191,16 @@ Tài liệu OpenAI đã dùng:
 
 ### Nghe trắc nghiệm
 
-Tái sử dụng model câu hỏi và nguyên tắc so đáp án của phần B. Luồng mới chỉ
-cho giao bài nghe khi từng câu có A–D hợp lệ và lựa chọn đúng đã được cấu hình.
-Bỏ trống tính sai; câu của bài khác bị từ chối. Điểm chính thức = số câu đúng /
-tổng câu × 10; hoàn tất ngay, không gọi OpenAI. Không công khai correct_option
-trong HTML/form/API đề bài học viên. Các câu part34 cũ không đủ lựa chọn A–D
-phải được giáo viên bổ sung trước khi giao theo yêu cầu trắc nghiệm mới.
+Mỗi buổi tự thêm 1–4 bài, không tạo sẵn. Bốn dạng có 6/25/39/30 câu, dạng 2 dùng
+A–C và các dạng còn lại A–D. Mỗi bài có audio và bảng đáp án hàng loạt; dạng 1 cần
+PDF hiển thị trực tiếp. Giáo viên dán đáp án từ Excel hoặc tải CSV/TXT, backend kiểm
+tra đủ số câu, không trùng, lựa chọn hợp lệ rồi tạo toàn bộ câu hỏi.
+
+Học viên chọn đáp án kèm câu trả lời ngắn cho từng câu. Điểm chính thức = số câu
+chọn đúng / tổng câu × 10, chấm ngay không gọi OpenAI. Mức hoàn thành được xét riêng:
+chỉ đủ lựa chọn và câu trả lời ngắn cho tất cả câu mới hoàn thành. Không chấm ngữ nghĩa
+câu trả lời ngắn tự động. Đáp án đúng không có trong HTML/form/API đề của học viên.
+Đề lịch sử giữ snapshot và các yêu cầu cũ. Hướng dẫn: [LISTENING_AND_COMPLETION.md](docs/LISTENING_AND_COMPLETION.md).
 
 ### Nghe video và đọc lại — chỉ nộp ghi âm
 
@@ -298,9 +302,11 @@ nhập từ nhánh quản trị để thống nhất màu, font và điều hư�
 
 Tỷ lệ nộp = lượt giao đã có ít nhất một submission / toàn bộ lượt giao đến
 thời điểm hiện tại. Không tính draft là đã nộp, không đếm trùng retry/nộp lại.
-Trạng thái tiến độ theo lần nộp mới nhất; điểm theo lần nộp gần nhất đã chấm,
-có chỉ báo riêng khi nộp lại đang chờ. Nguy cơ hỗ trợ: ít nhất 3 task quá hạn
-chưa nộp, hoặc 7 ngày không nộp và còn task quá hạn (quy tắc, không phải ML).
+Tỷ lệ hoàn thành chỉ đếm lượt giao đã chấm đủ yêu cầu; điểm và mức hoàn thành lấy
+lần nộp gần nhất đã chấm, có chỉ báo riêng khi nộp lại đang chờ. Điểm số không tự
+quyết định đủ/thiếu. Bài chưa nộp, bản nháp, bài chờ chấm và bài còn thiếu không tính
+hoàn thành. Bài cũ chưa có mức hoàn thành cần giáo viên xác nhận riêng, giữ nguyên điểm. Nguy cơ hỗ trợ: ít nhất 3 task quá hạn
+chưa nộp hoặc đã chấm còn thiếu, hoặc 7 ngày không nộp và còn task quá hạn (quy tắc, không phải ML).
 
 Ghi danh qua service quản lý lớp tự thêm học viên vào các bài còn hạn. Nếu
 đã chỉnh Enrollment qua admin hoặc nhập DB ngoài service, chạy:

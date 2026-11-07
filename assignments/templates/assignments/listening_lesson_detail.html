@@ -1,0 +1,23 @@
+{% extends 'base_admin.html' %}{% load static %}
+{% block title %}{{ lesson.title }}{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'assignments/listening.css' %}">{% endblock %}
+{% block content %}
+<div class="listening-page">
+<div class="listening-heading"><div><a href="{% url 'assignments:skill_lessons' 'listening' %}">← Ngân hàng bài nghe</a><h1>Buổi {{ lesson.order }}: {{ lesson.title }}</h1><p class="listening-muted">{{ exercises|length }}/4 bài nghe · {{ lesson.get_program_display }} · {{ lesson.questions.count }} câu</p></div>
+{% if can_edit and exercises|length < 4 %}<a class="listening-button" href="{% url 'assignments:listening_exercise_create' lesson.pk %}">+ Thêm bài nghe</a>{% endif %}</div>
+<div class="listening-actions"><a class="listening-button" href="{% url 'assignments:assign' %}?lesson={{ lesson.pk }}">Giao buổi cho lớp</a><a class="listening-button secondary" href="{% url 'assignments:lesson_clone' lesson.pk %}">Sao chép buổi</a>{% if can_edit %}<a href="{% url 'assignments:lesson_update' lesson.pk %}">Sửa thông tin buổi</a>{% endif %}</div>
+<p class="listening-note">Mỗi buổi có từ 1 đến 4 bài do người giao tự thêm. Mỗi bài có file nghe, tài liệu và bảng đáp án riêng. Dán đáp án hàng loạt hoặc tải CSV để tạo câu hỏi; không cần nhập từng câu.</p>
+{% if not can_edit %}<p class="listening-note">Buổi đã được sử dụng. Các đề và đáp án đã giao được giữ nguyên; dùng “Sao chép buổi” để tạo phiên bản mới.</p>{% endif %}
+{% for exercise in exercises %}
+<section class="listening-panel">
+<div class="listening-heading"><div><h2>Bài {{ exercise.order }} · {{ exercise.display_title }}</h2><p class="listening-muted">{{ exercise.get_kind_display }} · {{ exercise.question_count }} câu · lựa chọn {{ exercise.choice_letters }}</p></div>{% if can_edit %}<div class="listening-actions"><a href="{% url 'assignments:listening_exercise_edit' lesson.pk exercise.pk %}">Sửa tài liệu / đáp án</a><a href="{% url 'assignments:listening_exercise_delete' exercise.pk %}">Xóa bài</a></div>{% endif %}</div>
+{% if exercise.audio_file %}<audio controls preload="metadata" src="{% url 'assignments:listening_exercise_media' exercise.pk 'audio' %}"></audio>{% else %}<p class="listening-errors">Chưa có file nghe. Cần bổ sung trước khi giao.</p>{% endif %}
+{% if exercise.document_file %}{% url 'assignments:listening_exercise_media' exercise.pk 'document' as pdf_url %}{% include 'assignments/_pdf_viewer.html' with pdf_title='Đề bài nghe PDF' %}{% endif %}
+<details><summary>Kiểm tra {{ exercise.questions.count }} đáp án đúng · chỉ dành cho người giao</summary><div class="listening-key">{% for q in exercise.questions.all %}<span>Câu {{ q.order }}: <strong>{{ q.correct_option }}</strong> <a href="{% url 'assignments:item_edit' 'listening' q.pk %}" aria-label="Sửa nội dung câu {{ q.order }}">Sửa</a></span>{% endfor %}</div></details>
+</section>
+{% empty %}<section class="listening-panel"><h2>Chưa thêm bài nghe</h2><p>Chọn “Thêm bài nghe”, chọn một trong bốn dạng rồi tải tài liệu và dán đáp án. Hệ thống không tự tạo sẵn bốn bài.</p></section>{% endfor %}
+{% if legacy_questions %}<section class="listening-panel"><h2>Nội dung cũ</h2><p class="listening-muted">Các câu cũ được giữ để đối chiếu. Khi tổ chức lại buổi, đưa câu hỏi vào từng bài nghe trước khi giao.</p>{% for q in legacy_questions %}<p>Câu {{ q.order }}: {{ q.question_text }} · {{ q.correct_option }}</p>{% endfor %}</section>{% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}<script type="module" src="{% static 'assignments/pdf_viewer.mjs' %}"></script>{% endblock %}

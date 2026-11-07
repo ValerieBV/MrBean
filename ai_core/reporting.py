@@ -3,12 +3,16 @@ from django.urls import reverse
 
 
 REPORT_STATUS_LABELS = {
-    'not_submitted': 'Chưa nộp',
+    'not_submitted': 'Chưa làm',
+    'in_progress': 'Đang làm · chưa nộp',
     'queued': 'Đang xử lý bài nộp',
     'processing': 'Đang xử lý bài nộp',
     'ai_reviewed': 'Chờ giáo viên chấm',
     'manual': 'Chờ giáo viên chấm',
     'graded': 'Đã có điểm cuối cùng',
+    'complete': 'Hoàn thành',
+    'incomplete': 'Bài làm bị thiếu',
+    'assessed': 'Đã chấm · cần xác nhận hoàn thành',
     'exempt': 'Được miễn',
     'exemption_pending': 'Chờ duyệt miễn',
     'locked': 'Chưa mở',
@@ -27,7 +31,9 @@ def report_job(job):
         'title': job.task.title,
         'kind': job.kind,
         'status': job.status,
-        'status_label': REPORT_STATUS_LABELS.get(job.status, job.get_status_display()),
+        'status_label': job.public_status_label,
+        'completion_status': job.completion_status if published else 'pending',
+        'completion_label': job.get_completion_status_display() if published else 'Chờ chấm',
         'submitted_at': job.submitted_at.isoformat(),
         'final_score': job.final_score if published else None,
         'teacher_feedback': job.teacher_feedback if published else '',

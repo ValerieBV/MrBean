@@ -15,6 +15,7 @@ urlpatterns = [
     path('tasks/<int:task_id>/audio/', views.lesson_audio, name='lesson_audio'),
     path('tasks/<int:task_id>/video/', views.lesson_video, name='lesson_video'),
     path('tasks/<int:task_id>/questions/<int:question_id>/image/', views.lesson_image, name='lesson_image'),
+    path('tasks/<int:task_id>/listening/<int:exercise_id>/<str:kind>/', views.listening_material, name='listening_material'),
     path('tasks/<int:task_id>/draft/', views.autosave, name='autosave'),
     path('results/<int:job_id>/', views.result, name='result'),
 ]
