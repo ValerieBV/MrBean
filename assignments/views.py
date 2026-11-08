@@ -6,12 +6,14 @@ from django.db import transaction
 from django.db.models import Q, Max, Count
 from django.shortcuts import render, get_object_or_404, redirect
 from django.urls import reverse
-from ai_core.permissions import is_manager, classes_for
+from django.views.decorators.http import require_GET
+from ai_core.permissions import is_manager, classes_for, staff_required
 from .models import Lesson, ClassAssignment, VocabWord, ListeningQuestion, SpeakingTask, Skill, ListeningExercise
 from .forms import (LessonForm, VocabWordForm, ListeningQuestionForm, SpeakingTaskForm,
                     AssignmentForm, AssignmentUpdateForm, ReadingReferenceForm, ListeningExerciseForm)
 from .services import assign_to_class, save_listening_exercise
 from .listening import LISTENING_SPECS
+from .preview import build_assignment_preview
 
 ITEMS = {'vocabulary': (VocabWordForm, VocabWord, 'words'),
          'listening': (ListeningQuestionForm, ListeningQuestion, 'questions'),
@@ -197,8 +199,32 @@ def assign(request):
             messages.success(request, 'Đã giao bài và tạo danh sách bài cần nộp cho học viên đang học trong lớp.')
             return redirect('assignments:assigned_detail', pk=saved.pk)
         except ValidationError as exc: form.add_error(None, exc)
-    return render(request, 'assignments/form.html', {'form': form, 'title': 'Giao bài cho lớp',
-        'back_url': reverse('assignments:assigned_list')})
+    def selected(field):
+        try:
+            return form.fields[field].queryset.filter(pk=int(form[field].value())).first()
+        except (ValueError, TypeError):
+            return None
+    preview = build_assignment_preview(selected('lesson'), selected('classroom'))
+    return render(request, 'assignments/assignment_form.html', {'form': form, 'preview': preview,
+        'title': 'Giao bài cho lớp', 'back_url': reverse('assignments:assigned_list')})
+
+
+@require_GET
+@staff_required
+def assign_preview(request):
+    from django.http import JsonResponse
+    from django.template.loader import render_to_string
+    lesson, classroom = None, None
+    if request.GET.get('lesson'):
+        lesson = get_object_or_404(Lesson, pk=request.GET['lesson'], is_active=True) if request.GET['lesson'].isdigit() else None
+    if request.GET.get('classroom'):
+        classroom = get_object_or_404(classes_for(request.user).filter(is_active=True).select_related('teacher'),
+            pk=request.GET['classroom']) if request.GET['classroom'].isdigit() else None
+    preview = build_assignment_preview(lesson, classroom)
+    response = JsonResponse({'html': render_to_string('assignments/_assignment_preview.html', {'preview': preview}, request=request),
+        'ready': preview['ready'], 'skill': lesson.skill if lesson else ''})
+    response['Cache-Control'] = 'private, no-store'
+    return response
 
 
 @login_required

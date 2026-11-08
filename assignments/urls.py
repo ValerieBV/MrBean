@@ -12,6 +12,7 @@ urlpatterns = [
     path('assigned/<int:pk>/edit/', views.assigned_update, name='assigned_update'),
     path('assigned/<int:pk>/reading-reference/', views.reading_reference, name='reading_reference'),
     path('assign/', views.assign, name='assign'),
+    path('assign/preview/', views.assign_preview, name='assign_preview'),
     path('lesson/<int:pk>/', views.lesson_detail, name='lesson_detail'),
     path('lesson/<int:pk>/edit/', views.lesson_update, name='lesson_update'),
     path('lesson/<int:pk>/delete/', views.lesson_delete, name='lesson_delete'),

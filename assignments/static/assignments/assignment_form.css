@@ -1,0 +1,22 @@
+.assignment-layout{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:1.5rem;align-items:start}
+.assignment-form-section{padding-top:1.25rem;margin-top:1.5rem;border-top:1px solid #eadbcc}
+.assignment-check{display:flex;align-items:flex-start;gap:.75rem;padding:.8rem 0}
+.assignment-check input{flex-shrink:0;width:1.1rem;height:1.1rem;margin-top:.25rem}
+.assignment-check label{font-weight:600;font-size:.9rem;cursor:pointer}
+.assignment-check .listening-help{margin-top:.25rem}
+.assignment-submit{justify-content:space-between;border-top:1px solid #eadbcc;padding-top:1.2rem}
+.assignment-preview{min-width:0}
+.assignment-preview-heading{margin-top:1rem;padding-bottom:1rem;border-bottom:1px solid #eadbcc}
+.assignment-preview-heading h3{margin:.75rem 0 .25rem;overflow-wrap:anywhere}
+.assignment-summary{font-size:.9rem;margin:1rem 0;line-height:1.65}
+.assignment-preview-exercise{border:1px solid #eadbcc;border-radius:10px;padding:.85rem;margin:.7rem 0;font-size:.9rem;line-height:1.65}
+.assignment-preview-exercise>strong{display:block}
+.assignment-class-summary{padding-top:1rem;margin-top:1rem;border-top:1px solid #eadbcc;overflow-wrap:anywhere}
+.assignment-problems{padding:1rem;margin-top:1rem;border:1px solid #D4621A;border-radius:10px;background:#FEF3E2}
+.assignment-problems h3{font-size:1rem}
+.assignment-problems ul{list-style:disc;padding-left:1.2rem;font-size:.9rem;line-height:1.7;max-height:420px;overflow-y:auto}
+.assignment-problems li{margin:.4rem 0}
+.assignment-ready{padding:1rem;margin-top:1rem;border-left:4px solid #F4AE52;border-radius:8px;background:#FEF3E2;font-size:.9rem;line-height:1.7}
+.assignment-page .errorlist{list-style:disc;padding-left:1.2rem;font-size:.9rem;line-height:1.65}
+@media(max-width:1100px){.assignment-layout{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:520px){.assignment-submit{align-items:stretch}.assignment-submit .listening-button{flex:1}.assignment-preview .listening-button{width:100%}}

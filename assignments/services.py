@@ -1,6 +1,8 @@
 import re
+from datetime import datetime
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
+from django.utils import timezone
 from accounts.permissions import can_assign_homework_to_class
 from .models import ClassAssignment, Lesson, ListeningExercise, ListeningQuestion
 from .listening import LISTENING_SPECS
@@ -40,21 +42,30 @@ def lesson_rubric(lesson, repetitions=1):
             'audio_name': lesson.audio_file.name if lesson.audio_file else ''}
     if lesson.skill == 'listening':
         exercises = list(lesson.listening_exercises.prefetch_related('questions'))
+        problems = []
         if len(exercises) > 4:
-            raise ValidationError('Một buổi chỉ được giao từ 1 đến 4 bài nghe.')
+            problems.append('Một buổi chỉ được giao từ 1 đến 4 bài nghe.')
         questions, groups = [], []
         if exercises:
             if lesson.questions.filter(exercise__isnull=True).exists():
-                raise ValidationError('Có câu hỏi chưa thuộc bài nghe. Kiểm tra lại buổi trước khi giao.')
+                problems.append('Có câu hỏi chưa thuộc bài nghe. Mở quản lý bài tập để đưa câu hỏi vào đúng bài.')
             for exercise in exercises:
                 items = list(exercise.questions.order_by('order', 'pk'))
-                expected = LISTENING_SPECS[exercise.kind]['count'] or exercise.question_count
+                spec = LISTENING_SPECS.get(exercise.kind)
+                if not spec:
+                    problems.append(f'Bài {exercise.order}: dạng nghe không hợp lệ. Chọn lại dạng bài.')
+                    continue
+                expected = spec['count'] or exercise.question_count
                 if len(items) != expected or [q.order for q in items] != list(range(1, expected + 1)):
-                    raise ValidationError(f'Bài {exercise.order} cần đủ {expected} câu, đánh số liên tục.')
+                    problems.append(f'Bài {exercise.order} ({spec["label"]}) cần đủ {expected} câu, đánh số liên tục; hiện có {len(items)} câu. Nhập lại bảng đáp án của bài này.')
                 if not exercise.audio_file:
-                    raise ValidationError(f'Bài {exercise.order} chưa có file nghe.')
+                    problems.append(f'Bài {exercise.order}: chưa có file nghe. Tải file nghe trước khi giao.')
+                elif not exercise.audio_file.storage.exists(exercise.audio_file.name):
+                    problems.append(f'Bài {exercise.order}: file nghe không còn trên hệ thống. Tải lại file nghe.')
                 if exercise.kind == 'part1' and not exercise.document_file:
-                    raise ValidationError('Bài Mô tả tranh cần PDF đề bài để xem trên web.')
+                    problems.append(f'Bài {exercise.order} (Mô tả tranh): cần PDF đề bài có hình ảnh để xem trên web.')
+                elif exercise.document_file and not exercise.document_file.storage.exists(exercise.document_file.name):
+                    problems.append(f'Bài {exercise.order}: file PDF không còn trên hệ thống. Tải lại PDF đề bài.')
                 group = {'id': exercise.pk, 'order': exercise.order, 'kind': exercise.kind,
                     'label': exercise.get_kind_display(), 'title': exercise.display_title,
                     'question_count': len(items), 'audio_name': exercise.audio_file.name,
@@ -62,8 +73,6 @@ def lesson_rubric(lesson, repetitions=1):
                 groups.append(group)
                 for q in items:
                     row = {k: getattr(q, k) for k in ('id', 'question_text', 'option_a', 'option_b', 'option_c', 'option_d', 'correct_option', 'correct_answer')}
-                    if q.correct_option not in exercise.choice_letters:
-                        raise ValidationError(f'Bài {exercise.order}, câu {q.order}: đáp án không đúng dạng bài.')
                     row.update(exercise_id=exercise.pk, exercise_order=exercise.order, number=q.order,
                         choice_letters=exercise.choice_letters, requires_short_answer=True,
                         image_name=q.image.name if q.image else '')
@@ -73,8 +82,23 @@ def lesson_rubric(lesson, repetitions=1):
             questions = list(lesson.questions.values('id', 'question_text', 'option_a', 'option_b', 'option_c', 'option_d', 'correct_option', 'correct_answer'))
             for number, q in enumerate(questions, 1):
                 q.update(number=number, choice_letters='ABCD', requires_short_answer=True)
-        if not questions or any(q['correct_option'] not in 'ABCD' or len(q['correct_option']) != 1 or not q['option_'+q['correct_option'].lower()] for q in questions):
-            raise ValidationError('Mỗi câu nghe phải có lựa chọn và đáp án A–D hợp lệ trước khi giao bài.')
+        if not questions and not exercises:
+            problems.append('Buổi nghe chưa có bài tập hoặc câu hỏi. Mở Quản lý bài tập, thêm từ 1 đến 4 bài nghe và nhập bảng đáp án trước khi giao.')
+        legacy_ids = {exercise.pk for exercise in exercises if exercise.kind == 'legacy'}
+        for q in questions:
+            letters = q.get('choice_letters', 'ABCD')
+            location = (f'Bài {q["exercise_order"]}, ' if q.get('exercise_order') else '') + f'câu {q["number"]}'
+            correct = q['correct_option']
+            if len(correct) != 1 or correct not in letters:
+                problems.append(f'{location}: chưa có đáp án đúng hợp lệ. Chỉ nhận {" / ".join(letters)}; nhập hoặc tải lại bảng đáp án.')
+            elif not q['option_' + correct.lower()].strip():
+                problems.append(f'{location}: thiếu lựa chọn {correct}. Bổ sung nội dung hoặc ký hiệu lựa chọn này.')
+            if q.get('exercise_id') and q['exercise_id'] not in legacy_ids:
+                missing = [letter for letter in letters if not q['option_' + letter.lower()].strip()]
+                if missing:
+                    problems.append(f'{location}: thiếu lựa chọn {" / ".join(missing)}. Dạng này cần đủ {" / ".join(letters)}.')
+        if problems:
+            raise ValidationError(problems)
         data.update(questions=questions, exercises=groups, completion_rule='all_choices_and_short_answers')
         images = dict(lesson.questions.values_list('pk','image'))
         for question in questions:
@@ -106,11 +130,25 @@ def lesson_rubric(lesson, repetitions=1):
 @transaction.atomic
 def assign_to_class(*, actor, lesson, classroom, assigned_at, due_at, repetitions=1,
                     allow_late_submission=True, requires_previous=True):
+    from courses.models import ClassRoom
+    # Authoring and publishing lock the same lesson; permission uses the current class teacher.
+    classroom = ClassRoom.objects.select_for_update().get(pk=classroom.pk)
+    lesson = Lesson.objects.select_for_update().get(pk=lesson.pk)
     if not can_assign_homework_to_class(actor, classroom):
         raise PermissionDenied
-    if not classroom.is_active or not classroom.teacher_id or not classroom.teacher.is_active or not lesson.is_active or due_at < assigned_at:
-        raise ValidationError('Kiểm tra lớp, giáo viên và thời hạn giao bài.')
-    if not 1 <= repetitions <= 100:
+    if not classroom.is_active:
+        raise ValidationError('Lớp đã ngừng hoạt động. Chọn lớp đang hoạt động để giao bài.')
+    if not classroom.teacher_id or not classroom.teacher.is_active or classroom.teacher.role != 'teacher':
+        raise ValidationError('Lớp cần có giáo viên đang hoạt động trước khi giao bài.')
+    if not lesson.is_active:
+        raise ValidationError('Buổi học đang ẩn. Mở buổi học trước khi giao.')
+    if not all(isinstance(value, datetime) and timezone.is_aware(value) for value in (assigned_at, due_at)) or due_at < assigned_at:
+        raise ValidationError('Hạn nộp không thể trước thời điểm mở bài. Kiểm tra lại ngày và giờ.')
+    if ClassAssignment.objects.filter(lesson=lesson, classroom=classroom).exists():
+        raise ValidationError('Buổi học này đã được giao cho lớp. Mở lượt giao hiện có để chỉnh hạn nộp, không tạo lại.')
+    if lesson.skill != 'vocabulary':
+        repetitions = 1
+    if type(repetitions) is not int or not 1 <= repetitions <= 100:
         raise ValidationError('Số lượt viết mỗi từ phải từ 1 đến 100.')
     rubric = lesson_rubric(lesson, repetitions)
     assignment, created = ClassAssignment.objects.get_or_create(

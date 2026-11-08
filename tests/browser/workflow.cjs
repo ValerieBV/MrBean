@@ -34,7 +34,15 @@ await admin.goto(base+'/accounts/users/create/');await fill(admin,'username','ui
 await admin.goto(base+`/courses/classes/${classID}/enroll/`);const studentValue=await admin.locator('[name=student] option').filter({hasText:'ui_student'+stamp}).getAttribute('value');await admin.locator('[name=student]').selectOption(studentValue);await save(admin,'Thêm vào lớp');
 const teacher=await session('demo_teacher');
 async function createLesson(skill,order,title,extras={}){await teacher.goto(base+'/quan-ly/bai-tap/new/');await teacher.locator('[name=skill]').selectOption(skill);await teacher.locator('[name=program]').selectOption('B1');await fill(teacher,'order',String(order));await fill(teacher,'title',title);await fill(teacher,'description','Nội dung dùng kiểm thử giao diện và quy trình.');for(const [key,val]of Object.entries(extras)){if(key==='video_file')await teacher.locator('[name=video_file]').setInputFiles(val);else await fill(teacher,key,val);}await save(teacher,'Lưu buổi');return teacher.url().match(/lesson\/(\d+)/)[1];}
-async function assignLesson(lessonID){await teacher.goto(base+`/quan-ly/bai-tap/assign/?lesson=${lessonID}&classroom=${classID}`);await fill(teacher,'assigned_at',start);await fill(teacher,'due_at',due);await fill(teacher,'repetitions','2');await Promise.all([teacher.waitForURL('**/assigned/*/'),teacher.getByRole('button',{name:'Lưu thay đổi',exact:true}).click()]);return teacher.url();}
+async function assignLesson(lessonID){
+ await teacher.goto(base+`/quan-ly/bai-tap/assign/?lesson=${lessonID}&classroom=${classID}`);
+ await teacher.locator('[data-assignment-ready=true]').waitFor();
+ await fill(teacher,'assigned_at',start);await fill(teacher,'due_at',due);
+ if(await teacher.locator('#vocabularyRepetitions').isVisible())await fill(teacher,'repetitions','2');
+ else assert(await teacher.locator('[name=repetitions]').isDisabled());
+ if(await teacher.locator('#assignmentPreview .assignment-preview-exercise').count())await teacher.screenshot({path:'screenshots/assignment-listening-preview.png',fullPage:true});
+ await Promise.all([teacher.waitForURL('**/assigned/*/'),teacher.getByRole('button',{name:'Giao bài cho lớp',exact:true}).click()]);return teacher.url();
+}
 // Real lesson authoring with four independently added listening exercises.
 execFileSync('ffmpeg',['-loglevel','error','-f','lavfi','-i','sine=frequency=440:duration=2','-y','sample-listening.mp3'],{stdio:'pipe'});
 function makeTestPDF(filename){
@@ -63,6 +71,18 @@ assert(await teacher.evaluate(()=>document.documentElement.scrollWidth<=innerWid
 await teacher.screenshot({path:'screenshots/listening-type-chooser-mobile.png',fullPage:true});
 await teacher.setViewportSize({width:1440,height:1000});
 assert.match(await teacher.locator('#main-content').innerText(),/Chưa thêm bài nghe/);
+await teacher.goto(base+`/quan-ly/bai-tap/assign/?lesson=${listening}&classroom=${classID}`);
+await teacher.locator('[data-assignment-ready=false]').waitFor();
+assert(await teacher.locator('#assignButton').isDisabled());
+assert.match(await teacher.locator('#assignmentPreview').innerText(),/Buổi nghe chưa có bài tập hoặc câu hỏi/);
+assert(!(await teacher.locator('#vocabularyRepetitions').isVisible()));
+await teacher.screenshot({path:'screenshots/assignment-empty-blocked.png',fullPage:true});
+await teacher.setViewportSize({width:390,height:920});
+await teacher.waitForFunction(()=>document.getElementById('sidebarMenu').getBoundingClientRect().right<=0);
+assert(await teacher.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
+await teacher.screenshot({path:'screenshots/assignment-empty-mobile.png',fullPage:true});
+await teacher.setViewportSize({width:1440,height:1000});
+await teacher.getByRole('link',{name:'Quản lý bài tập / bổ sung nội dung',exact:true}).click();
 for(const [index,kind,count] of [[1,'part1',6],[2,'part2',25],[3,'part3',39],[4,'part4',30]]){
  await teacher.locator('[data-add-listening-kind='+kind+']').click();
  await teacher.waitForLoadState('domcontentloaded');
@@ -83,6 +103,11 @@ for(const [index,kind,count] of [[1,'part1',6],[2,'part2',25],[3,'part3',39],[4,
 assert.equal(await teacher.getByRole('link',{name:'Thêm bài nghe',exact:true}).count(),0);
 assert.equal(await teacher.locator('[data-listening-kind]').count(),4);
 await teacher.screenshot({path:'screenshots/listening-four-exercises.png',fullPage:true});await assignLesson(listening);
+const assignedListeningURL=teacher.url();
+await teacher.goto(base+`/quan-ly/bai-tap/assign/?lesson=${listening}&classroom=${classID}`);
+await teacher.locator('[data-assignment-ready=false]').waitFor();assert(await teacher.locator('#assignButton').isDisabled());
+await teacher.getByRole('link',{name:/Mở lượt giao hiện có/}).click();assert.equal(teacher.url(),assignedListeningURL);
+results.assignment='Empty listening blocked with a content-repair link; live preview of four exercises/100 questions; vocabulary repetitions hidden for listening; valid assignment saved; duplicate links to existing assignment';
 await teacher.getByRole('link',{name:'Quản lý bài tập của buổi',exact:true}).click();
 assert.equal(await teacher.locator('[data-add-listening-kind]').count(),0);
 assert.equal(await teacher.getByRole('link',{name:'Tạo bản sao để thêm bài tập',exact:true}).count(),1);

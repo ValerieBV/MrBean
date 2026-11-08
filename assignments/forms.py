@@ -180,9 +180,12 @@ class SpeakingTaskForm(forms.ModelForm):
 class AssignmentForm(forms.Form):
     lesson = forms.ModelChoiceField(queryset=Lesson.objects.filter(is_active=True), label='Buổi học')
     classroom = forms.ModelChoiceField(queryset=None, label='Lớp nhận bài')
-    assigned_at = forms.DateTimeField(label='Thời điểm giao', widget=forms.DateTimeInput(attrs={'type': 'datetime-local'}))
-    due_at = forms.DateTimeField(label='Hạn nộp', widget=forms.DateTimeInput(attrs={'type': 'datetime-local'}))
-    repetitions = forms.IntegerField(label='Số lượt viết mỗi từ (chỉ Vocabulary)', min_value=1, max_value=100, initial=1)
+    assigned_at = forms.DateTimeField(label='Thời điểm mở bài', widget=forms.DateTimeInput(attrs={'type': 'datetime-local'}, format='%Y-%m-%dT%H:%M'),
+        help_text='Giờ Việt Nam (UTC+7). Học viên thấy bài từ thời điểm này.')
+    due_at = forms.DateTimeField(label='Hạn nộp', widget=forms.DateTimeInput(attrs={'type': 'datetime-local'}, format='%Y-%m-%dT%H:%M'),
+        help_text='Hạn nộp phải bằng hoặc sau thời điểm mở bài.')
+    repetitions = forms.IntegerField(label='Số lượt viết mỗi từ', min_value=1, max_value=100, initial=1, required=False,
+        help_text='Áp dụng cho từng từ trong bài Vocabulary, từ 1 đến 100 lượt.')
     allow_late_submission = forms.BooleanField(label='Cho phép nộp quá hạn', required=False, initial=True)
     requires_previous = forms.BooleanField(label='Yêu cầu hoàn thành bài trước cùng kỹ năng', required=False, initial=True)
 
@@ -190,6 +193,31 @@ class AssignmentForm(forms.Form):
         super().__init__(*args, **kwargs)
         from ai_core.permissions import classes_for
         self.fields['classroom'].queryset = classes_for(user).filter(is_active=True)
+        from django.utils import timezone
+        self.initial.setdefault('assigned_at', timezone.localtime().replace(second=0, microsecond=0))
+        for field in self.fields.values():
+            if not isinstance(field.widget, forms.CheckboxInput):
+                field.widget.attrs['class'] = INPUT
+        self.fields['allow_late_submission'].help_text = 'Nếu tắt, hệ thống ngừng nhận bài sau hạn nộp.'
+        self.fields['requires_previous'].help_text = 'Bài trước cùng kỹ năng, chương trình và lớp phải hoàn thành hoặc được miễn. Chỉ nộp bài chưa đủ để mở bài sau.'
+
+    def clean(self):
+        data = super().clean()
+        lesson, classroom = data.get('lesson'), data.get('classroom')
+        if data.get('assigned_at') and data.get('due_at') and data['due_at'] < data['assigned_at']:
+            self.add_error('due_at', 'Hạn nộp không thể trước thời điểm mở bài.')
+        if lesson and lesson.skill == 'vocabulary':
+            if data.get('repetitions') is None and 'repetitions' not in self.errors:
+                self.add_error('repetitions', 'Nhập số lượt viết yêu cầu cho mỗi từ.')
+        elif lesson:
+            data['repetitions'] = 1
+        if classroom and (not classroom.teacher_id or not classroom.teacher.is_active or classroom.teacher.role != 'teacher'):
+            self.add_error('classroom', 'Lớp cần có giáo viên đang hoạt động trước khi giao bài.')
+        if lesson and classroom:
+            from .models import ClassAssignment
+            if ClassAssignment.objects.filter(lesson=lesson, classroom=classroom).exists():
+                self.add_error(None, 'Buổi học này đã được giao cho lớp. Mở lượt giao hiện có để chỉnh hạn nộp.')
+        return data
 
 
 class ReadingReferenceForm(forms.Form):

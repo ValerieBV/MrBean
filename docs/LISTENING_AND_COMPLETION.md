@@ -72,6 +72,20 @@ kết quả đã dùng trước đó được giữ nguyên. Buổi của giáo 
 quyền xem và nút sao chép. Khi đủ bốn bài, màn hình báo rõ giới hạn và vẫn có nút sửa,
 xóa từng bài chưa giao.
 
+### Kiểm tra trước khi giao
+
+Trong biểu mẫu giao bài, chọn buổi và lớp để xem bảng kiểm tra bên cạnh. Hệ thống nêu
+rõ số bài/câu, tài liệu, giáo viên phụ trách và số học viên nhận bài. Nếu buổi chưa có
+bài nghe, hoặc bài/câu chưa đủ số câu, thiếu đáp án hay tài liệu, mở **Quản lý bài tập / bổ
+sung nội dung** để sửa rồi quay lại. Dạng 2 chỉ cần A/B/C; PDF chỉ bắt buộc với dạng 1.
+Thông báo “Mỗi câu nghe phải có lựa chọn và đáp án A–D…” trước đây là thông báo chung,
+không cho biết buổi rỗng hay câu nào thiếu key. Bản mới tách các trường hợp này và chỉ rõ
+bài/câu cần bổ sung; không tự đoán đáp án thay người soạn.
+
+Chỉ hiện số lượt viết khi giao Vocabulary. Nhập giờ Việt Nam (UTC+7), bảo đảm hạn nộp
+không trước thời điểm mở bài rồi bấm **Giao bài cho lớp**. Với cùng buổi và lớp đã giao,
+biểu mẫu có liên kết **Mở lượt giao hiện có** để chỉnh hạn nộp; không tạo trùng bài.
+
 ## 3. Nhập đáp án thuận tiện
 
 **Cách nhanh nhất: sao chép cột đáp án từ Excel rồi dán.** Ví dụ dạng 1 có sáu đáp án:

@@ -1,0 +1,33 @@
+{% extends 'base_admin.html' %}
+{% load static %}
+{% block title %}Giao bài cho lớp{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'assignments/listening.css' %}"><link rel="stylesheet" href="{% static 'assignments/assignment_form.css' %}">{% endblock %}
+{% block content %}
+<div class="listening-page assignment-page">
+    <div class="listening-heading"><div><a class="listening-breadcrumb" href="{{ back_url }}">← Bài tập đã giao</a><h1>Giao bài cho lớp</h1><p class="listening-muted">Chọn buổi học và lớp nhận bài, kiểm tra nội dung rồi đặt thời gian mở bài và hạn nộp.</p></div></div>
+    <div class="assignment-layout">
+        <form id="assignmentForm" class="listening-panel" method="post" data-preview-url="{% url 'assignments:assign_preview' %}" data-initial-skill="{{ preview.lesson.skill }}" data-initial-ready="{{ preview.ready|yesno:'true,false' }}">
+            {% csrf_token %}
+            {% if form.non_field_errors %}<div class="listening-errors" role="alert">{{ form.non_field_errors }}</div>{% endif %}
+            <h2>1. Buổi học và lớp nhận bài</h2>
+            {% for field in form %}
+                {% if field.name == 'assigned_at' %}<h2 class="assignment-form-section">2. Thời gian và quy định nộp</h2>{% endif %}
+                {% if field.name == 'allow_late_submission' or field.name == 'requires_previous' %}
+                    <div class="assignment-check">{{ field }}<div><label for="{{ field.id_for_label }}">{{ field.label }}</label><p class="listening-help">{{ field.help_text }}</p>{{ field.errors }}</div></div>
+                {% else %}
+                    <div class="listening-field" {% if field.name == 'repetitions' %}id="vocabularyRepetitions"{% endif %}>
+                        <label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{{ field.errors }}
+                        {% if field.help_text %}<p class="listening-help">{{ field.help_text }}</p>{% endif %}
+                    </div>
+                {% endif %}
+            {% endfor %}
+            <div class="listening-actions assignment-submit"><a class="listening-button secondary" href="{{ back_url }}">Quay lại</a><button type="submit" id="assignButton" class="listening-button">Giao bài cho lớp</button></div>
+            <p class="listening-help">Lưu thành công sẽ giao toàn bộ nội dung trong buổi cho các học viên đang hoạt động của lớp.</p>
+        </form>
+        <aside class="assignment-preview" aria-labelledby="assignment-preview-title">
+            <div class="listening-panel"><h2 id="assignment-preview-title">Kiểm tra trước khi giao</h2><p id="assignmentPreviewStatus" class="listening-help" role="status"></p><div id="assignmentPreview">{% include 'assignments/_assignment_preview.html' %}</div><button type="button" class="listening-button secondary" id="retryAssignmentPreview" hidden>Kiểm tra lại nội dung</button></div>
+        </aside>
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}<script src="{% static 'assignments/assignment_form.js' %}" defer></script>{% endblock %}

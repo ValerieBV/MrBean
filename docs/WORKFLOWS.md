@@ -61,6 +61,16 @@ Bật buổi học, chọn **Giao cho lớp**, thời điểm mở, hạn nộp,
 cầu hoàn thành bài trước hay không. Backend tạo một LearningTask cho từng học viên
 active, lưu yêu cầu/đáp án/số lượt viết thành snapshot. Không giao trùng cùng buổi/lớp.
 
+Màn hình giao bài có **Kiểm tra trước khi giao**: chọn buổi/lớp để xem số bài, số câu,
+file nghe/PDF, giáo viên và số học viên đang hoạt động. Nếu thiếu nội dung, hệ thống chỉ
+rõ bài/câu cần sửa và có nút **Quản lý bài tập / bổ sung nội dung**. Dạng 2 kiểm tra A/B/C,
+các dạng mới còn lại kiểm tra A/B/C/D. Buổi rỗng được báo là chưa có bài tập, không báo
+chung thiếu đáp án. Chỉ hiện số lượt viết khi chọn Vocabulary. Ngày giờ theo Việt Nam
+(UTC+7), hạn nộp không được trước thời điểm mở bài. Bấm **Giao bài cho lớp** khi nội dung
+đủ điều kiện. Nếu đã giao cùng buổi/lớp, mở lượt giao hiện có để chỉnh hạn thay vì tạo lại.
+Tài khoản học viên đã ngừng hoạt động không nhận lượt giao mới. Lớp chưa có học viên vẫn
+có thể lưu lượt giao; học viên ghi danh sau được đồng bộ khi lượt giao còn mở và còn hạn.
+
 Sau khi giao, buổi gốc khóa chỉnh sửa/xóa để bảo toàn dữ liệu. Dùng **Sao chép** để tạo
 buổi mới có thể chỉnh sửa đầy đủ câu hỏi/từ/câu luyện. Trong **Bài tập đã giao → Chi tiết**,
 giáo viên có thể đổi hạn nộp, tạm dừng nhận, bật/tắt nộp muộn và thứ tự mở bài.

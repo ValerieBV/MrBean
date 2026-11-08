@@ -1,0 +1,15 @@
+{% if preview.lesson %}
+    <div class="assignment-preview-heading"><span class="listening-count">{{ preview.lesson.skill_label }}</span><h3>Buổi {{ preview.lesson.order }}: {{ preview.lesson.title }}</h3><p class="listening-help">{{ preview.lesson.program }}</p></div>
+    {% if preview.lesson.skill == 'listening' %}
+        <p class="assignment-summary"><strong>{% if preview.lesson.legacy_listening %}Bài nghe cũ{% else %}{{ preview.lesson.exercises|length }} bài nghe{% endif %} · {{ preview.lesson.question_count }} câu</strong></p>
+        {% for exercise in preview.lesson.exercises %}<div class="assignment-preview-exercise"><strong>Bài {{ exercise.order }} · {{ exercise.title }}</strong><p>{{ exercise.kind }} · {{ exercise.count }} câu · {{ exercise.choices }}</p><p class="listening-help">File nghe: {{ exercise.has_audio|yesno:'Đã thêm,Chưa thêm' }} · PDF: {% if exercise.has_pdf %}Đã thêm{% elif exercise.requires_pdf %}Cần bổ sung{% else %}Không bắt buộc{% endif %}</p></div>{% endfor %}
+    {% elif preview.lesson.skill == 'vocabulary' %}<p class="assignment-summary">{{ preview.lesson.word_count }} từ trong buổi. Số lượt viết áp dụng cho từng từ.</p>
+    {% else %}<p class="assignment-summary">Bài đọc theo video. Học viên xem video rồi ghi âm; lời mẫu dùng để đối chiếu khi chấm.</p>{% endif %}
+    <a class="listening-button secondary" id="assignmentContentLink" href="{{ preview.lesson.content_url }}">Quản lý bài tập / bổ sung nội dung</a>
+{% else %}<p class="listening-note">Chọn buổi học ở biểu mẫu để kiểm tra số bài, tài liệu và đáp án trước khi giao.</p>{% endif %}
+{% if preview.classroom %}<div class="assignment-class-summary"><h3>Lớp nhận bài</h3><strong>{{ preview.classroom.code }} · {{ preview.classroom.name }}</strong><p class="listening-help">Giáo viên: {{ preview.classroom.teacher }}<br>{{ preview.classroom.student_count }} học viên đang hoạt động sẽ nhận bài.</p></div>{% endif %}
+{% if preview.existing_assignment %}<p class="listening-note"><a class="listening-text-link" href="{{ preview.existing_assignment.url }}">Mở lượt giao hiện có →</a></p>{% endif %}
+{% if preview.problems %}<div class="assignment-problems" data-assignment-ready="false"><h3>Cần bổ sung trước khi giao</h3><ul>{% for problem in preview.problems %}<li>{{ problem }}</li>{% endfor %}</ul><p class="listening-help">Sửa nội dung rồi quay lại biểu mẫu để kiểm tra và giao bài.</p></div>
+{% elif preview.ready %}<p class="assignment-ready" data-assignment-ready="true">Nội dung đủ điều kiện giao cho lớp đã chọn. Kiểm tra thời gian mở bài và hạn nộp rồi lưu.</p>
+{% elif preview.lesson and not preview.classroom %}<p class="listening-note">Chọn lớp nhận bài để hoàn tất kiểm tra.</p>{% endif %}
+{% for warning in preview.warnings %}<p class="listening-note">{{ warning }}</p>{% endfor %}

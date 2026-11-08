@@ -39,7 +39,7 @@ def sync_class_assignment(assignment):
     if not teacher or teacher.role != 'teacher':
         raise ValidationError('Lớp cần có giáo viên trước khi giao bài.')
     rows = []
-    for enrollment in Enrollment.objects.filter(classroom=assignment.classroom, status='active').select_related('student'):
+    for enrollment in Enrollment.objects.filter(classroom=assignment.classroom, status='active', student__is_active=True).select_related('student'):
         task, created = LearningTask.objects.get_or_create(
             assignment_key=f'class-assignment:{assignment.pk}', learner=enrollment.student,
             defaults=dict(assignment=assignment, title=assignment.lesson.title, teacher=teacher,
