@@ -21,14 +21,14 @@ Các biểu mẫu chung mở rộng cũng dùng hàng/cột, card và widget Boo
 
 | Thành phần | Quy định |
 | --- | --- |
-| Font chung | Be Vietnam Pro, dùng cho nội dung, tiêu đề, bảng, nút và trường nhập |
+| Font | Be Vietnam Pro ở trang quản lý, header và sidebar; Roboto/Montserrat trong các trang học tập theo nguồn đã tích hợp |
 | Tiêu đề trang | 1,65 rem, đậm 800, in hoa, giãn chữ 0,5 px |
 | Tiêu đề mục | 1,15 rem, đậm 700, in hoa, giãn chữ 0,4 px |
 | Nâu đậm | `#2A1A0E`: sidebar, thẻ thống kê, chữ chính, nút phụ |
 | Kem sáng | `#FEF3E2`: nền trang, thanh đầu trang và vùng thông tin |
 | Cam cháy | `#D4621A`: số liệu nổi bật, biểu tượng thương hiệu, viền nhấn |
 | Vàng cam | `#F4AE52`: menu đang chọn, biểu tượng trên nền nâu, nút xuất báo cáo |
-| Bố cục | Sidebar 270 px; thanh đầu trang cố định khi cuộn; nội dung cách lề 2 rem |
+| Bố cục | Sidebar 280 px, có đóng/mở; header chung cho ba vai trò; nội dung và grid co theo vùng làm việc |
 | Khối dữ liệu | Nền trắng, viền cam mảnh, bo góc 16 px, bảng có đầu nền kem |
 | Thao tác | Nút chính bo tròn, nút sửa màu nâu, trạng thái có nhãn chữ và màu |
 
@@ -48,7 +48,7 @@ bằng chuột hoặc bàn phím; thao tác đăng xuất tiếp tục dùng POS
 
 Khung sidebar/thanh đầu trang được giữ cả trước và sau đăng nhập. Menu quản trị
 đặt theo thứ tự tài khoản, lớp học, miễn BTVN, thông báo và Django Admin; các chức
-năng mở rộng vẫn truy cập trong nhóm “Bài tập & báo cáo”. Footer chỉ nằm ở cuối sidebar.
+năng mở rộng hiển thị trực tiếp trên sidebar, không có nhóm dropdown. Footer chỉ nằm ở cuối sidebar.
 
 Danh sách tài khoản giữ đủ bốn thẻ thống kê, bảng sáu cột và tiến trình hạn mức
 của nguồn. Các số liệu, danh sách hạn mức, đơn chờ duyệt và lịch sử đơn của học

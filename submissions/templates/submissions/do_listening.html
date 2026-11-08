@@ -6,18 +6,18 @@
 <div class="listening-heading"><div><a href="{% url 'submissions:student_skill' 'listening' %}">← Các buổi Listening</a><h1>Buổi {{ lesson.order }}: {{ task.title }}</h1><p class="listening-muted">Hạn nộp {{ task.due_at|date:'d/m/Y H:i' }} · {{ questions|length }} câu trong {{ listening_exercises|length }} bài nghe</p></div></div>
 {% include 'submissions/_task_context.html' %}
 {% if not blocked_reason %}
-<p class="listening-note">Nghe tài liệu, chọn đáp án và ghi lại câu trả lời ngắn để giáo viên biết bạn nghe được gì. Làm đủ yêu cầu từng câu mới được tính hoàn thành; điểm đúng/sai được theo dõi riêng.</p>
-<nav class="listening-toc" aria-label="Chuyển đến bài nghe">{% for exercise in listening_exercises %}<a href="#listening-{{ exercise.order }}">Bài {{ exercise.order }} · {{ exercise.questions|length }} câu</a>{% endfor %}</nav>
+<div class="listening-toc" role="tablist" aria-label="Bài nghe">{% for exercise in listening_exercises %}<button type="button" role="tab" data-listening-tab="{{ exercise.order }}" aria-controls="listening-{{ exercise.order }}" aria-selected="{% if forloop.first %}true{% else %}false{% endif %}">Bài {{ exercise.order }} · {{ exercise.questions|length }} câu</button>{% endfor %}</div>
 <form id="submissionForm" method="post" action="{% url 'ai_core:submit' %}" enctype="multipart/form-data" data-kind="listening" data-submit-url="{% url 'ai_core:submit' %}" data-draft-url="{% url 'submissions:autosave' task.pk %}">
 {% csrf_token %}<input type="hidden" name="task_id" value="{{ task.pk }}"><input type="hidden" name="submission_key" value="{{ submission_key }}"><input type="hidden" name="reference_version" value="{{ task.assignment.reference_version }}">
-<p id="listeningProgress" class="listening-sticky-note" role="status">Đã làm đủ 0/{{ questions|length }} câu.</p>
+<p id="listeningProgress" class="listening-sticky-note" role="status">Đã trả lời 0/{{ questions|length }} câu.</p>
 {% for exercise in listening_exercises %}
-<section id="listening-{{ exercise.order }}" class="listening-panel">
+<section id="listening-{{ exercise.order }}" class="listening-panel" data-listening-exercise="{{ exercise.order }}" role="tabpanel" aria-label="Bài {{ exercise.order }}">
 <h2>Bài {{ exercise.order }} · {{ exercise.title }}</h2><p class="listening-muted">{{ exercise.label }} · {{ exercise.questions|length }} câu</p>
 {% if exercise.has_audio %}<audio controls preload="metadata" src="{% if exercise.id %}{% url 'submissions:listening_material' task.pk exercise.id 'audio' %}{% else %}{% url 'submissions:lesson_audio' task.pk %}{% endif %}"></audio>{% endif %}
-<div{% if exercise.has_document %} class="listening-workspace"{% endif %}>
-{% if exercise.has_document %}<div>{% url 'submissions:listening_material' task.pk exercise.id 'document' as pdf_url %}{% include 'assignments/_pdf_viewer.html' with pdf_title='Đề bài nghe PDF' %}</div>{% endif %}
-<div>{% for q in exercise.questions %}{% include 'submissions/_listening_question.html' %}{% endfor %}</div>
+{% if exercise.has_document and exercise.kind != 'part1' %}<button type="button" class="listening-button secondary" data-pdf-toggle="pdf-exercise-{{ exercise.order }}" aria-expanded="false" aria-controls="pdf-exercise-{{ exercise.order }}">Xem đề PDF</button>{% endif %}
+<div{% if exercise.has_document and exercise.kind == 'part1' %} class="listening-workspace"{% endif %}>
+{% if exercise.has_document %}<div id="pdf-exercise-{{ exercise.order }}" {% if exercise.kind != 'part1' %}hidden{% endif %}>{% url 'submissions:listening_material' task.pk exercise.id 'document' as pdf_url %}{% include 'assignments/_pdf_viewer.html' with pdf_title='Đề bài nghe PDF' %}</div>{% endif %}
+<div><div class="listening-question-nav" aria-label="Chọn câu hỏi"></div>{% for q in exercise.questions %}{% include 'submissions/_listening_question.html' %}{% endfor %}<div class="listening-actions question-controls"><button type="button" class="listening-button secondary" data-question-prev>← Câu trước</button><span class="question-counter"></span><button type="button" class="listening-button secondary" data-question-next>Câu tiếp →</button></div></div>
 </div></section>
 {% endfor %}
 {% include 'submissions/_submit_controls.html' %}
@@ -26,4 +26,4 @@
 {% include 'submissions/_submission_history.html' %}
 </div>
 {% endblock %}
-{% block scripts %}<script type="module" src="{% static 'assignments/pdf_viewer.mjs' %}"></script>{% if not blocked_reason %}<script src="{% static 'submissions/submit.js' %}" defer></script>{% endif %}{% endblock %}
+{% block scripts %}<script type="module" src="{% static 'assignments/pdf_viewer.mjs' %}"></script>{% if not blocked_reason %}<script src="{% static 'submissions/submit.js' %}" defer></script><script src="{% static 'submissions/listening.js' %}" defer></script>{% endif %}{% endblock %}

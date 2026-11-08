@@ -44,9 +44,9 @@ giáo viên chấm. Báo cáo vẫn giữ riêng số đã nộp để phân bi�
 | Dạng | Số câu cố định | Lựa chọn | Tài liệu |
 | --- | --- | --- | --- |
 | 1 · Mô tả tranh | 6 | A, B, C, D | File nghe và PDF đề có tranh |
-| 2 · Hỏi - Đáp | 25 | A, B, C | File nghe; có thể thêm PDF |
+| 2 · Hỏi - Đáp · Câu 7–31 | 25 | A, B, C | Chỉ file nghe |
 | 3 · Cuộc hội thoại ngắn | 39 | A, B, C, D | File nghe; có thể thêm PDF |
-| 4 · Bài nói ngắn | 30 | A, B, C, D | File nghe; có thể thêm PDF |
+| 4 · Bài nói ngắn · Câu 71–100 | 30 | A, B, C, D | File nghe; có thể thêm PDF |
 
 Không bắt buộc chọn đủ bốn dạng trong một buổi. Nếu thêm cả bốn thì có tổng cộng 100
 câu. Các bài được thêm riêng, mỗi bài có tài liệu và bảng đáp án riêng. Số câu tự đổi
@@ -55,11 +55,33 @@ theo dạng; backend từ chối số câu không đúng quy định.
 4. Tải file nghe MP3/WAV/M4A/MP4/OGG/WebM, tối đa **50 MiB/bài**. Nên dùng MP3 để
    các trình duyệt phát thuận tiện. PDF tối đa **25 MiB**, bắt buộc với dạng 1.
    PDF cần có đủ hình/đề học viên được xem và không chứa bảng đáp án đúng.
-5. Nhập đáp án hàng loạt theo một trong các cách ở mục 3, rồi bấm
-   **Lưu bài nghe và đáp án**. Có thể sửa riêng nội dung một câu nếu muốn.
-6. Thêm các bài còn lại theo nhu cầu. Kiểm tra file nghe, PDF và bảng đáp án tại
+5. Với dạng 3/4, tải PDF có câu hỏi và đầy đủ lựa chọn. Hệ thống đọc chữ từ PDF
+   để tạo nội dung câu hỏi trên web, giữ nguyên số câu trên đề (ví dụ 32–70).
+   Nếu tài liệu là PDF scan/ảnh, chọn **Đọc bản scan bằng AI**.
+6. Mở phần **Câu hỏi và lựa chọn**, bấm từng số câu để kiểm tra câu hỏi và A/B/C/D.
+   Sửa nội dung nhận dạng sai hoặc thiếu. Câu AI báo chưa rõ cần kiểm tra rồi bấm
+   **Đã kiểm tra câu này**; hệ thống chặn lưu dạng 3/4 nếu chỉ có ký hiệu A/B/C/D.
+7. Nhập đáp án đúng hàng loạt theo mục 3, rồi bấm **Lưu bài nghe và đáp án**.
+   Đáp án được nhập riêng; bộ đọc PDF không tự đoán đáp án đúng.
+8. Thêm các bài còn lại theo nhu cầu. Kiểm tra file nghe, PDF và bảng đáp án tại
    chi tiết buổi, rồi bấm **Giao buổi cho lớp**. Chọn lớp, thời điểm mở, hạn nộp
    và quy định nhận bài.
+
+PDF có lớp chữ được đọc bằng PDF.js ngay trong trình duyệt, không gọi OpenAI.
+Mỗi PDF nhập câu hỏi tối đa 40 trang; nên tách đúng phần cần giao. Cơ chế đọc hỗ trợ
+bố cục một/hai cột và lựa chọn xuống dòng, nhưng giáo viên vẫn kiểm tra trước khi lưu.
+Với PDF scan, nút nhận dạng gọi OpenAI bằng `OPENAI_API_KEY` và `OPENAI_TEXT_MODEL`
+đã cấu hình trên máy chạy Django; có thể phát sinh phí API. Không cần train hay cài
+thêm thư viện Python cho chức năng này. API key không được đưa ra trình duyệt.
+Nhận dạng có thể sai khi ảnh mờ hoặc bố cục phức tạp; nội dung chưa rõ không được
+tự điền thành lời giải. Chỉ bấm nhận dạng khi tài liệu cần dùng AI.
+
+Dạng 1 có tranh và các lựa chọn trong audio; không cần tự tạo lời đọc không in trên đề.
+Dạng 2 chỉ có file nghe, gồm câu 7–31 và ba lựa chọn A/B/C. Biểu mẫu ẩn PDF và phần
+nhập câu hỏi in sẵn của dạng này; học viên nghe, chọn A/B/C rồi ghi câu trả lời ngắn.
+Dạng 4 gồm 30 câu, đánh số 71–100 như TOEIC Part 4.
+Dạng 3/4 cần câu hỏi và nội dung lựa chọn để học viên chọn ngay trên web; có thể nhập
+bằng PDF, CSV đủ nội dung hoặc sửa trong trình soạn câu.
 
 PDF được hiển thị trên web với nút chuyển trang, phóng to/thu nhỏ. Không cần tải về
 để làm bài. Bộ xem PDF được đóng gói sẵn trong mã nguồn, không cần cài thêm Python
@@ -118,15 +140,23 @@ Khi tải file, hệ thống dùng nội dung file thay cho phần dán. Dạng 
 Số câu thiếu, trùng, ngoài phạm vi hoặc đáp án không hợp lệ sẽ báo lỗi trước khi lưu.
 File CSV/TXT tối đa 1 MiB. Không tự dùng AI đoán đáp án từ audio hoặc PDF.
 
-Nếu cần hiển thị thêm văn bản đề/lựa chọn, dùng các cột tùy chọn
-`question_text,A,B,C,D` trong mẫu CSV. Nội dung chứa dấu phẩy phải được đặt trong dấu
-nháy kép. Nếu đề/lựa chọn đã có trong tài liệu nghe hoặc PDF, chỉ điền `number,answer`;
-trên web học viên chọn các nút A/B/C/D tương ứng.
+Nếu nhập nội dung đề/lựa chọn bằng CSV, dùng các cột
+`question_text,A,B,C,D` trong mẫu. Nội dung chứa dấu phẩy phải đặt trong dấu nháy kép.
+Nếu đã đọc và kiểm tra câu hỏi từ PDF, chỉ cần điền `number,answer`.
+Mẫu CSV dùng số câu đang hiển thị trong phần kiểm tra; có thể nhập key theo số trên
+đề (ví dụ `32.B … 70.C`), theo thứ tự trong bài (`1.B … 39.C`) hoặc chỉ dán chuỗi chữ.
+Không trộn hai cách đánh số trong cùng một bảng. Số câu trên PDF được lưu riêng với
+thứ tự nội bộ, giữ đúng liên kết câu hỏi–lựa chọn–key khi chấm và xem kết quả.
 
 ## 4. Học viên làm bài và giáo viên theo dõi
 
-Học viên mở buổi đã giao, phát audio, xem PDF rồi chọn đáp án và ghi câu trả lời ngắn
-ở từng câu (tối đa 255 ký tự/câu). Bộ đếm cho biết đã làm đủ bao nhiêu câu. Cả lựa
+Học viên chọn bài bằng các tab, phát audio, bấm số câu để làm lần lượt. Nội dung
+câu hỏi và từng lựa chọn được hiển thị trực tiếp. Chọn một phương án bằng nút tròn
+rồi ghi câu trả lời ngắn ở ô bên cạnh (trên điện thoại nằm ngay dưới lựa chọn), tối
+đa 255 ký tự/câu. Dạng 1 hiển thị PDF tranh cùng phần trả lời; dạng 3/4 có nút
+**Xem đề PDF** khi cần đối chiếu tài liệu gốc. Nút trước/tiếp theo đổi câu; dấu số
+cho biết câu nào đã làm đủ. Chuyển bài/câu không xóa câu trả lời đã nhập.
+Bộ đếm cho biết đã trả lời bao nhiêu câu. Cả lựa
 chọn và câu trả lời ngắn được lưu nháp; có thể tải lại để tiếp tục trong hạn lưu nháp.
 Vẫn cho phép nộp khi còn thiếu để ghi nhận đúng tình trạng bài đã làm.
 
@@ -154,7 +184,8 @@ Chạy các lệnh bằng Python của virtualenv đang dùng trong PyCharm. Kh�
 `requirements.txt` cho thay đổi này. Khởi động lại website, AI worker và watchdog.
 Nếu triển khai dùng static đã thu thập, chạy thêm `python manage.py collectstatic --noinput`.
 
-Migration giữ nguyên điểm, nhận xét, bài làm, ID câu hỏi và snapshot đề cũ. Các câu nghe
+Migration mới `assignments.0007` bổ sung số câu trên đề gốc, không viết lại snapshot
+hay kết quả lịch sử. Điểm, nhận xét, bài làm và ID câu hỏi cũ được giữ nguyên. Các câu nghe
 trong ngân hàng cũ được gom thành một bài **Bài nghe đã có**; không tự nhân thành bốn bài
 hoặc ép đổi số câu của đề lịch sử. Trước khi giao lại nguồn cũ, bổ sung audio còn thiếu;
 nên sao chép và tạo bài theo bốn dạng mới khi muốn chuẩn hóa nội dung.

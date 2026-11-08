@@ -6,13 +6,13 @@ from django.db import transaction
 from django.db.models import Q, Max, Count
 from django.shortcuts import render, get_object_or_404, redirect
 from django.urls import reverse
-from django.views.decorators.http import require_GET
+from django.views.decorators.http import require_GET, require_POST
 from ai_core.permissions import is_manager, classes_for, staff_required
 from .models import Lesson, ClassAssignment, VocabWord, ListeningQuestion, SpeakingTask, Skill, ListeningExercise
 from .forms import (LessonForm, VocabWordForm, ListeningQuestionForm, SpeakingTaskForm,
                     AssignmentForm, AssignmentUpdateForm, ReadingReferenceForm, ListeningExerciseForm)
 from .services import assign_to_class, save_listening_exercise
-from .listening import LISTENING_SPECS
+from .listening import FIRST_NUMBER, LISTENING_SPECS
 from .preview import build_assignment_preview
 
 ITEMS = {'vocabulary': (VocabWordForm, VocabWord, 'words'),
@@ -101,7 +101,7 @@ def lesson_detail(request, pk):
             spec = LISTENING_SPECS[kind]
             type_cards.append({
                 'kind': kind, 'label': spec['label'], 'number': index,
-                'count': spec['count'], 'choices': ' / '.join(spec['choices']),
+                'count': spec['count'], 'first_number': FIRST_NUMBER[kind], 'last_number': FIRST_NUMBER[kind]+spec['count']-1, 'choices': ' / '.join(spec['choices']),
                 'existing': sum(item.kind == kind for item in exercises),
                 'icon': icon, 'requires_pdf': kind == 'part1',
             })
@@ -352,6 +352,59 @@ def listening_exercise_edit(request, lesson_id, pk=None):
         'selected_spec': LISTENING_SPECS.get(form['kind'].value(), LISTENING_SPECS['part1']),
         'title': 'Chỉnh sửa bài nghe' if exercise else 'Thêm bài nghe vào buổi',
     })
+
+
+@require_POST
+@staff_required
+def listening_extract(request, lesson_id):
+    import json
+    from django.http import JsonResponse
+    from openai import OpenAIError
+    from .question_import import extract_text_questions, extract_scanned_pdf
+    lesson = get_object_or_404(editable_lessons(request.user), pk=lesson_id, skill='listening')
+    try:
+        assert_editable(request, lesson)
+    except ValidationError as exc:
+        return JsonResponse({'message': ' '.join(exc.messages)}, status=409)
+    try:
+        if request.content_type == 'application/json':
+            if len(request.body) > 5*1024*1024:
+                raise ValidationError('PDF quá nhiều chữ. Tách riêng phần cần dùng.')
+            data = json.loads(request.body)
+            kind = data.get('kind') if isinstance(data, dict) else None
+            if kind == 'part2':
+                raise ValidationError('Dạng 2 chỉ dùng file nghe, câu 7–31; không cần đọc PDF.')
+            if kind not in ('part1','part3','part4'):
+                raise ValidationError('Chọn dạng bài nghe trước khi đọc PDF.')
+            questions = extract_text_questions(data.get('pages'), kind)
+        else:
+            kind = request.POST.get('kind')
+            if kind == 'part2':
+                raise ValidationError('Dạng 2 chỉ dùng file nghe, câu 7–31; không cần đọc PDF.')
+            if kind not in ('part1','part3','part4'):
+                raise ValidationError('Chọn dạng bài nghe trước khi đọc PDF.')
+            upload = request.FILES.get('document_file')
+            if not upload and request.POST.get('exercise_id', '').isdigit():
+                exercise = get_object_or_404(ListeningExercise, pk=request.POST['exercise_id'], lesson=lesson)
+                if exercise.document_file:
+                    upload = exercise.document_file
+                    upload.open('rb')
+            if not upload:
+                raise ValidationError('Chọn file PDF trước khi nhận dạng bản scan.')
+            try:
+                questions = extract_scanned_pdf(upload, kind)
+            finally:
+                upload.close()
+        response = JsonResponse({'questions': questions, 'expected': LISTENING_SPECS[kind]['count']})
+        response['Cache-Control'] = 'private, no-store'
+        return response
+    except (ValidationError, ValueError, UnicodeDecodeError) as exc:
+        message = ' '.join(exc.messages) if isinstance(exc, ValidationError) else 'Không đọc được nội dung PDF.'
+        return JsonResponse({'message': message}, status=400)
+    except OSError:
+        return JsonResponse({'message':'Không mở được PDF đã lưu. Chọn lại tài liệu để tiếp tục.'}, status=400)
+    except OpenAIError:
+        return JsonResponse({'message':'Chưa nhận dạng được bản scan. Kiểm tra kết nối và cấu hình OpenAI, hoặc dùng PDF có chữ.'}, status=502)
 
 
 @login_required

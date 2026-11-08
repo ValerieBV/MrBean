@@ -12,9 +12,10 @@ async function openPDF(viewer) {
     const next = viewer.querySelector('[data-pdf-next]');
     const minus = viewer.querySelector('[data-pdf-minus]');
     const plus = viewer.querySelector('[data-pdf-plus]');
-    let pdf, pageNumber = 1, zoom = 1, renderTask, generation = 0, lastWidth = 0;
+    let pdf, pageNumber = 1, zoom = 1, renderTask, generation = 0, lastWidth = 0, resizeFrame = 0;
 
     async function renderPage() {
+        if (!viewport.clientWidth) return;
         const current = ++generation;
         if (renderTask) {
             renderTask.cancel();
@@ -67,11 +68,24 @@ async function openPDF(viewer) {
         plus.addEventListener('click', () => {zoom = Math.min(2.5, zoom + .25); renderPage();});
         new ResizeObserver(entries => {
             const width = Math.round(entries[0].contentRect.width);
-            if (width !== lastWidth) {lastWidth = width; renderPage();}
+            if (width === lastWidth) return;
+            lastWidth = width;
+            cancelAnimationFrame(resizeFrame);
+            if (width > 0) resizeFrame = requestAnimationFrame(() => renderPage());
         }).observe(viewport);
     } catch {
         status.textContent = 'Không mở được PDF. Thử tải lại trang hoặc mở đề trong tab mới.';
     }
 }
 
-document.querySelectorAll('[data-pdf-url]').forEach(openPDF);
+const viewers = document.querySelectorAll('[data-pdf-url]');
+if ('IntersectionObserver' in window) {
+    const visible = new IntersectionObserver(entries => {
+        for (const entry of entries) {
+            if (entry.isIntersecting) {visible.unobserve(entry.target);openPDF(entry.target);}
+        }
+    }, {rootMargin:'160px'});
+    viewers.forEach(viewer => visible.observe(viewer));
+} else {
+    viewers.forEach(openPDF);
+}

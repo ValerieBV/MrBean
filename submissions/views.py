@@ -8,6 +8,7 @@ from django.http import JsonResponse, Http404
 from django.shortcuts import render, get_object_or_404, redirect
 from django.utils import timezone
 from django.views.decorators.http import require_POST
+from assignments.listening import FIRST_NUMBER
 from ai_core.models import GradingJob
 from ai_core.permissions import tasks_for
 from .access import submission_problem, assert_can_submit, is_unlocked
@@ -82,6 +83,11 @@ def do_lesson(request, pk):
     return redirect('submissions:do_task', task_id=task.pk)
 
 
+def listening_question_number(question, exercise_kinds, fallback=1):
+    start = FIRST_NUMBER.get(exercise_kinds.get(question.get('exercise_id')), 1)
+    return question.get('source_number') or start + question.get('number', fallback) - 1
+
+
 @login_required
 def do_task(request, task_id):
     task = own_task(request, task_id)
@@ -97,18 +103,23 @@ def do_task(request, task_id):
     draft = progress.draft if progress and progress.draft_valid and isinstance(progress.draft, dict) else {}
     answers = draft.get('answers', {})
     questions = []
+    exercise_kinds = {item['id']:item.get('kind') for item in rubric.get('exercises', [])}
     for q in rubric.get('questions', []):
         saved = answers.get(str(q['id']), '')
         selected = saved.get('chosen', '') if isinstance(saved, dict) else saved
         row = {**{k: q.get(k, '') for k in ('id','question_text','option_a','option_b','option_c','option_d','exercise_id')},
             'has_image':bool(q.get('image_name')), 'selected':selected,
             'short_answer':saved.get('short_answer', '') if isinstance(saved, dict) else '',
-            'requires_short_answer':q.get('requires_short_answer', False), 'number':q.get('number', len(questions)+1)}
+            'requires_short_answer':q.get('requires_short_answer', False), 'number':listening_question_number(q, exercise_kinds, len(questions)+1)}
+        exercise_kind = exercise_kinds.get(q.get('exercise_id'))
         row['options'] = [{'letter':c, 'text':q.get('option_'+c.lower(), '')} for c in q.get('choice_letters','ABCD')
             if q.get('option_'+c.lower())]
+        if exercise_kind == 'part2':
+            row.update(question_text='', has_image=False, options=[{'letter':c,'text':c} for c in 'ABC'])
+        row['has_printed_options'] = any(option['text'] != option['letter'] for option in row['options'])
         questions.append(row)
     listening_exercises = [{**{k:e.get(k) for k in ('id','order','kind','label','title','question_count')},
-        'has_audio':bool(e.get('audio_name')), 'has_document':bool(e.get('document_name')),
+        'has_audio':bool(e.get('audio_name')), 'has_document':bool(e.get('document_name')) and e.get('kind') != 'part2',
         'questions':[q for q in questions if q['exercise_id']==e['id']]} for e in rubric.get('exercises',[])]
     if not listening_exercises and questions:
         listening_exercises = [{'id':None, 'order':1, 'title':'Bài nghe', 'label':'Nội dung đã giao',
@@ -142,8 +153,9 @@ def result(request, job_id):
     try: video_url = youtube_embed(job.rubric_snapshot.get('youtube_url',''))
     except (ValidationError, ValueError): video_url = ''
     questions = {q['id']:q for q in job.rubric_snapshot.get('questions',[])}
+    exercise_kinds = {item['id']:item.get('kind') for item in job.rubric_snapshot.get('exercises', [])}
     listening_details = [{**row,'question_text':questions.get(row.get('question_id'),{}).get('question_text',''),
-        'number':questions.get(row.get('question_id'),{}).get('number'),
+        'number':listening_question_number(questions.get(row.get('question_id'),{}), exercise_kinds),
         'exercise_order':questions.get(row.get('question_id'),{}).get('exercise_order')}
         for row in job.result.get('details',[]) if isinstance(row,dict)] if job.kind=='listening' else []
     return render(request, 'submissions/result.html', {'job': job, 'can_review': can_review, 'published':report_job(job),

@@ -22,7 +22,7 @@ def build_assignment_preview(lesson=None, classroom=None):
             'exercises': [{'order': item.order, 'title': item.title or LISTENING_SPECS.get(item.kind, {}).get('label', 'Dạng chưa hợp lệ'),
                 'kind': item.get_kind_display(), 'count': item.question_count,
                 'choices': ' / '.join(item.choice_letters) if item.kind in ('part1','part2','part3','part4','legacy') else '',
-                'has_audio': bool(item.audio_file), 'has_pdf': bool(item.document_file),
+                'has_audio': bool(item.audio_file), 'has_pdf': item.kind != 'part2' and bool(item.document_file),
                 'requires_pdf': item.kind == 'part1'} for item in exercises],
         }
         if lesson.skill == 'listening' and not exercises and lesson.questions.exists():

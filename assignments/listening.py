@@ -8,6 +8,8 @@ from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import UploadedFile
 
 
+FIRST_NUMBER = {'part1': 1, 'part2': 7, 'part3': 32, 'part4': 71}
+
 LISTENING_SPECS = {
     'part1': {'label': 'Mô tả tranh', 'count': 6, 'choices': 'ABCD'},
     'part2': {'label': 'Hỏi - Đáp', 'count': 25, 'choices': 'ABC'},
@@ -43,7 +45,7 @@ def _header(value):
     return re.sub(r'[^a-z0-9]', '', ''.join(c for c in value if not unicodedata.combining(c)))
 
 
-def parse_answer_key(text, question_count, choices):
+def parse_answer_key(text, question_count, choices, source_numbers=None):
     """Accept numbered keys, a sequence of letters, or a UTF-8 CSV with a header.
 
     Optional CSV columns: number,answer,question_text,A,B,C,D. No guesswork:
@@ -91,6 +93,12 @@ def parse_answer_key(text, question_count, choices):
             if not matches or re.sub(r'[\s,;|]+', '', leftover):
                 raise ValidationError('Dùng dạng 1.A 2.C 3.B, chuỗi A C B, hoặc CSV có cột number,answer.')
             rows = [{'number': int(m[1]), 'answer': m[2]} for m in matches]
+    if source_numbers and len(source_numbers) == question_count:
+        submitted = {row['number'] for row in rows}
+        if submitted == set(source_numbers) and submitted != set(range(1, question_count + 1)):
+            positions = {number: i for i, number in enumerate(source_numbers, 1)}
+            for row in rows:
+                row['source_number'], row['number'] = row['number'], positions[row['number']]
     by_number = {}
     for row in rows:
         number = row['number']

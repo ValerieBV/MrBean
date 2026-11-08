@@ -21,35 +21,14 @@
     <a class="source-skip" href="#main-content">Đi đến nội dung</a>
     {% include 'core/sidebar.html' %}
     <div class="learning-workspace">
-    <div class="student-banner text-white text-sm" style="background:#2A1A0E">
-        <div class="max-w-6xl mx-auto px-4 py-2 flex items-center justify-between flex-wrap gap-y-1">
-            <div class="flex items-center space-x-2 flex-wrap">
-                <button class="sidebar-toggle" type="button" data-menu-toggle aria-controls="sidebarMenu" aria-expanded="true" aria-label="Đóng điều hướng"><i class="bi bi-list" aria-hidden="true"></i></button>
-                <i class="fa-solid fa-graduation-cap text-amber-300"></i>
-                <span class="font-semibold">MR BEAN ENGLISH</span>
-                {% if student_info %}
-                <span class="opacity-80 hidden md:inline">·</span>
-                <span class="opacity-90 hidden md:inline">{{ student_info.chung_chi }} · {{ student_info.khoa }} · {{ student_info.co_so }} · {{ student_info.ma_hv }} · {{ student_info.ho_ten }}</span>
-                {% endif %}
-            </div>
-            <div class="flex items-center space-x-3">
-                <a href="{% url 'submissions:dashboard' %}" class="hover:underline"><i class="fa-regular fa-user"></i> {{ student_info.ho_ten }}</a>
-                <a href="{% url 'accounts:logout' %}" onclick="event.preventDefault();document.getElementById('lf').submit();" class="hover:underline"><i class="fa-solid fa-right-from-bracket"></i> Thoát</a>
-                <form id="lf" method="post" action="{% url 'accounts:logout' %}" class="hidden">{% csrf_token %}</form>
-            </div>
-        </div>
-    </div>
-
-    <nav class="bg-white border-b" aria-label="Tiện ích học viên"><div class="max-w-6xl mx-auto px-4 py-2 flex flex-wrap gap-4 text-xs font-semibold text-gray-700">
-        <a href="{% url 'courses:class_list' %}">Khóa học của tôi</a><a href="{% url 'dashboard:index' %}">Báo cáo học tập</a><a href="{% url 'support:contact_list' %}">Liên hệ & phản ánh</a><a href="{% url 'accounts:notification_list' %}">Thông báo</a>
-    </div></nav>
+    {% include 'core/topbar.html' %}
     {% if current_class %}
     <div class="bg-white border-b">
-        <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-            <h1 class="text-lg md:text-xl font-bold font-title" style="color:#2A1A0E">
+        <div class="student-class-row max-w-6xl mx-auto px-4 py-3">
+            <p class="student-class-title text-lg md:text-xl font-bold font-title" style="color:#2A1A0E">
                 [{{ current_class.cert }}] {{ current_class.name }} <span class="text-gray-400 font-normal">[{{ current_class.code }}]</span>
-            </h1>
-            <a href="{% url 'submissions:dashboard' %}" class="text-xs text-gray-500 hover:text-amber-700"><i class="fa-solid fa-angle-left"></i> Đổi lớp</a>
+            </p>
+            <a href="{% url 'submissions:dashboard' %}" class="student-change-class text-xs text-gray-500 hover:text-amber-700"><i class="fa-solid fa-angle-left"></i> Đổi lớp</a>
         </div>
     </div>
     {% endif %}

@@ -1,4 +1,5 @@
 import io
+import json
 from datetime import timedelta
 from django.core.exceptions import ValidationError, PermissionDenied
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -40,6 +41,10 @@ class ListeningExerciseTests(IntegratedFixture):
         count = count or {'part1':6, 'part2':25, 'part3':39, 'part4':30}[kind]
         data = {'kind':kind, 'order':order, 'title':'Bài nghe thử', 'question_count':count,
             'answer_key':key or ' '.join('A' for _ in range(count))}
+        if kind in ('part3','part4'):
+            start = 32 if kind=='part3' else 71
+            data['question_data'] = json.dumps([{'number':start+i,'question_text':f'What is question {start+i}?',
+                **{'option_'+c.lower():f'Choice {c} for question {start+i}' for c in 'ABCD'}} for i in range(count)])
         files = {'audio_file':SimpleUploadedFile('audio.mp3', b'ID3-test-audio', content_type='audio/mpeg')}
         if document:
             files['document_file'] = SimpleUploadedFile('de-bai.pdf', b'%PDF-1.4\n%%EOF', content_type='application/pdf')

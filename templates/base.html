@@ -20,53 +20,7 @@
         <!-- Main Workspace -->
         <div class="app-main">
             <!-- B. Topbar Header -->
-            <header class="app-topbar">
-                <div class="topbar-left">
-                    <button class="sidebar-toggle" type="button" data-menu-toggle aria-controls="sidebarMenu" aria-expanded="false" aria-label="Mở điều hướng">
-                        <i aria-hidden="true" class="bi bi-list fs-3"></i>
-                    </button>
-                    <div>
-                        <div class="user-role-sub text-uppercase">TRUNG TÂM TIẾNG ANH MR BEAN</div>
-                        <div class="user-name-title">Phân hệ Quản trị & Vận hành</div>
-                    </div>
-                </div>
-
-                {% if user.is_authenticated %}
-                <div class="topbar-right">
-                    <!-- Biểu tượng thông báo (Chuông) -->
-                    <a href="{% url 'accounts:notification_list' %}" class="btn-notification" title="Xem thông báo" aria-label="Xem thông báo">
-                        <i aria-hidden="true" class="bi bi-bell-fill"></i>
-                        {% if unread_notifications > 0 %}
-                            <span class="badge-dot"></span>
-                        {% endif %}
-                    </a>
-
-                    <!-- Dropdown thông tin tài khoản -->
-                    <div class="dropdown">
-                        <button type="button" class="user-dropdown-btn dropdown-toggle" id="userMenuDropdown" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Tài khoản">
-                            <div class="user-avatar">
-                                {{ user.username|slice:":1"|upper }}
-                            </div>
-                            <div class="user-info-text d-none d-sm-block">
-                                <div class="user-name-title">{{ user.get_full_name|default:user.username }}</div>
-                                <div class="user-role-sub">{{ user.get_role_display }}</div>
-                            </div>
-                        </button>
-                        <ul class="dropdown-menu dropdown-menu-end shadow border-0 py-2 mt-2" aria-labelledby="userMenuDropdown" style="min-width: 200px;">
-                            <li class="px-3 py-2 border-bottom">
-                                <div class="small text-muted">Đang đăng nhập:</div>
-                                <div class="fw-bold text-dark">@{{ user.username }}</div>
-                            </li>
-                            <li><a class="dropdown-item py-2" href="{% url 'accounts:notification_list' %}"><i aria-hidden="true" class="bi bi-bell me-2 text-warning"></i>Thông báo</a></li>
-                            <li><a class="dropdown-item py-2" href="{% url 'accounts:profile' %}"><i aria-hidden="true" class="bi bi-person-circle me-2"></i>Hồ sơ của tôi</a></li>
-                            <li><a class="dropdown-item py-2" href="{% url 'accounts:password_change' %}"><i aria-hidden="true" class="bi bi-key me-2"></i>Đổi mật khẩu</a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><form method="post" action="{% url 'accounts:logout' %}">{% csrf_token %}<button type="submit" class="dropdown-item py-2 text-danger fw-semibold"><i aria-hidden="true" class="bi bi-box-arrow-right me-2"></i>Đăng xuất</button></form></li>
-                        </ul>
-                    </div>
-                </div>
-                {% endif %}
-            </header>
+            {% include 'core/topbar.html' %}
 
             <!-- Alerts / Messages -->
             <div class="px-4 pt-3">

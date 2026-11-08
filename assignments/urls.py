@@ -22,6 +22,7 @@ urlpatterns = [
     path('item/<str:skill>/<int:pk>/delete/', views.item_edit, {'delete': True}, name='item_delete'),
     path('question/<int:pk>/image/', views.question_image, name='question_image'),
     path('lesson/<int:lesson_id>/listening/new/', views.listening_exercise_edit, name='listening_exercise_create'),
+    path('lesson/<int:lesson_id>/listening/extract/', views.listening_extract, name='listening_extract'),
     path('lesson/<int:lesson_id>/listening/<int:pk>/edit/', views.listening_exercise_edit, name='listening_exercise_edit'),
     path('listening/<int:pk>/delete/', views.listening_exercise_delete, name='listening_exercise_delete'),
     path('listening/<int:pk>/media/<str:kind>/', views.listening_exercise_media, name='listening_exercise_media'),

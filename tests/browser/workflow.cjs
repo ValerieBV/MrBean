@@ -22,7 +22,7 @@ for(let i=0;i<100;i++){try{const r=await fetch(base+'/accounts/login/');if(r.ok)
 const browser=await chromium.launch({headless:true,executablePath:process.env.MRBEAN_CHROMIUM_PATH||undefined,
  args:['--no-sandbox','--disable-dev-shm-usage','--disable-gpu','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader','--use-fake-device-for-media-stream','--use-fake-ui-for-media-stream'],
 });
-async function session(username){const ctx=await browser.newContext({viewport:{width:1440,height:1000},permissions:['microphone']});const p=await ctx.newPage();p.on('pageerror',e=>errors.push(username+': '+e.message));p.on('response',r=>{if(r.url().startsWith(base)&&r.status()>=400)errors.push(username+': HTTP '+r.status()+' '+r.url());});await p.goto(base+'/accounts/login/');await p.locator('[name=username]').fill(username);await p.locator('[name=password]').fill(username.startsWith('ui_student')?'Learning!8429':'DemoLocal123!');await Promise.all([p.waitForURL(username.startsWith('ui_student')||username==='demo_student'?'**/hoc-tap/':'**/dashboard/'),p.getByRole('button',{name:'Đăng nhập hệ thống',exact:true}).click()]);await p.goto(base+'/dashboard/');await p.waitForFunction(()=>document.getElementById('rate')?.textContent!=='—');return p;}
+async function session(username){const ctx=await browser.newContext({viewport:{width:1440,height:1000},permissions:['microphone']});const p=await ctx.newPage();p.on('pageerror',e=>errors.push(username+': '+p.url()+': '+e.message));p.on('response',r=>{if(r.url().startsWith(base)&&r.status()>=400)errors.push(username+': HTTP '+r.status()+' '+r.url());});await p.goto(base+'/accounts/login/');await p.locator('[name=username]').fill(username);await p.locator('[name=password]').fill(username.startsWith('ui_student')?'Learning!8429':'DemoLocal123!');await Promise.all([p.waitForURL(username.startsWith('ui_student')||username==='demo_student'?'**/hoc-tap/':'**/dashboard/'),p.getByRole('button',{name:'Đăng nhập hệ thống',exact:true}).click()]);await p.goto(base+'/dashboard/');await p.waitForFunction(()=>document.getElementById('rate')?.textContent!=='—');return p;}
 async function fill(p,name,value){await p.locator(`[name="${name}"]`).fill(value);}
 async function save(p,name='Lưu thay đổi'){await Promise.all([p.waitForURL(url=>!url.pathname.endsWith('/new/')&&!url.pathname.endsWith('/create/')&&!url.pathname.endsWith('/edit/')),p.getByRole('button',{name,exact:true}).click()]);}
 const admin=await session('demo_admin');await admin.screenshot({path:'screenshots/admin-desktop.png',fullPage:true});
@@ -45,12 +45,24 @@ async function assignLesson(lessonID){
 }
 // Real lesson authoring with four independently added listening exercises.
 execFileSync('ffmpeg',['-loglevel','error','-f','lavfi','-i','sine=frequency=440:duration=2','-y','sample-listening.mp3'],{stdio:'pipe'});
-function makeTestPDF(filename){
- const content='0.94 0.92 0.88 rg 40 60 510 680 re f 0 0 0 rg BT /F1 20 Tf 60 710 Td (Listening photographs) Tj ET '+Array.from({length:6},(_,i)=>'BT /F1 14 Tf 65 '+(650-i*85)+' Td (Photograph '+(i+1)+') Tj ET').join(' ');
- const objects=['<< /Type /Catalog /Pages 2 0 R >>','<< /Type /Pages /Kids [3 0 R 6 0 R] /Count 2 >>','<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>','<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>','<< /Length '+Buffer.byteLength(content)+' >>\nstream\n'+content+'\nendstream','<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 7 0 R >>','<< /Length 60 >>\nstream\nBT /F1 20 Tf 60 710 Td (Listening page two) Tj ET\nendstream'];
+function writePDF(filename,contents){
+ const objects=['<< /Type /Catalog /Pages 2 0 R >>','<< /Type /Pages /Kids ['+contents.map((_,i)=>(4+i*2)+' 0 R').join(' ')+'] /Count '+contents.length+' >>','<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>'];
+ contents.forEach((content,i)=>{objects.push('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R >> >> /Contents '+(5+i*2)+' 0 R >>','<< /Length '+Buffer.byteLength(content)+' >>\nstream\n'+content+'\nendstream');});
  let pdf='%PDF-1.4\n',offsets=[0];for(let i=0;i<objects.length;i++){offsets.push(Buffer.byteLength(pdf));pdf+=(i+1)+' 0 obj\n'+objects[i]+'\nendobj\n';}const start=Buffer.byteLength(pdf);pdf+='xref\n0 '+(objects.length+1)+'\n0000000000 65535 f \n'+offsets.slice(1).map(n=>String(n).padStart(10,'0')+' 00000 n \n').join('')+'trailer\n<< /Size '+(objects.length+1)+' /Root 1 0 R >>\nstartxref\n'+start+'\n%%EOF';fs.writeFileSync(filename,pdf);
 }
-makeTestPDF('listening-photographs.pdf');
+const pdfLine=(text,x,y)=>'BT /F1 9 Tf '+x+' '+y+' Td ('+text.replace(/[()\\]/g,'\\$&')+') Tj ET';
+writePDF('listening-photographs.pdf',[
+ '0.94 0.92 0.88 rg 40 60 510 680 re f 0 0 0 rg '+Array.from({length:6},(_,i)=>pdfLine('Photograph '+(i+1),65,710-i*95)).join(' '),
+ pdfLine('Listening page two',60,710),
+]);
+for(const [kind,start,count]of [['part3',32,39],['part4',71,30]]){
+ const pages=[];
+ for(let offset=0;offset<count;offset+=6){const lines=[];for(let i=offset;i<Math.min(count,offset+6);i++){const slot=i-offset,x=slot<3?35:320,y=780-(slot%3)*225;
+  [''+(start+i)+'. What does the man need to do first?','(A) Change his clothes.','(B) Attach a name tag.','(C) Contact a warehouse supervisor.','(D) Read an employee handbook.'].forEach((line,n)=>lines.push(pdfLine(line,x,y-n*18)));}
+  pages.push(lines.join(' '));
+ }
+ writePDF('listening-'+kind+'.pdf',pages);
+}
 fs.writeFileSync('listening-key-part2.csv','number,answer\n'+Array.from({length:25},(_,i)=>(i+1)+',B').join('\n'));
 await teacher.goto(base+'/quan-ly/bai-tap/');
 await teacher.getByRole('link',{name:'Xem buổi và thêm bài',exact:true}).click();
@@ -89,8 +101,15 @@ for(const [index,kind,count] of [[1,'part1',6],[2,'part2',25],[3,'part3',39],[4,
  assert.equal(await teacher.locator('[name=kind]').inputValue(),kind);await fill(teacher,'order',String(index));await fill(teacher,'title','Dạng nghe '+index);
  await teacher.waitForFunction(expected=>document.querySelector('[name=question_count]').value===String(expected)&&document.querySelector('[name=question_count]').readOnly,count);assert.equal(await teacher.locator('[name=question_count]').inputValue(),String(count));
  await teacher.locator('[name=audio_file]').setInputFiles('sample-listening.mp3');
- if(kind==='part1')await teacher.locator('[name=document_file]').setInputFiles('listening-photographs.pdf');
- if(kind==='part2')await teacher.locator('[name=answer_key_file]').setInputFiles('listening-key-part2.csv');else await fill(teacher,'answer_key',Array(count).fill('B').join(' '));
+ if(kind==='part1'){await teacher.locator('[name=document_file]').setInputFiles('listening-photographs.pdf');await teacher.waitForFunction(()=>!document.querySelector('#readPDFText').disabled);}
+ if(kind==='part3'||kind==='part4'){
+  await teacher.locator('[name=document_file]').setInputFiles('listening-'+kind+'.pdf');
+  await teacher.waitForFunction(expected=>document.querySelector('#pdfImportStatus').textContent.includes('Đã đọc '+expected+'/'+expected),count);
+  const questions=JSON.parse(await teacher.locator('[name=question_data]').inputValue());
+  assert.equal(questions.length,count);assert.equal(questions[0].number,kind==='part3'?32:71);assert.equal(questions[0].option_b,'Attach a name tag.');
+ }
+ if(kind==='part2'){assert(!(await teacher.locator('[data-pdf-field]').isVisible()));assert(!(await teacher.locator('#questionReview').isVisible()));assert.match(await teacher.locator('#selectedKindMeta').innerText(),/7–31/);}
+ if(kind==='part2')await teacher.locator('[name=answer_key_file]').setInputFiles('listening-key-part2.csv');else await fill(teacher,'answer_key',Array.from({length:count},(_,i)=>kind==='part3'?(32+i)+'.B':kind==='part4'?(71+i)+'.B':'B').join(' '));
  if(kind==='part1')await teacher.screenshot({path:'screenshots/listening-bulk-authoring.png',fullPage:true});
  if(kind==='part4'){
   await teacher.screenshot({path:'screenshots/listening-part4-form.png',fullPage:true});
@@ -116,17 +135,38 @@ const listeningTaskURL=student.url();
 assert.equal(await student.locator('[data-question]').count(),100);
 assert.equal(await student.locator('#listening-2 input[type=radio]').count(),75);
 assert.equal(await student.locator('#listening-2 input[type=radio][value=D]').count(),0);
-const pdfURL=await student.locator('[data-pdf-url]').getAttribute('data-pdf-url');const pdfResponse=await student.request.get(base+pdfURL);assert.equal(pdfResponse.status(),200);assert.match(pdfResponse.headers()['content-type'],/application\/pdf/);assert.equal(pdfResponse.headers()['x-frame-options'],'SAMEORIGIN');
-await student.locator('[data-pdf-ready=true]').waitFor();
+assert.equal(await student.locator('#listening-2 [data-question]').first().getAttribute('data-number'),'7');
+assert.equal(await student.locator('#listening-2 [data-question]').last().getAttribute('data-number'),'31');
+assert.equal(await student.locator('#listening-2 [data-pdf-url]').count(),0);
+assert.equal(await student.locator('#listening-4 [data-question]').first().getAttribute('data-number'),'71');
+assert.equal(await student.locator('#listening-4 [data-question]').last().getAttribute('data-number'),'100');
+const pdfURL=await student.locator('[data-pdf-url]').first().getAttribute('data-pdf-url');const pdfResponse=await student.request.get(base+pdfURL);assert.equal(pdfResponse.status(),200);assert.match(pdfResponse.headers()['content-type'],/application\/pdf/);assert.equal(pdfResponse.headers()['x-frame-options'],'SAMEORIGIN');
+await student.locator('[data-pdf-ready=true]').first().waitFor();
 await student.getByRole('button',{name:'Trang PDF tiếp theo',exact:true}).click();
 await student.waitForFunction(()=>document.querySelector('[data-pdf-page]').textContent==='Trang 2 / 2');
 await student.getByRole('button',{name:'Trang PDF trước',exact:true}).click();
 await student.waitForFunction(()=>document.querySelector('[data-pdf-page]').textContent==='Trang 1 / 2');
-assert(await student.locator('.pdf-viewport canvas').evaluate(canvas=>canvas.width>100&&canvas.height>100));
+assert(await student.locator('.pdf-viewport canvas').first().evaluate(canvas=>canvas.width>100&&canvas.height>100));
 await student.screenshot({path:'screenshots/source-listening.png',fullPage:true});
-for(const choice of await student.locator('input[type=radio][value=B]').all())await choice.check();
-for(const answer of await student.locator('.listening-answer').all())await answer.fill('The answer I heard.');
-await student.locator('.listening-answer').first().fill('');
+async function answerListening({incomplete=false,wrongFirst=false}={}){
+ for(const panel of await student.locator('[data-listening-exercise]').all()){
+  const order=await panel.getAttribute('data-listening-exercise');await student.locator('[data-listening-tab="'+order+'"]').click();
+  const questions=await panel.locator('[data-question]').all();
+  for(let i=0;i<questions.length;i++){
+   await panel.locator('.listening-question-nav button').nth(i).click();const question=questions[i];
+   await question.locator('input[type=radio][value='+((wrongFirst&&order==='1'&&i===0)?'A':'B')+']').check();
+   await question.locator('.listening-answer').fill(incomplete&&order==='1'&&i===0?'':'The answer I heard.');
+  }
+ }
+}
+await student.locator('[data-listening-tab="3"]').click();
+assert.match(await student.locator('#listening-3 [data-question]:visible').innerText(),/Câu 32[\s\S]*What does the man need to do first[\s\S]*Attach a name tag/);
+assert.equal(await student.locator('[data-question]:visible').count(),1);
+await student.locator('#listening-3 [data-pdf-toggle]').click();await student.locator('#listening-3 [data-pdf-ready=true]').waitFor();
+assert(await student.locator('#listening-3 canvas').evaluate(canvas=>canvas.width>100));await student.locator('#listening-3 [data-pdf-toggle]').click();
+await student.screenshot({path:'screenshots/listening-interactive-questions.png',fullPage:true});
+await student.setViewportSize({width:390,height:920});await student.waitForFunction(()=>document.getElementById('sidebarMenu').getBoundingClientRect().right<=0);await student.screenshot({path:'screenshots/listening-interactive-mobile.png',fullPage:true});await student.setViewportSize({width:1440,height:1000});
+await answerListening({incomplete:true});
 await student.waitForFunction(()=>document.getElementById('draftStatus')?.textContent.startsWith('Đã lưu nháp'));
 await student.reload();assert(await student.locator('input[type=radio][value=B]').first().isChecked());assert.equal(await student.locator('.listening-answer').nth(1).inputValue(),'The answer I heard.');
 await Promise.all([student.waitForURL('**/results/*/'),student.getByRole('button',{name:'Nộp bài',exact:true}).click()]);
@@ -134,13 +174,11 @@ assert.equal(await student.locator('[data-completion-status]').getAttribute('dat
 const partialMetric=await (await student.request.get(base+'/dashboard/metrics/')).json();assert.equal(partialMetric.completed_count,0);
 await student.screenshot({path:'screenshots/listening-incomplete-result.png',fullPage:true});
 await student.goto(listeningTaskURL);
-for(const choice of await student.locator('input[type=radio][value=B]').all())await choice.check();
-for(const answer of await student.locator('.listening-answer').all())await answer.fill('The answer I heard.');
-await student.locator('input[type=radio][value=A]').first().check();
+await answerListening({wrongFirst:true});
 await student.setViewportSize({width:390,height:920});assert(await student.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));await student.screenshot({path:'screenshots/listening-mobile.png',fullPage:false});await student.setViewportSize({width:1440,height:1000});
 await Promise.all([student.waitForURL('**/results/*/'),student.getByRole('button',{name:'Nộp bài',exact:true}).click()]);
 assert.match(await student.locator('body').innerText(),/Đúng 99\/100/);assert.equal(await student.locator('[data-completion-status]').getAttribute('data-completion-status'),'complete');
-results.listening='4 manually added exercises, 6/25/39/30 questions; inline PDF; CSV and pasted keys; short answers/draft restored; partial 10-point attempt incomplete; 9.9-point full attempt complete';
+results.listening='4 manually added exercises, 6/25/39/30 questions; two-column multi-page PDF import with source numbers 32–70/71–100; full-text radio choices + short answers; tabs and numbered navigation; CSV and source-numbered keys; draft restored; partial 10-point attempt incomplete; 9.9-point full attempt complete';
 const vocab=await createLesson('vocabulary',Number(stamp),'Từ vựng UI '+stamp);await teacher.getByRole('button',{name:'Thêm từ vựng',exact:true}).click();await fill(teacher,'order','1');await fill(teacher,'word','Hello');await fill(teacher,'meaning','Xin chào');await teacher.getByRole('button',{name:'Thêm',exact:true}).click();await assignLesson(vocab);
 await student.goto(base+'/hoc-tap/skill/vocabulary/');await student.locator('.space-y-3 > div').filter({hasText:'Từ vựng UI '+stamp}).getByRole('link',{name:'Làm bài',exact:true}).click();const vocabTaskURL=student.url();await student.screenshot({path:'screenshots/source-vocabulary.png',fullPage:true});await student.getByRole('link',{name:'Cần xin miễn bài này?'}).click();await fill(student,'reason','Xin miễn để kiểm thử quy trình duyệt đúng bài.');await Promise.all([student.waitForURL('**/exemptions/'),student.getByRole('button',{name:'Gửi đơn xin miễn',exact:true}).click()]);
 await teacher.goto(base+'/courses/exemptions/');await teacher.locator('tr').filter({hasText:'Từ vựng UI '+stamp}).getByRole('link',{name:'Xét duyệt'}).click();await teacher.locator('[name=action][value=approve]').check();await fill(teacher,'note','Đồng ý miễn bài theo quy định.');await Promise.all([teacher.waitForURL('**/exemptions/'),teacher.getByRole('button',{name:'Xác nhận xử lý',exact:true}).click()]);results.exemption='requested and approved once';
@@ -263,6 +301,30 @@ const authoringStyle=await teacher.evaluate(()=>({body:getComputedStyle(document
 assert.match(authoringStyle.body,/Roboto/);assert.match(authoringStyle.heading,/Montserrat/);assert.equal(authoringStyle.background,'rgb(254, 243, 226)');
 results.authoringStyle=authoringStyle;
 results.authoring='Visible bank links and four type cards for teacher/admin; preselected 6/25/39/30 counts; assigned lesson copy action; 390/768/1440px layouts';
+results.responsive=[];
+for(const[role,p,urls]of [
+ ['admin',admin,['/accounts/users/','/courses/catalog/','/courses/classes/create/','/dashboard/','/accounts/profile/']],
+ ['teacher',teacher,['/quan-ly/bai-tap/skill/listening/',listeningFormURL,`/quan-ly/bai-tap/assign/?lesson=${listening}&classroom=${classID}`,'/ho-tro/lien-he/','/dashboard/']],
+ ['student',student,[listeningTaskURL.replace(base,'')+'#listening-3','/hoc-tap/ky-nang/','/ho-tro/lien-he/moi/','/courses/','/dashboard/']],
+]){
+ for(const width of [1440,1200,1024,768,390])for(const url of urls){
+  await p.setViewportSize({width,height:950});await p.goto(base+url);
+  for(const open of width>=992?[true,false]:[false]){
+   const toggle=p.locator('[data-menu-toggle]');if((await toggle.getAttribute('aria-expanded')==='true')!==open)await toggle.click();
+   await p.waitForFunction(expected=>{const rect=document.getElementById('sidebarMenu').getBoundingClientRect();return expected?Math.abs(rect.x)<1:rect.right<=0;},open);
+   await p.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+   const layout=await p.evaluate(()=>{const brand=document.querySelector('.topbar-brand').getBoundingClientRect(),actions=document.querySelector('.topbar-actions').getBoundingClientRect();return{width:innerWidth,pageWidth:document.documentElement.scrollWidth,overlap:brand.right>actions.left+1};});
+   assert(layout.pageWidth<=layout.width+1,`${role} ${width}px sidebar=${open} overflow ${url}: ${JSON.stringify(layout)}`);
+   assert(!layout.overlap,`${role} ${width}px header overlap ${url}`);
+   assert.equal(await p.locator('.unified-topbar').count(),1);
+   if(width===1024&&open&&url===listeningFormURL)await p.screenshot({path:'screenshots/listening-form-sidebar-1024.png',fullPage:true});
+   if(width===1200&&open&&role==='student'&&url.includes('/tasks/'))await p.screenshot({path:'screenshots/listening-sidebar-1200.png',fullPage:true});
+   results.responsive.push({role,width,url,sidebar:open?'open':'closed'});
+  }
+ }
+ await p.setViewportSize({width:1440,height:1000});await p.goto(base+'/dashboard/');
+ await p.locator('.topbar-account summary').click();assert(await p.locator('.topbar-account-menu').isVisible());await p.keyboard.press('Escape');assert(!(await p.locator('.topbar-account-menu').isVisible()));
+}
 const AxeBuilder=require('@axe-core/playwright').default;results.accessibility=[];results.accessibilityMode='prefers-contrast: more';
 const anonymousContext=await browser.newContext();const anon=await anonymousContext.newPage();await anon.emulateMedia({contrast:'more'});for(const url of ['/accounts/login/','/login/']){await anon.goto(base+url);await anon.screenshot({path:'screenshots/palette-login-'+(url==='/login/'?'learning':'admin')+'.png',fullPage:true});const anonymousReport=await new AxeBuilder({page:anon}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze();results.accessibility.push({role:'anonymous',url,violations:anonymousReport.violations.map(v=>({id:v.id,impact:v.impact}))});}await anonymousContext.close();
 for(const[role,p]of [['admin',admin],['teacher',teacher],['student',student]]){

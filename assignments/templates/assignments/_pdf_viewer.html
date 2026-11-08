@@ -7,7 +7,7 @@
         <button type="button" data-pdf-plus aria-label="Phóng to PDF" disabled>+</button>
     </div>
     <p class="listening-help pdf-message" data-pdf-status role="status">Đang mở đề bài…</p>
-    <div class="pdf-viewport"><canvas role="img" aria-label="{{ pdf_title }}" hidden></canvas></div>
+    <div class="pdf-viewport" tabindex="0" role="region" aria-label="Trang đề PDF"><canvas role="img" aria-label="{{ pdf_title }}" hidden></canvas></div>
     <p class="pdf-accessible-text" data-pdf-text></p>
     <p class="listening-help"><a href="{{ pdf_url }}" target="_blank" rel="noopener">Mở đề PDF trong tab mới</a></p>
     <noscript><iframe class="listening-pdf" src="{{ pdf_url }}" title="{{ pdf_title }}"></iframe></noscript>

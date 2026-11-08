@@ -20,6 +20,9 @@ Phạm vi kiểm tra:
 - Ngân hàng bài tập, đáp án nghe, bản sao buổi đã giao, khóa sửa/xóa nội dung có lịch sử.
 - Giao bài: buổi rỗng, lỗi đúng bài/câu, dạng 2 chỉ A/B/C, file bị thiếu, thời hạn sai,
   lớp thiếu giáo viên, giao trùng, quyền lớp và danh sách học viên hoạt động.
+- Đọc PDF hai cột/nhiều trang, nối lựa chọn xuống dòng, chọn đúng phần trong đề 100 câu;
+  giữ số câu gốc, key theo số gốc hoặc thứ tự; scan OpenAI dùng mock, không đoán key;
+  chặn nội dung chưa rõ/thiếu câu hỏi hoặc lựa chọn ở dạng 3/4, kiểm tra quyền endpoint.
 - Chấm nghe theo key, câu bỏ trống, chống câu hỏi lạ và chống tạo trùng lần nộp.
 - Chỉ nhận ghi âm cho bài đọc, ASR transcript, so lời mẫu, phiên bản mẫu và snapshot cũ.
 - Từ vựng đủ/thiếu lượt, không dùng lượt thừa bù từ thiếu, ảnh lỗi/trùng chuyển thủ công.
@@ -58,14 +61,17 @@ chạy web tại `127.0.0.1:8765` rồi thực hiện:
    font Roboto/Montserrat, màu nền chung và nút sao chép buổi đã giao.
 3. Biểu mẫu giao bài chặn buổi rỗng, liên kết sửa nội dung, xem đủ bốn bài/100 câu,
    ẩn lượt viết từ vựng với bài nghe và liên kết lượt giao cũ khi chọn trùng.
-4. Học viên xem PDF trực tiếp, chọn đáp án/ghi câu trả lời ngắn, khôi phục nháp. Nộp
+4. Nhập PDF hai cột/nhiều trang cho dạng 3/4, giữ số 32–70 và 71–100, dán key theo
+   số gốc. Học viên dùng tab bài nghe, số câu, chọn lựa chọn có đầy đủ nội dung và
+   ghi câu trả lời ngắn; xem PDF trực tiếp và khôi phục nháp. Nộp
    thiếu câu trả lời dù được 10 điểm vẫn chưa hoàn thành; nộp đủ nhưng sai một câu
    được 9,9 điểm vẫn hoàn thành.
 5. Học viên xin miễn từ vựng; giáo viên chấp thuận; mẫu số báo cáo thay đổi đúng.
 6. Giáo viên tải video kiểm thử, nhập lời mẫu, giao bài; học viên dùng micro giả lập của
    Chromium để ghi âm, nghe lại, nộp. Đây là fixture kỹ thuật, không phải bài nói đã xác minh.
 7. Worker không có key chuyển bài thủ công; giáo viên chấm 7,5; học viên thấy kết quả.
-8. Kiểm tra menu cả ba vai trò, quản lý chỉ xem kết quả, màn hình 1440/768/390 px,
+8. Kiểm tra menu cả ba vai trò, quản lý chỉ xem kết quả; rà header chung và trang bảng,
+   biểu mẫu, giao bài, làm bài ở 1440/1200/1024/768/390 px, mở/đóng thanh bên;
    không tràn ngang trang, không lỗi JavaScript/HTTP trên các trang sử dụng.
 9. Axe kiểm tra các trang theo các quy tắc WCAG A/AA hỗ trợ. Kiểm tra tự động không thay thế
    toàn bộ đánh giá khả năng truy cập bằng người dùng thực.

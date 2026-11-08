@@ -57,12 +57,12 @@ class AssignmentFlowTests(IntegratedFixture):
     def test_invalid_answer_identifies_exact_question_and_allowed_letters(self):
         exercise = self.exercise()
         exercise.questions.filter(order=7).update(correct_option='D')
-        with self.assertRaisesMessage(ValidationError, 'Bài 1, câu 7') as error:
+        with self.assertRaisesMessage(ValidationError, 'Bài 1, câu 13') as error:
             lesson_rubric(self.lesson)
         self.assertIn('A / B / C;', str(error.exception))
         preview = build_assignment_preview(self.lesson, self.classroom)
         self.assertFalse(preview['ready'])
-        self.assertTrue(any('câu 7' in message for message in preview['problems']))
+        self.assertTrue(any('câu 13' in message for message in preview['problems']))
 
     def test_missing_option_and_uploaded_audio_are_reported_before_assignment(self):
         exercise = self.exercise()
@@ -71,7 +71,7 @@ class AssignmentFlowTests(IntegratedFixture):
         preview = build_assignment_preview(self.lesson, self.classroom)
         self.assertFalse(preview['ready'])
         self.assertTrue(any('file nghe không còn' in message for message in preview['problems']))
-        self.assertTrue(any('câu 3: thiếu lựa chọn A' in message for message in preview['problems']))
+        self.assertTrue(any('câu 9: thiếu lựa chọn A' in message for message in preview['problems']))
 
     def test_preview_does_not_publish_keys_and_rejects_other_class_or_student(self):
         self.exercise()

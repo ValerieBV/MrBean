@@ -1,0 +1,14 @@
+<header class="app-topbar unified-topbar">
+    <div class="topbar-brand">
+        <button class="sidebar-toggle" type="button" data-menu-toggle aria-controls="sidebarMenu" aria-expanded="false" aria-label="Mở điều hướng"><i class="bi bi-list" aria-hidden="true"></i></button>
+        <div class="topbar-brand-copy"><span class="topbar-brand-name">TRUNG TÂM TIẾNG ANH MR BEAN</span><strong>{% if user.is_superuser or user.role == 'admin' or user.role == 'manager' %}Quản trị &amp; Vận hành{% elif user.role == 'teacher' %}Giảng dạy &amp; Lớp học{% else %}Học tập &amp; Bài tập{% endif %}</strong></div>
+    </div>
+    {% if user.is_authenticated %}
+    <div class="topbar-actions">
+        <a href="{% url 'accounts:notification_list' %}" class="topbar-notifications" aria-label="Xem thông báo"><i class="bi bi-bell" aria-hidden="true"></i>{% if unread_notifications %}<span class="topbar-unread" aria-hidden="true"></span>{% endif %}</a>
+        <details class="topbar-account"><summary aria-label="Tài khoản"><span class="topbar-avatar">{{ user.username|slice:':1'|upper }}</span><span class="topbar-user-copy"><strong>{{ user.get_full_name|default:user.username }}</strong><small>{{ user.get_role_display }}</small></span><i class="bi bi-chevron-down" aria-hidden="true"></i></summary>
+            <div class="topbar-account-menu"><a href="{% url 'accounts:profile' %}"><i class="bi bi-person" aria-hidden="true"></i> Hồ sơ của tôi</a><a href="{% url 'accounts:password_change' %}"><i class="bi bi-key" aria-hidden="true"></i> Đổi mật khẩu</a><form method="post" action="{% url 'accounts:logout' %}">{% csrf_token %}<button type="submit"><i class="bi bi-box-arrow-right" aria-hidden="true"></i> Đăng xuất</button></form></div>
+        </details>
+    </div>
+    {% endif %}
+</header>

@@ -25,24 +25,17 @@
     <a class="source-skip" href="#main-content">Đi đến nội dung</a>
     {% include 'core/sidebar.html' %}
 
-    <main id="main-content" class="learning-workspace flex-1 flex flex-col min-w-0">
-        <header class="learning-header bg-white/60 border-b border-amber-900/10 px-6 py-3 flex items-center justify-between text-sm">
-            <button class="sidebar-toggle" type="button" data-menu-toggle aria-controls="sidebarMenu" aria-expanded="true" aria-label="Đóng điều hướng"><i class="bi bi-list" aria-hidden="true"></i></button>
-            <div class="flex items-center space-x-2 font-medium text-gray-700">
-                <span class="text-amber-800 font-semibold">Trang quản lý</span>
-                <span class="text-gray-400">-</span>
-                <span class="text-gray-500 italic">Hệ thống bài tập phân loại theo Buổi</span>
-            </div>
-        </header>
-        <div class="p-6 md:p-10 flex-1">
+    <div class="learning-workspace flex-1 flex flex-col min-w-0">
+        {% include 'core/topbar.html' %}
+        <main id="main-content" class="p-6 md:p-10 flex-1">
             {% if messages %}
                 {% for m in messages %}
                 <div class="mb-4 px-4 py-3 rounded-lg text-sm {% if m.tags == 'error' %}bg-red-100 text-red-700{% else %}bg-green-100 text-green-700{% endif %}">{{ m }}</div>
                 {% endfor %}
             {% endif %}
             {% block content %}{% endblock %}
-        </div>
-    </main>
+        </main>
+    </div>
     <script src="{% static 'learning/dialogs.js' %}" defer></script>
     {% block scripts %}{% endblock %}
 </body>

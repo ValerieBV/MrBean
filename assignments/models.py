@@ -2,7 +2,7 @@ from django.conf import settings
 from django.db import models
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator, MaxValueValidator
-from .listening import LISTENING_SPECS, validate_listening_audio, validate_listening_pdf
+from .listening import FIRST_NUMBER, LISTENING_SPECS, validate_listening_audio, validate_listening_pdf
 
 
 class Skill(models.TextChoices):
@@ -126,6 +126,7 @@ class ListeningQuestion(models.Model):
     lesson = models.ForeignKey(Lesson, on_delete=models.CASCADE, related_name="questions")
     exercise = models.ForeignKey(ListeningExercise, on_delete=models.CASCADE, related_name='questions', null=True, blank=True)
     order = models.PositiveIntegerField("Câu số", default=1)
+    source_number = models.PositiveIntegerField('Số câu trên đề gốc', null=True, blank=True)
     image = models.ImageField(
         "Hình ảnh (part 1-2)", upload_to="assignments/listening_img/", blank=True, null=True
     )
@@ -143,8 +144,13 @@ class ListeningQuestion(models.Model):
     class Meta:
         ordering = ["order", "id"]
 
+    @property
+    def display_number(self):
+        start = FIRST_NUMBER.get(self.exercise.kind, 1) if self.exercise_id else 1
+        return self.source_number or start + self.order - 1
+
     def __str__(self):
-        return f"Câu {self.order} - {self.lesson.title}"
+        return f"Câu {self.display_number} - {self.lesson.title}"
 
     def clean(self):
         super().clean()

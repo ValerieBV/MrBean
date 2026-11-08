@@ -1,4 +1,5 @@
 from django import forms
+import json
 
 from .models import Lesson, VocabWord, ListeningQuestion, SpeakingTask, ListeningExercise
 
@@ -89,6 +90,7 @@ class ListeningQuestionForm(forms.ModelForm):
 
 
 class ListeningExerciseForm(forms.ModelForm):
+    question_data = forms.CharField(required=False, max_length=250000, widget=forms.HiddenInput(), label='Nội dung câu hỏi')
     answer_key = forms.CharField(label='Dán đáp án hàng loạt', required=False,
         widget=forms.Textarea(attrs={'rows': 7, 'placeholder': '1.A 2.C 3.B 4.D 5.A 6.C', 'class': INPUT}),
         help_text='Nhập số câu kèm đáp án, hoặc dán cả cột đáp án từ Excel. Không cần nhập từng câu.')
@@ -116,9 +118,13 @@ class ListeningExerciseForm(forms.ModelForm):
         self.fields['question_count'].required = False
         self.fields['question_count'].help_text = 'Số câu cố định theo dạng bài: 6 / 25 / 39 / 30.'
         self.fields['audio_file'].help_text = 'Tải file nghe đầy đủ cho bài này, tối đa 50 MiB.'
-        self.fields['document_file'].help_text = 'Dạng 1 bắt buộc PDF đề bài; các dạng khác có thể thêm PDF. Không đưa đáp án vào PDF học viên xem.'
+        self.fields['document_file'].help_text = 'Dạng 1 bắt buộc PDF đề bài; dạng 3/4 có thể thêm PDF. Dạng 2 chỉ dùng file nghe. Không đưa đáp án vào PDF học viên xem.'
         if self.instance.pk:
-            self.initial['answer_key'] = '\n'.join(f'{q.order}.{q.correct_option}' for q in self.instance.questions.all())
+            questions = list(self.instance.questions.all())
+            self.initial['answer_key'] = '\n'.join(f'{q.display_number}.{q.correct_option}' for q in questions)
+            self.initial['question_data'] = json.dumps([{'number':q.display_number,
+                **{key:getattr(q,key) for key in ['question_text','option_a','option_b','option_c','option_d']}}
+                for q in questions], ensure_ascii=False)
 
     def clean(self):
         from .listening import LISTENING_SPECS, parse_answer_key
@@ -148,10 +154,49 @@ class ListeningExerciseForm(forms.ModelForm):
                 self.add_error('answer_key_file', 'Lưu bảng đáp án bằng CSV UTF-8.')
                 return data
         if data.get('question_count') and 1 <= data['question_count'] <= 200:
+            from .question_import import normalize_questions, default_numbers
             try:
-                data['answer_rows'] = parse_answer_key(text, data['question_count'], spec['choices'])
+                raw_content = data.get('question_data') or (self.initial.get('question_data') if self.instance.pk else '[]')
+                content = normalize_questions(json.loads(raw_content))
+                if content and len(content) != data['question_count']:
+                    raise forms.ValidationError(f'Cần đủ {data["question_count"]} câu hỏi, hiện có {len(content)} câu.')
+            except (ValueError, TypeError, forms.ValidationError) as exc:
+                self.add_error('question_data', exc if isinstance(exc, forms.ValidationError) else 'Nội dung câu hỏi không hợp lệ.')
+                return data
+            expected_numbers = default_numbers(data['kind'], data['question_count'])
+            if data['kind'] == 'part2':
+                content = []
+            numbers = [row['number'] for row in content] or expected_numbers
+            if data['kind'] == 'part4' and numbers != expected_numbers:
+                self.add_error('question_data', 'Dạng 4 sử dụng các câu 71–100. Chọn đúng phần đề và kiểm tra lại số câu.')
+                return data
+            try:
+                rows = parse_answer_key(text, data['question_count'], spec['choices'], numbers)
             except forms.ValidationError as exc:
                 self.add_error('answer_key_file' if upload else 'answer_key', exc)
+                return data
+            problems = []
+            for index, row in enumerate(rows):
+                source = content[index] if content else {}
+                row['source_number'] = source.get('number') or row.get('source_number') or numbers[index]
+                for key in ['question_text','option_a','option_b','option_c','option_d']:
+                    if source.get(key):
+                        row[key] = source[key]
+                if data['kind'] == 'part2':
+                    row['question_text'] = ''
+                    for letter in 'ABCD':
+                        row['option_'+letter.lower()] = letter if letter in spec['choices'] else ''
+                if source.get('uncertain'):
+                    problems.append(f'Câu {row["source_number"]}: kiểm tra phần nhận dạng chưa rõ trước khi lưu.')
+                if data['kind'] in ('part3','part4'):
+                    if not row.get('question_text', '').strip():
+                        problems.append(f'Câu {row["source_number"]}: chưa có nội dung câu hỏi.')
+                    missing = [c for c in spec['choices'] if row.get('option_'+c.lower(), '').strip() in ('', c)]
+                    if missing:
+                        problems.append(f'Câu {row["source_number"]}: cần nội dung lựa chọn {" / ".join(missing)}.')
+            if problems:
+                self.add_error('question_data', problems)
+            data['answer_rows'] = rows
         return data
 
     def clean_audio_file(self):
@@ -161,6 +206,8 @@ class ListeningExerciseForm(forms.ModelForm):
         return value
 
     def clean_document_file(self):
+        if self.cleaned_data.get('kind') == 'part2':
+            return False
         from .listening import validate_listening_pdf
         value = self.cleaned_data.get('document_file')
         validate_listening_pdf(value)

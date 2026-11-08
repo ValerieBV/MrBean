@@ -26,6 +26,7 @@ def save_listening_exercise(*, actor, form):
     for row in form.cleaned_data['answer_rows']:
         question = existing.get(row['number']) or ListeningQuestion(lesson=lesson, exercise=exercise, order=row['number'])
         question.correct_option = row['answer']
+        question.source_number = row.get('source_number') or row['number']
         if 'question_text' in row:
             question.question_text = row['question_text']
         for letter in 'ABCD':
@@ -64,16 +65,17 @@ def lesson_rubric(lesson, repetitions=1):
                     problems.append(f'Bài {exercise.order}: file nghe không còn trên hệ thống. Tải lại file nghe.')
                 if exercise.kind == 'part1' and not exercise.document_file:
                     problems.append(f'Bài {exercise.order} (Mô tả tranh): cần PDF đề bài có hình ảnh để xem trên web.')
-                elif exercise.document_file and not exercise.document_file.storage.exists(exercise.document_file.name):
+                elif exercise.kind != 'part2' and exercise.document_file and not exercise.document_file.storage.exists(exercise.document_file.name):
                     problems.append(f'Bài {exercise.order}: file PDF không còn trên hệ thống. Tải lại PDF đề bài.')
                 group = {'id': exercise.pk, 'order': exercise.order, 'kind': exercise.kind,
                     'label': exercise.get_kind_display(), 'title': exercise.display_title,
                     'question_count': len(items), 'audio_name': exercise.audio_file.name,
-                    'document_name': exercise.document_file.name, 'question_ids': [q.pk for q in items]}
+                    'document_name': exercise.document_file.name if exercise.kind != 'part2' else '', 'question_ids': [q.pk for q in items]}
                 groups.append(group)
                 for q in items:
                     row = {k: getattr(q, k) for k in ('id', 'question_text', 'option_a', 'option_b', 'option_c', 'option_d', 'correct_option', 'correct_answer')}
                     row.update(exercise_id=exercise.pk, exercise_order=exercise.order, number=q.order,
+                        source_number=q.source_number,
                         choice_letters=exercise.choice_letters, requires_short_answer=True,
                         image_name=q.image.name if q.image else '')
                     questions.append(row)
@@ -88,6 +90,8 @@ def lesson_rubric(lesson, repetitions=1):
         for q in questions:
             letters = q.get('choice_letters', 'ABCD')
             location = (f'Bài {q["exercise_order"]}, ' if q.get('exercise_order') else '') + f'câu {q["number"]}'
+            if q.get('source_number'):
+                location = (f'Bài {q["exercise_order"]}, ' if q.get('exercise_order') else '') + f'câu {q["source_number"]}'
             correct = q['correct_option']
             if len(correct) != 1 or correct not in letters:
                 problems.append(f'{location}: chưa có đáp án đúng hợp lệ. Chỉ nhận {" / ".join(letters)}; nhập hoặc tải lại bảng đáp án.')
@@ -97,6 +101,13 @@ def lesson_rubric(lesson, repetitions=1):
                 missing = [letter for letter in letters if not q['option_' + letter.lower()].strip()]
                 if missing:
                     problems.append(f'{location}: thiếu lựa chọn {" / ".join(missing)}. Dạng này cần đủ {" / ".join(letters)}.')
+                exercise_kind = next((item.kind for item in exercises if item.pk == q['exercise_id']), '')
+                if exercise_kind in ('part3','part4'):
+                    if not q['question_text'].strip():
+                        problems.append(f'{location}: thiếu nội dung câu hỏi. Đọc câu hỏi từ PDF hoặc nhập nội dung trước khi giao.')
+                    placeholders = [letter for letter in letters if q['option_'+letter.lower()].strip() == letter]
+                    if placeholders:
+                        problems.append(f'{location}: cần nội dung đầy đủ cho lựa chọn {" / ".join(placeholders)}, không chỉ ký hiệu.')
         if problems:
             raise ValidationError(problems)
         data.update(questions=questions, exercises=groups, completion_rule='all_choices_and_short_answers')
