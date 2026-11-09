@@ -58,8 +58,10 @@ theo dạng; backend từ chối số câu không đúng quy định.
 5. Với dạng 3/4, tải PDF có câu hỏi và đầy đủ lựa chọn. Hệ thống đọc chữ từ PDF
    để tạo nội dung câu hỏi trên web, giữ nguyên số câu trên đề (ví dụ 32–70).
    Nếu tài liệu là PDF scan/ảnh, chọn **Đọc bản scan bằng AI**.
-6. Mở phần **Câu hỏi và lựa chọn**, bấm từng số câu để kiểm tra câu hỏi và A/B/C/D.
-   Sửa nội dung nhận dạng sai hoặc thiếu. Câu AI báo chưa rõ cần kiểm tra rồi bấm
+6. Câu hỏi và lựa chọn được lấy tự động từ PDF, không cần nhập lại từng câu.
+   Trang chính chỉ hiển thị tài liệu và bảng đáp án. Nếu cần kiểm tra hoặc sửa lỗi
+   nhận dạng, bấm **Kiểm tra nội dung PDF** để mở cửa sổ riêng.
+   Câu AI báo chưa rõ cần kiểm tra rồi bấm
    **Đã kiểm tra câu này**; hệ thống chặn lưu dạng 3/4 nếu chỉ có ký hiệu A/B/C/D.
 7. Nhập đáp án đúng hàng loạt theo mục 3, rồi bấm **Lưu bài nghe và đáp án**.
    Đáp án được nhập riêng; bộ đọc PDF không tự đoán đáp án đúng.
@@ -143,7 +145,7 @@ File CSV/TXT tối đa 1 MiB. Không tự dùng AI đoán đáp án từ audio h
 Nếu nhập nội dung đề/lựa chọn bằng CSV, dùng các cột
 `question_text,A,B,C,D` trong mẫu. Nội dung chứa dấu phẩy phải đặt trong dấu nháy kép.
 Nếu đã đọc và kiểm tra câu hỏi từ PDF, chỉ cần điền `number,answer`.
-Mẫu CSV dùng số câu đang hiển thị trong phần kiểm tra; có thể nhập key theo số trên
+Mẫu CSV dùng số câu đã đọc từ PDF; có thể nhập key theo số trên
 đề (ví dụ `32.B … 70.C`), theo thứ tự trong bài (`1.B … 39.C`) hoặc chỉ dán chuỗi chữ.
 Không trộn hai cách đánh số trong cùng một bảng. Số câu trên PDF được lưu riêng với
 thứ tự nội bộ, giữ đúng liên kết câu hỏi–lựa chọn–key khi chấm và xem kết quả.

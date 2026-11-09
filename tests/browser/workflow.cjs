@@ -101,12 +101,35 @@ for(const [index,kind,count] of [[1,'part1',6],[2,'part2',25],[3,'part3',39],[4,
  assert.equal(await teacher.locator('[name=kind]').inputValue(),kind);await fill(teacher,'order',String(index));await fill(teacher,'title','Dạng nghe '+index);
  await teacher.waitForFunction(expected=>document.querySelector('[name=question_count]').value===String(expected)&&document.querySelector('[name=question_count]').readOnly,count);assert.equal(await teacher.locator('[name=question_count]').inputValue(),String(count));
  await teacher.locator('[name=audio_file]').setInputFiles('sample-listening.mp3');
+ assert(!(await teacher.locator('#questionReview').isVisible()));
+ assert.equal(await teacher.getByRole('heading',{name:'3. Câu hỏi và lựa chọn',exact:true}).count(),0);
+ if(kind==='part1'||kind==='part2')assert(!(await teacher.locator('#openQuestionReview').isVisible()));
  if(kind==='part1'){await teacher.locator('[name=document_file]').setInputFiles('listening-photographs.pdf');await teacher.waitForFunction(()=>!document.querySelector('#readPDFText').disabled);}
+ if(kind==='part3'){await teacher.route('**/listening/extract/',async route=>{const response=await route.fetch(),data=await response.json();data.questions[0].uncertain=true;await route.fulfill({response,json:data});},{times:1});}
  if(kind==='part3'||kind==='part4'){
   await teacher.locator('[name=document_file]').setInputFiles('listening-'+kind+'.pdf');
   await teacher.waitForFunction(expected=>document.querySelector('#pdfImportStatus').textContent.includes('Đã đọc '+expected+'/'+expected),count);
   const questions=JSON.parse(await teacher.locator('[name=question_data]').inputValue());
   assert.equal(questions.length,count);assert.equal(questions[0].number,kind==='part3'?32:71);assert.equal(questions[0].option_b,'Attach a name tag.');
+  assert(!(await teacher.locator('#questionReview').isVisible()));
+  if(kind==='part3'){
+   assert.match(await teacher.locator('#pdfImportStatus').innerText(),/Có 1 câu cần kiểm tra/);
+   await teacher.locator('#openQuestionReview').click();const review=teacher.locator('#questionReview');
+   assert(await review.isVisible());assert.equal(await review.locator('#review_question_text').inputValue(),'What does the man need to do first?');
+   await review.locator('#review_option_a').fill('Put on a jacket.');await review.getByRole('button',{name:'Đã kiểm tra câu này',exact:true}).click();
+   const audit=await new (require('@axe-core/playwright').default)({page:teacher}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze();
+   assert.equal(audit.violations.length,0,'Question correction dialog accessibility: '+JSON.stringify(audit.violations.map(v=>({id:v.id,targets:v.nodes.map(n=>n.target)}))));
+   await teacher.screenshot({path:'screenshots/pdf-correction-dialog.png',fullPage:false});
+   await review.getByRole('button',{name:'Xong',exact:true}).click();assert(!(await review.isVisible()));
+   assert(!/câu cần kiểm tra/.test(await teacher.locator('#pdfImportStatus').innerText()));
+   assert.equal(JSON.parse(await teacher.locator('[name=question_data]').inputValue())[0].option_a,'Put on a jacket.');
+   await teacher.locator('#openQuestionReview').click();assert.equal(await review.locator('#review_option_a').inputValue(),'Put on a jacket.');
+   await review.locator('#review_option_a').press('Enter');assert(!(await review.isVisible()));
+   await teacher.locator('#openQuestionReview').click();await teacher.setViewportSize({width:390,height:920});
+   assert(await teacher.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
+   await teacher.screenshot({path:'screenshots/pdf-correction-dialog-mobile.png',fullPage:false});await teacher.keyboard.press('Escape');assert(!(await review.isVisible()));
+   assert(await teacher.locator('#openQuestionReview').evaluate(button=>document.activeElement===button));await teacher.setViewportSize({width:1440,height:1000});
+  }
  }
  if(kind==='part2'){assert(!(await teacher.locator('[data-pdf-field]').isVisible()));assert(!(await teacher.locator('#questionReview').isVisible()));assert.match(await teacher.locator('#selectedKindMeta').innerText(),/7–31/);}
  if(kind==='part2')await teacher.locator('[name=answer_key_file]').setInputFiles('listening-key-part2.csv');else await fill(teacher,'answer_key',Array.from({length:count},(_,i)=>kind==='part3'?(32+i)+'.B':kind==='part4'?(71+i)+'.B':'B').join(' '));
@@ -300,7 +323,7 @@ await teacher.goto(base+listeningFormURL);await teacher.evaluate(()=>document.fo
 const authoringStyle=await teacher.evaluate(()=>({body:getComputedStyle(document.body).fontFamily,heading:getComputedStyle(document.querySelector('h1')).fontFamily,background:getComputedStyle(document.body).backgroundColor,button:getComputedStyle(document.querySelector('.listening-button')).backgroundColor}));
 assert.match(authoringStyle.body,/Roboto/);assert.match(authoringStyle.heading,/Montserrat/);assert.equal(authoringStyle.background,'rgb(254, 243, 226)');
 results.authoringStyle=authoringStyle;
-results.authoring='Visible bank links and four type cards for teacher/admin; preselected 6/25/39/30 counts; assigned lesson copy action; 390/768/1440px layouts';
+results.authoring='Compact authoring with no inline question editor or 0/N counter; automatic PDF import and bulk keys; optional correction dialog persists edits and reviewed flags; Enter/Escape and mobile keyboard focus; four type cards and fixed 6/25/39/30 counts';
 results.responsive=[];
 for(const[role,p,urls]of [
  ['admin',admin,['/accounts/users/','/courses/catalog/','/courses/classes/create/','/dashboard/','/accounts/profile/']],

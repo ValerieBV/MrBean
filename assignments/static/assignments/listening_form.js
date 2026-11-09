@@ -8,7 +8,8 @@
   const spec=specs[kind.value];if(!spec)return;
   const audioOnly=kind.value==='part2',pdfField=form.querySelector('[data-pdf-field]');
   pdfField.hidden=audioOnly;pdfField.querySelectorAll('input,button').forEach(control=>control.disabled=audioOnly||form.dataset.pdfBusy==='true');
-  document.getElementById('questionReview').hidden=audioOnly;
+  document.getElementById('openQuestionReview').hidden=['part1','part2'].includes(kind.value);
+  if(['part1','part2'].includes(kind.value)&&document.getElementById('questionReview').open)document.getElementById('questionReview').close();
   count.readOnly=spec.count!==null;if(spec.count!==null)count.value=spec.count;
   pdf.required=kind.value==='part1'&&form.dataset.hasDocument!=='true';
   document.getElementById('kindHelp').textContent=(spec.count?spec.count+' câu · ': 'Nhập số câu · ')+spec.letters.split('').join(' / ')+(kind.value==='part1'?' · cần PDF đề bài':'');

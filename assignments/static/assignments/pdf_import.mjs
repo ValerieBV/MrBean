@@ -6,10 +6,11 @@ if (form) {
     GlobalWorkerOptions.workerSrc = new URL('pdf.worker.min.mjs', assets).href;
     const kind = form.elements.kind, field = form.elements.question_data, fileInput = form.elements.document_file;
     const nav = document.getElementById('questionReviewNav'), editor = document.getElementById('questionEditor');
+    const dialog = document.getElementById('questionReview'), reviewButton = document.getElementById('openQuestionReview');
     const status = document.getElementById('pdfImportStatus'), textButton = document.getElementById('readPDFText'), scanButton = document.getElementById('readPDFScan');
     const specs = {part1:{count:6,start:1,letters:'ABCD'},part2:{count:25,start:7,letters:'ABC'},part3:{count:39,start:32,letters:'ABCD'},part4:{count:30,start:71,letters:'ABCD'}};
     const states = new Map();
-    let active = 0, busy = false, currentKind = kind.value;
+    let active = 0, busy = false, currentKind = kind.value, importedCount = null;
     let rows;
     try { rows = JSON.parse(field.value || '[]'); } catch { rows = []; }
     function spec() { return specs[kind.value] || {count:Number(form.elements.question_count.value)||1,start:1,letters:'ABCD'}; }
@@ -23,6 +24,12 @@ if (form) {
         return !row.uncertain && row.question_text.trim() && [...spec().letters].every(c=>row['option_'+c.toLowerCase()].trim() && row['option_'+c.toLowerCase()].trim()!==c);
     }
     function sync() { field.value = JSON.stringify(rows);form.dispatchEvent(new Event('listening-questions-changed')); }
+    function importStatus() {
+        if(importedCount===null)return;
+        const issues=['part3','part4'].includes(kind.value)?rows.filter(row=>!complete(row)).length:0;
+        status.textContent='Đã đọc '+importedCount+'/'+spec().count+' câu. '+(issues?'Có '+issues+' câu cần kiểm tra. Chọn “Kiểm tra nội dung PDF” để sửa.':'Dán đáp án đúng để lưu bài nghe.');
+    }
+    function openReview() {if(busy)return;if(!dialog.open)dialog.showModal();draw();}
     function drawNav() {
         nav.replaceChildren();
         rows.forEach((row,index)=>{
@@ -32,12 +39,12 @@ if (form) {
             button.onclick=()=>{active=index;draw();};nav.append(button);
         });
         document.getElementById('questionReviewCount').textContent=rows.filter(complete).length+'/'+rows.length+' câu có nội dung';
-        sync();
+        sync();importStatus();
     }
     function makeInput(label,key,tag='input') {
         const wrapper=document.createElement('div');wrapper.className='listening-field';
         const title=document.createElement('label'),input=document.createElement(tag);input.id='review_'+key;input.name='review_'+key;
-        title.htmlFor=input.id;title.textContent=label;input.value=rows[active][key] ?? '';
+        title.htmlFor=input.id;title.textContent=label;input.value=rows[active][key] ?? '';input.disabled=!dialog.open;
         if(key==='number'){input.type='number';input.min='1';input.max='9999';}
         else {input.maxLength=tag==='textarea'?10000:255;if(tag==='textarea')input.rows=3;}
         input.addEventListener('input',()=>{rows[active][key]=key==='number'?Number(input.value):input.value;drawNav();});
@@ -59,8 +66,7 @@ if (form) {
         if(imported.length>config.count)throw Error('PDF có nhiều câu hơn dạng đã chọn. Tách riêng phần cần dùng.');
         const start=kind.value==='part4'?71:imported[0].number,next=Array.from({length:config.count},(_,i)=>blank(start+i));
         for(const row of imported){const index=row.number-start;if(index<0||index>=config.count)throw Error('Số câu trong PDF không liên tục. Kiểm tra lại phần đề đã chọn.');next[index]={...blank(row.number),...row};}
-        rows=next;active=0;draw();status.textContent='Đã đọc '+imported.length+'/'+config.count+' câu. Kiểm tra nội dung bên dưới trước khi lưu.';
-        editor.scrollIntoView({block:'nearest',behavior:'smooth'});
+        rows=next;active=0;importedCount=imported.length;draw();
     }
     async function request(body,isJSON=false) {
         const headers={'X-CSRFToken':form.elements.csrfmiddlewaretoken.value};if(isJSON)headers['Content-Type']='application/json';
@@ -68,7 +74,7 @@ if (form) {
         if(response.status===401||response.redirected)throw Error('Phiên đăng nhập đã hết. Tải lại trang và đăng nhập để tiếp tục.');
         const data=await response.json();if(!response.ok)throw Error(data.message||'Không đọc được PDF. Kiểm tra lại tài liệu.');return data;
     }
-    function setBusy(value) { busy=value;form.dataset.pdfBusy=String(value);textButton.disabled=scanButton.disabled=kind.disabled=fileInput.disabled=value;form.querySelector('[type=submit]').disabled=value; }
+    function setBusy(value) { busy=value;form.dataset.pdfBusy=String(value);textButton.disabled=scanButton.disabled=reviewButton.disabled=kind.disabled=fileInput.disabled=value;form.querySelector('[type=submit]').disabled=value; }
     async function readText() {
         if(busy)return;setBusy(true);status.textContent='Đang đọc PDF…';let loadingTask;
         try {
@@ -91,7 +97,11 @@ if (form) {
             const data=await request(body);applyImport(data.questions);
         }catch(error){status.textContent=error.message;}finally{setBusy(false);}
     }
-    kind.addEventListener('change',()=>{states.set(currentKind,rows);currentKind=kind.value;rows=states.get(currentKind)||[];active=0;draw();});
-    textButton.onclick=readText;scanButton.onclick=readScan;fileInput.addEventListener('change',readText);form.addEventListener('submit',sync);
+    kind.addEventListener('change',()=>{dialog.close();states.set(currentKind,rows);currentKind=kind.value;rows=states.get(currentKind)||[];active=0;importedCount=null;status.textContent='';draw();});
+    textButton.onclick=readText;scanButton.onclick=readScan;fileInput.addEventListener('change',readText);
+    reviewButton.onclick=openReview;
+    dialog.querySelectorAll('[data-review-close]').forEach(button=>button.onclick=()=>dialog.close());
+    dialog.addEventListener('close',()=>{editor.querySelectorAll('input,textarea').forEach(input=>input.disabled=true);sync();importStatus();});
+    form.addEventListener('submit',event=>{sync();if(dialog.open){event.preventDefault();dialog.close();}});
     draw();
 }
