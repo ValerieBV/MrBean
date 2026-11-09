@@ -27,6 +27,28 @@ CSV chấp nhận tiêu đề `word,word_type,meaning,example` hoặc `Từ,Lo�
 có thể thêm cột STT. Nội dung có dấu phẩy phải đặt trong dấu nháy kép như CSV thông thường.
 Tệp Excel `.xlsx` cần lưu thành CSV UTF-8 hoặc sao chép các ô vào ô dán danh sách.
 
+### CSV có phiên âm và nhiều nghĩa
+
+Tệp `tu_vung_department_purchase.csv` dùng được trực tiếp với bốn cột trên.
+Mỗi từ hoặc cụm từ chiếm một dòng dữ liệu, kể cả khi có nhiều loại từ và nghĩa:
+
+- `word`: từ hoặc cụm từ, chẳng hạn `sign up` hoặc `purchase`.
+- `word_type`: loại từ, có thể là `v / n` cho cùng một mục từ.
+- `meaning`: giữ cả phiên âm và các nghĩa. Dùng xuống dòng trong cùng ô để tách nghĩa.
+- `example`: có thể để trống khi không có câu ví dụ.
+
+CSV có nội dung xuống dòng, dấu phẩy hoặc dấu nháy cần được lưu đúng quy tắc CSV.
+Giới hạn mỗi mục: từ 120 ký tự, loại từ 60, phiên âm/nghĩa 255 và ví dụ 2.000.
+Không cần tách `purchase` thành hai dòng trùng từ. Trang xem trước, buổi học và
+trang học viên giữ các dòng nghĩa; ô sửa nghĩa cho phép nhập nhiều dòng.
+
+CSV là danh sách **giáo viên giao bài**. Học viên xem các mục từ trực tiếp trên web
+rồi nộp văn bản hoặc ảnh bài viết PNG/JPG/WebP theo biểu mẫu hiện có. Khi chấm,
+AI dùng danh sách mẫu làm ngữ cảnh và đếm lượt chép của từng từ/cụm từ, không đếm
+thêm từ nằm trong giải nghĩa hay ví dụ. Từ có nhiều nghĩa vẫn là một mục từ.
+Kết quả theo số lượt yêu cầu là hoàn thành/chưa hoàn thành; ảnh không đủ rõ để
+xác định số lượt vẫn cần được kiểm tra, không mặc định kết luận học viên làm thiếu.
+
 ## Kiểm tra và giao bài
 
 1. Chọn một cách nhập: dán danh sách hoặc tải tệp. Mỗi lần tối đa 500 từ.

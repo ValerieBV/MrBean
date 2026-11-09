@@ -52,9 +52,10 @@ class VocabWordForm(forms.ModelForm):
     class Meta:
         model = VocabWord
         fields = ["order", "word", "word_type", "meaning", "example"]
-        labels = {'meaning': 'Nghĩa (không bắt buộc)'}
-        widgets = {f: forms.TextInput(attrs={"class": INPUT}) for f in ["word", "word_type", "meaning"]}
+        labels = {'meaning': 'Phiên âm / nghĩa (không bắt buộc)'}
+        widgets = {f: forms.TextInput(attrs={"class": INPUT}) for f in ["word", "word_type"]}
         widgets["order"] = forms.NumberInput(attrs={"class": INPUT})
+        widgets["meaning"] = forms.Textarea(attrs={"class": INPUT, "rows": 4})
         widgets["example"] = forms.Textarea(attrs={"class": INPUT, "rows": 2})
 
 

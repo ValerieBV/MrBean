@@ -1,9 +1,14 @@
+import io
 import time
 from datetime import timedelta
+from pathlib import Path
 from unittest.mock import patch
 
+from PIL import Image
+from django import forms
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.template.defaultfilters import linebreaksbr
 from django.test import Client, SimpleTestCase
 from django.urls import reverse
 
@@ -14,7 +19,20 @@ from .services import assign_to_class, import_vocabulary_rows
 from .vocabulary_import import parse_vocabulary_text
 
 
+FULL_ENTRIES_CSV = Path(__file__).with_name('testdata') / 'vocabulary_full_entries.csv'
+
+
 class VocabularyParserTests(SimpleTestCase):
+    def test_full_entries_csv_preserves_all_ten_words_and_multiple_senses(self):
+        rows = parse_vocabulary_text(FULL_ENTRIES_CSV.read_text(encoding='utf-8-sig'), csv_file=True)
+        self.assertEqual([row['word'] for row in rows], ['department', 'issue', 'corporate', 'sign up',
+            'outing', 'notify', 'supervisor', 'join', 'appliance', 'purchase'])
+        self.assertEqual(rows[7]['meaning'].count('\n- '), 3)
+        self.assertIn('/dzoin/', rows[7]['meaning'])
+        self.assertEqual(rows[9]['word_type'], 'v / n')
+        self.assertIn("(v) /'p3:rtfas/: to buy sth\n(n)", rows[9]['meaning'])
+        self.assertTrue(all(row['example'] == '' for row in rows))
+
     def test_plain_words_phrases_and_numbered_lines_need_no_meaning(self):
         rows = parse_vocabulary_text('word\n\n1. department\n2) sign up\nissue\n')
         self.assertEqual([row['word'] for row in rows], ['word', 'department', 'sign up', 'issue'])
@@ -86,6 +104,69 @@ class VocabularyImportTests(IntegratedFixture):
 
     def confirm(self, token, client=None, url=None):
         return (client or self.client).post(url or self.url, {'action': 'confirm', 'preview_token': token})
+
+    def test_full_entries_survive_import_edit_assignment_and_png_submission(self):
+        upload = SimpleUploadedFile('tu_vung.csv', FULL_ENTRIES_CSV.read_bytes(), content_type='text/csv')
+        response = self.client.post(self.url, {'action': 'preview', 'upload': upload})
+        self.assertEqual(response.context['add_count'], 10)
+        self.assertEqual(response.context['skip_count'], 0)
+        self.assertEqual(self.lesson.words.count(), 0)
+        for row in response.context['preview']:
+            self.assertContains(response, linebreaksbr(row['meaning']))
+        self.confirm(response.context['preview_token'])
+        purchase = self.lesson.words.get(word='purchase')
+        self.assertEqual(purchase.word_type, 'v / n')
+        self.assertEqual(self.lesson.words.count(), 10)
+        edit_url = reverse('assignments:item_edit', args=['vocabulary', purchase.pk])
+        edit = self.client.get(edit_url)
+        self.assertIsInstance(edit.context['form'].fields['meaning'].widget, forms.Textarea)
+        self.assertEqual(edit.context['form']['meaning'].value(), purchase.meaning)
+        self.assertRedirects(self.client.post(edit_url, {'order': purchase.order, 'word': purchase.word,
+            'word_type': purchase.word_type, 'meaning': purchase.meaning, 'example': ''}),
+            reverse('assignments:lesson_detail', args=[self.lesson.pk]))
+        purchase.refresh_from_db()
+        self.assertIn('\n(n)', purchase.meaning)
+        self.assertContains(self.client.get(reverse('assignments:lesson_detail', args=[self.lesson.pk])),
+            linebreaksbr(purchase.meaning))
+        assigned = assign_to_class(actor=self.teacher, lesson=self.lesson, classroom=self.classroom,
+            assigned_at=self.now - timedelta(minutes=1), due_at=self.now + timedelta(days=1),
+            repetitions=1, requires_previous=False)
+        self.assertEqual(len(assigned.rubric['words']), 10)
+        self.assertIn('sign up', assigned.rubric['words'])
+        detail = next(row for row in assigned.rubric['word_details'] if row['word'] == 'purchase')
+        self.assertEqual(detail['meaning'], purchase.meaning)
+        self.assertEqual(detail['word_type'], 'v / n')
+        task = assigned.tasks.get(learner=self.student)
+        self.client.force_login(self.student)
+        response = self.client.get(reverse('submissions:do_task', args=[task.pk]))
+        self.assertContains(response, linebreaksbr(purchase.meaning))
+        self.assertContains(response, '10. purchase')
+        self.assertContains(response, 'Bài có 10 từ / cụm từ.')
+        stream = io.BytesIO()
+        Image.new('RGB', (80, 60), 'white').save(stream, 'PNG')
+        response = self.client.post(reverse('ai_core:submit'), {'task_id': task.pk,
+            'submission_key': 'csv-import-png', 'reference_version': assigned.reference_version,
+            'images': SimpleUploadedFile('bai_lam.png', stream.getvalue(), content_type='image/png')})
+        self.assertEqual(response.status_code, 201)
+        job = task.jobs.get()
+        self.assertEqual(job.status, 'queued')
+        self.assertEqual(job.pages.count(), 1)
+        self.assertEqual(job.rubric_snapshot, assigned.rubric)
+
+    def test_multiline_definitions_are_escaped_on_every_reading_screen(self):
+        definition = 'First meaning\n<script>alert(1)</script>\nSecond meaning'
+        response = self.preview('word,word_type,meaning,example\njoin,v,"' + definition + '",')
+        self.assertContains(response, linebreaksbr(definition))
+        self.assertNotContains(response, '<script>alert(1)</script>')
+        self.confirm(response.context['preview_token'])
+        assigned = assign_to_class(actor=self.teacher, lesson=self.lesson, classroom=self.classroom,
+            assigned_at=self.now - timedelta(minutes=1), due_at=self.now + timedelta(days=1), requires_previous=False)
+        for actor, url in [(self.teacher, reverse('assignments:lesson_detail', args=[self.lesson.pk])),
+                (self.student, reverse('submissions:do_task', args=[assigned.tasks.get(learner=self.student).pk]))]:
+            self.client.force_login(actor)
+            response = self.client.get(url)
+            self.assertContains(response, linebreaksbr(definition))
+            self.assertNotContains(response, '<script>alert(1)</script>')
 
     def test_preview_has_no_writes_and_confirm_makes_words_available_to_assignment(self):
         self.assertContains(self.client.get(reverse('assignments:lesson_detail', args=[self.lesson.pk])), self.url)

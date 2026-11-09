@@ -1,13 +1,13 @@
 {% extends 'base_student.html' %}{% load static %}{% block title %}{{ task.title }}{% endblock %}{% block tab_vocabulary %}tab-active{% endblock %}{% block content %}<div class="mb-4"><a href="{% url 'submissions:student_skill' rubric.skill %}" class="text-amber-700 text-sm hover:underline"><i class="fa-solid fa-angle-left" aria-hidden="true"></i> {{ lesson.get_skill_display }}</a><h2 class="text-xl font-bold text-gray-800 mt-1 font-title">Buổi {{ lesson.order }}: {{ task.title }}</h2><p class="text-gray-500 text-sm">Hạn nộp {{ task.due_at|date:'d/m/Y H:i' }}</p></div>
 {% include 'submissions/_task_context.html' %}{% if not blocked_reason %}<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
     {% for w in word_details %}
-    <div class="bg-white rounded-xl shadow-sm border p-5">
-        <div class="flex items-baseline justify-between">
-            <h3 class="text-lg font-bold" style="color:#D4621A">{{ w.word }}</h3>
+    <div class="bg-white rounded-xl shadow-sm border p-5 min-w-0">
+        <div class="flex flex-wrap gap-3 items-baseline justify-between">
+            <h3 class="text-lg font-bold vocabulary-copy" style="color:#D4621A">{{ forloop.counter }}. {{ w.word }}</h3>
             <span class="text-xs text-gray-400">{{ w.word_type }}</span>
         </div>
-        <p class="text-gray-700 mt-1">{{ w.meaning }}</p>
-        {% if w.example %}<p class="text-gray-500 italic text-sm mt-2"><i class="fa-solid fa-quote-left text-xs"></i> {{ w.example }}</p>{% endif %}
+        <p class="text-gray-700 mt-1 vocabulary-copy">{{ w.meaning|linebreaksbr }}</p>
+        {% if w.example %}<p class="text-gray-500 italic text-sm mt-2 vocabulary-copy"><i class="fa-solid fa-quote-left text-xs"></i> {{ w.example|linebreaksbr }}</p>{% endif %}
     </div>
     {% empty %}
     <p class="text-gray-400">Buổi này chưa có từ vựng.</p>
@@ -15,4 +15,4 @@
 </div>
 
 <form id="submissionForm" method="post" action="{% url 'ai_core:submit' %}" enctype="multipart/form-data" data-kind="{{ rubric.skill }}" data-submit-url="{% url 'ai_core:submit' %}" data-draft-url="{% url 'submissions:autosave' task.pk %}">{% csrf_token %}<input type="hidden" name="task_id" value="{{ task.pk }}"><input type="hidden" name="submission_key" value="{{ submission_key }}"><input type="hidden" name="reference_version" value="{{ task.assignment.reference_version }}">
-<div class="bg-white rounded-xl shadow-sm border p-5 mt-6"><h3 class="font-semibold text-gray-800 mb-3">Nộp bài từ vựng</h3><p class="text-sm text-gray-600 mb-4">Mỗi từ viết {{ rubric.repetitions }} lượt. Chỉ kiểm tra đủ số lượng, không chấm chữ đẹp hay xấu.</p><label for="text" class="block text-sm font-medium mb-2">Bài làm dạng văn bản</label><textarea id="text" name="text" rows="8" maxlength="20000" class="w-full px-3 py-2 border rounded-lg">{{ draft_text }}</textarea><label for="images" class="block text-sm font-medium mt-4 mb-2">Hoặc gửi ảnh bài làm</label><input id="images" type="file" name="images" multiple accept="image/png,image/jpeg,image/webp"><p class="text-xs text-gray-500 mt-2">Tối đa 5 ảnh, mỗi ảnh 8 MiB. Nếu gửi cả hai dạng, chỉ đếm trên ảnh.</p></div>{% include 'submissions/_submit_controls.html' %}</form>{% endif %}{% include 'submissions/_submission_history.html' %}{% endblock %}{% block scripts %}{% if not blocked_reason %}<script src="{% static 'submissions/submit.js' %}" defer></script>{% endif %}{% endblock %}
+<div class="bg-white rounded-xl shadow-sm border p-5 mt-6"><h3 class="font-semibold text-gray-800 mb-3">Nộp bài từ vựng</h3><p class="text-sm text-gray-600 mb-4">Bài có {{ rubric.words|length }} từ / cụm từ. Mỗi từ viết {{ rubric.repetitions }} lượt; một từ có nhiều nghĩa vẫn tính là một mục. Chỉ kiểm tra đủ lượt viết, không chấm chữ đẹp hay xấu.</p><label for="text" class="block text-sm font-medium mb-2">Bài làm dạng văn bản</label><textarea id="text" name="text" rows="8" maxlength="20000" class="w-full px-3 py-2 border rounded-lg">{{ draft_text }}</textarea><label for="images" class="block text-sm font-medium mt-4 mb-2">Hoặc gửi ảnh bài làm</label><input id="images" type="file" name="images" multiple accept="image/png,image/jpeg,image/webp"><p class="text-xs text-gray-500 mt-2">Tối đa 5 ảnh, mỗi ảnh 8 MiB. Nếu gửi cả hai dạng, chỉ đếm trên ảnh.</p></div>{% include 'submissions/_submit_controls.html' %}</form>{% endif %}{% include 'submissions/_submission_history.html' %}{% endblock %}{% block scripts %}{% if not blocked_reason %}<script src="{% static 'submissions/submit.js' %}" defer></script>{% endif %}{% endblock %}

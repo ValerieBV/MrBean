@@ -28,11 +28,11 @@
 <div class="space-y-3">
     {% for item in items %}
     <div class="bg-white rounded-xl shadow-sm border border-amber-900/5 p-4 flex justify-between items-start">
-        <div class="text-sm">
+        <div class="text-sm min-w-0">
             {% if lesson.skill == 'vocabulary' %}
                 <b class="text-amber-800">{{ item.word }}</b> <span class="text-gray-400">{{ item.word_type }}</span><br>
-                <span class="text-gray-700">{{ item.meaning }}</span>
-                {% if item.example %}<div class="text-gray-500 italic mt-1">{{ item.example }}</div>{% endif %}
+                <div class="text-gray-700 vocabulary-copy">{{ item.meaning|linebreaksbr }}</div>
+                {% if item.example %}<div class="text-gray-500 italic mt-1 vocabulary-copy">{{ item.example|linebreaksbr }}</div>{% endif %}
             {% elif lesson.skill == 'listening' %}
                 <b class="text-amber-800">Câu {{ item.order }}.</b> {{ item.question_text }}
                 {% if item.image %}<div class="mt-2"><img src="{% url 'assignments:question_image' item.pk %}" class="h-24 rounded border" alt="Hình câu hỏi {{ item.order }}"></div>{% endif %}
