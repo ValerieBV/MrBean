@@ -3,13 +3,14 @@ import base64
 import json
 import math
 import re
+import unicodedata
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from openai import OpenAI
 from .listening import FIRST_NUMBER, LISTENING_SPECS, validate_listening_pdf
 
-QUESTION = re.compile(r'^\s*(?:Question\s+)?(\d{1,4})(?:[.)]\s*|\s+)(.*)$', re.I)
-OPTION = re.compile(r'(?:^|\s)[(（]?([A-D])[)）.]\s*')
+QUESTION = re.compile(r'^\s*(?:(?:Question|Câu)\s*)?[(（]?(\d{1,4})\s*(?:[.)）-]\s*|[:：](?!\d)\s*|\s+|$)(.*)$', re.I)
+OPTION = re.compile(r'(?:(?<!\S)\(([A-D])\)|(?:^|\t+| {2,})([A-D])[).:])\s*', re.I)
 
 
 def default_numbers(kind, count):
@@ -48,13 +49,16 @@ def select_questions(rows, kind):
         selected = [row for row in rows if row['number'] in standard]
         if len(selected) == expected:
             rows = selected
+    if len(rows) == expected and [row['number'] for row in rows] == list(range(1, expected+1)):
+        for row, number in zip(rows, default_numbers(kind, expected)):
+            row['number'] = number
     return rows
 
 
 def parse_lines(lines):
     rows, current, field = [], None, 'question_text'
     for line in lines:
-        line = line.strip()
+        line = unicodedata.normalize('NFKC', line).replace('\u200b', '').strip()
         if not line:
             continue
         match = QUESTION.match(line)
@@ -70,7 +74,7 @@ def parse_lines(lines):
             if before:
                 current[field] = (current[field] + ' ' + before).strip()
             for i, option in enumerate(options):
-                field = 'option_' + option[1].lower()
+                field = 'option_' + (option[1] or option[2]).lower()
                 end = options[i+1].start() if i+1 < len(options) else len(line)
                 current[field] = (current[field] + ' ' + line[option.end():end]).strip()
         else:
@@ -102,11 +106,11 @@ def extract_text_questions(pages, kind):
                 raise ValidationError('Tọa độ chữ trong PDF không hợp lệ.')
             if item['text'].strip():
                 items.append(item)
-        anchors = sorted({item['x'] for item in items if re.match(r'^\s*\d{1,4}(?:[.)]|\s*$)', item['text'])})
+        anchors = sorted({item['x'] for item in items if QUESTION.match(item['text'])})
         split = None
         if len(anchors) > 1:
             left, right = max(zip(anchors, anchors[1:]), key=lambda pair: pair[1]-pair[0])
-            if right-left > width*.3:
+            if right-left > width*.25:
                 split = (left+right)/2
         columns = [items] if split is None else [[item for item in items if item['x'] < split], [item for item in items if item['x'] >= split]]
         for column in columns:

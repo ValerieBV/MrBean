@@ -8,6 +8,8 @@
   const spec=specs[kind.value];if(!spec)return;
   const audioOnly=kind.value==='part2',pdfField=form.querySelector('[data-pdf-field]');
   pdfField.hidden=audioOnly;pdfField.querySelectorAll('input,button').forEach(control=>control.disabled=audioOnly||form.dataset.pdfBusy==='true');
+  const wordField=form.querySelector('[data-docx-field]');wordField.hidden=!['part3','part4'].includes(kind.value);
+  wordField.querySelectorAll('input,button').forEach(control=>control.disabled=wordField.hidden||form.dataset.pdfBusy==='true');
   document.getElementById('openQuestionReview').hidden=['part1','part2'].includes(kind.value);
   if(['part1','part2'].includes(kind.value)&&document.getElementById('questionReview').open)document.getElementById('questionReview').close();
   count.readOnly=spec.count!==null;if(spec.count!==null)count.value=spec.count;

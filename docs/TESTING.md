@@ -20,6 +20,9 @@ Phạm vi kiểm tra:
 - Ngân hàng bài tập, đáp án nghe, bản sao buổi đã giao, khóa sửa/xóa nội dung có lịch sử.
 - Giao bài: buổi rỗng, lỗi đúng bài/câu, dạng 2 chỉ A/B/C, file bị thiếu, thời hạn sai,
   lớp thiếu giáo viên, giao trùng, quyền lớp và danh sách học viên hoạt động.
+- Word DOCX: đoạn văn, bảng hai cột, xuống dòng, danh sách số/chữ tự động và style
+  đánh số; kiểm tra ZIP/XML lỗi, giới hạn kích thước, file ảnh không có văn bản, quyền
+  nhập và khóa đề đã giao. Word không gọi OpenAI và không cần PDF để giao dạng 3/4.
 - Đọc PDF hai cột/nhiều trang, nối lựa chọn xuống dòng, chọn đúng phần trong đề 100 câu;
   giữ số câu gốc, key theo số gốc hoặc thứ tự; scan OpenAI dùng mock, không đoán key;
   chặn nội dung chưa rõ/thiếu câu hỏi hoặc lựa chọn ở dạng 3/4, kiểm tra quyền endpoint.
@@ -61,7 +64,8 @@ chạy web tại `127.0.0.1:8765` rồi thực hiện:
    font Roboto/Montserrat, màu nền chung và nút sao chép buổi đã giao.
 3. Biểu mẫu giao bài chặn buổi rỗng, liên kết sửa nội dung, xem đủ bốn bài/100 câu,
    ẩn lượt viết từ vựng với bài nghe và liên kết lượt giao cũ khi chọn trùng.
-4. Nhập PDF hai cột/nhiều trang cho dạng 3/4, giữ số 32–70 và 71–100, dán key theo
+4. Nhập PDF hai cột/nhiều trang có nhãn `Question 32 :`; thử PDF không có chữ, sau đó
+   nhập Word DOCX cho dạng 4 không kèm PDF. Giữ số 32–70 và 71–100, dán key theo
    số gốc. Học viên dùng tab bài nghe, số câu, chọn lựa chọn có đầy đủ nội dung và
    ghi câu trả lời ngắn; xem PDF trực tiếp và khôi phục nháp. Nộp
    thiếu câu trả lời dù được 10 điểm vẫn chưa hoàn thành; nộp đủ nhưng sai một câu

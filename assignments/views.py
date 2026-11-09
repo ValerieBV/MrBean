@@ -361,6 +361,7 @@ def listening_extract(request, lesson_id):
     from django.http import JsonResponse
     from openai import OpenAIError
     from .question_import import extract_text_questions, extract_scanned_pdf
+    from .docx_import import extract_docx_questions
     lesson = get_object_or_404(editable_lessons(request.user), pk=lesson_id, skill='listening')
     try:
         assert_editable(request, lesson)
@@ -383,6 +384,12 @@ def listening_extract(request, lesson_id):
                 raise ValidationError('Dạng 2 chỉ dùng file nghe, câu 7–31; không cần đọc PDF.')
             if kind not in ('part1','part3','part4'):
                 raise ValidationError('Chọn dạng bài nghe trước khi đọc PDF.')
+            word = request.FILES.get('docx_file')
+            if word:
+                questions = extract_docx_questions(word, kind)
+                response = JsonResponse({'questions': questions, 'expected': LISTENING_SPECS[kind]['count']})
+                response['Cache-Control'] = 'private, no-store'
+                return response
             upload = request.FILES.get('document_file')
             if not upload and request.POST.get('exercise_id', '').isdigit():
                 exercise = get_object_or_404(ListeningExercise, pk=request.POST['exercise_id'], lesson=lesson)

@@ -119,3 +119,5 @@
 @media(min-width:1200px){.listening-response-row{grid-template-columns:minmax(0,1fr) minmax(210px,.65fr)}.listening-workspace .listening-response-row{grid-template-columns:minmax(0,1fr)}}
 .workspace-compact .listening-response-row{grid-template-columns:minmax(0,1fr)}
 @media(max-width:520px){.question-controls .listening-button{padding:.55rem .65rem;font-size:.8rem}.listening-options.detailed .listening-option{justify-content:flex-start}.question-review-nav,.listening-question-nav{gap:.35rem}}
+
+.listening-word-import{margin-top:1rem;padding-top:1rem;border-top:1px solid #eadbcc}

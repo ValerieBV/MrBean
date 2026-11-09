@@ -51,6 +51,7 @@ function writePDF(filename,contents){
  let pdf='%PDF-1.4\n',offsets=[0];for(let i=0;i<objects.length;i++){offsets.push(Buffer.byteLength(pdf));pdf+=(i+1)+' 0 obj\n'+objects[i]+'\nendobj\n';}const start=Buffer.byteLength(pdf);pdf+='xref\n0 '+(objects.length+1)+'\n0000000000 65535 f \n'+offsets.slice(1).map(n=>String(n).padStart(10,'0')+' 00000 n \n').join('')+'trailer\n<< /Size '+(objects.length+1)+' /Root 1 0 R >>\nstartxref\n'+start+'\n%%EOF';fs.writeFileSync(filename,pdf);
 }
 const pdfLine=(text,x,y)=>'BT /F1 9 Tf '+x+' '+y+' Td ('+text.replace(/[()\\]/g,'\\$&')+') Tj ET';
+writePDF('scan-without-text.pdf',['0.9 0.9 0.9 rg 40 60 510 680 re f']);
 writePDF('listening-photographs.pdf',[
  '0.94 0.92 0.88 rg 40 60 510 680 re f 0 0 0 rg '+Array.from({length:6},(_,i)=>pdfLine('Photograph '+(i+1),65,710-i*95)).join(' '),
  pdfLine('Listening page two',60,710),
@@ -58,11 +59,22 @@ writePDF('listening-photographs.pdf',[
 for(const [kind,start,count]of [['part3',32,39],['part4',71,30]]){
  const pages=[];
  for(let offset=0;offset<count;offset+=6){const lines=[];for(let i=offset;i<Math.min(count,offset+6);i++){const slot=i-offset,x=slot<3?35:320,y=780-(slot%3)*225;
-  [''+(start+i)+'. What does the man need to do first?','(A) Change his clothes.','(B) Attach a name tag.','(C) Contact a warehouse supervisor.','(D) Read an employee handbook.'].forEach((line,n)=>lines.push(pdfLine(line,x,y-n*18)));}
+  [(kind==='part3'?'Question '+(start+i)+' : ':''+(start+i)+'. ')+'What does the man need to do first?','(A) Change his clothes.','(B) Attach a name tag.','(C) Contact a warehouse supervisor.','(D) Read an employee handbook.'].forEach((line,n)=>lines.push(pdfLine(line,x,y-n*18)));}
   pages.push(lines.join(' '));
  }
  writePDF('listening-'+kind+'.pdf',pages);
 }
+execFileSync(python,['-c',String.raw`
+import zipfile
+from html import escape
+ns='http://schemas.openxmlformats.org/wordprocessingml/2006/main'
+lines=[line for n in range(71,101) for line in [f'Question {n}: What does the man need to do first?','a: Change his clothes.','b: Attach a name tag.','c: Contact a warehouse supervisor.','d: Read an employee handbook.']]
+body=''.join('<w:p><w:r><w:t>'+escape(line)+'</w:t></w:r></w:p>' for line in lines)
+with zipfile.ZipFile('listening-part4.docx','w',zipfile.ZIP_DEFLATED) as z:
+ z.writestr('[Content_Types].xml','<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>')
+ z.writestr('_rels/.rels','<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>')
+ z.writestr('word/document.xml',f'<w:document xmlns:w="{ns}"><w:body>{body}</w:body></w:document>')
+`],{stdio:'pipe'});
 fs.writeFileSync('listening-key-part2.csv','number,answer\n'+Array.from({length:25},(_,i)=>(i+1)+',B').join('\n'));
 await teacher.goto(base+'/quan-ly/bai-tap/');
 await teacher.getByRole('link',{name:'Xem buổi và thêm bài',exact:true}).click();
@@ -103,7 +115,7 @@ for(const [index,kind,count] of [[1,'part1',6],[2,'part2',25],[3,'part3',39],[4,
  await teacher.locator('[name=audio_file]').setInputFiles('sample-listening.mp3');
  assert(!(await teacher.locator('#questionReview').isVisible()));
  assert.equal(await teacher.getByRole('heading',{name:'3. Câu hỏi và lựa chọn',exact:true}).count(),0);
- if(kind==='part1'||kind==='part2')assert(!(await teacher.locator('#openQuestionReview').isVisible()));
+ if(kind==='part1'||kind==='part2'){assert(!(await teacher.locator('#openQuestionReview').isVisible()));assert(!(await teacher.locator('[data-docx-field]').isVisible()));}
  if(kind==='part1'){await teacher.locator('[name=document_file]').setInputFiles('listening-photographs.pdf');await teacher.waitForFunction(()=>!document.querySelector('#readPDFText').disabled);}
  if(kind==='part3'){await teacher.route('**/listening/extract/',async route=>{const response=await route.fetch(),data=await response.json();data.questions[0].uncertain=true;await route.fulfill({response,json:data});},{times:1});}
  if(kind==='part3'||kind==='part4'){
@@ -112,6 +124,17 @@ for(const [index,kind,count] of [[1,'part1',6],[2,'part2',25],[3,'part3',39],[4,
   const questions=JSON.parse(await teacher.locator('[name=question_data]').inputValue());
   assert.equal(questions.length,count);assert.equal(questions[0].number,kind==='part3'?32:71);assert.equal(questions[0].option_b,'Attach a name tag.');
   assert(!(await teacher.locator('#questionReview').isVisible()));
+  if(kind==='part4'){
+   await teacher.locator('[name=document_file]').setInputFiles('scan-without-text.pdf');
+   await teacher.waitForFunction(()=>document.querySelector('#pdfImportStatus').textContent.includes('PDF không có chữ đọc được'));
+   assert(JSON.parse(await teacher.locator('[name=question_data]').inputValue()).every(q=>!q.question_text));
+   await teacher.locator('#docxQuestions').setInputFiles('listening-part4.docx');
+   await teacher.waitForFunction(()=>document.querySelector('#pdfImportStatus').textContent.includes('Đã đọc 30/30 câu từ Word'));
+   const wordQuestions=JSON.parse(await teacher.locator('[name=question_data]').inputValue());
+   assert.equal(wordQuestions[0].number,71);assert.equal(wordQuestions[29].number,100);assert.equal(wordQuestions[0].option_b,'Attach a name tag.');
+   await teacher.locator('[name=document_file]').setInputFiles([]);
+   assert.equal(JSON.parse(await teacher.locator('[name=question_data]').inputValue())[0].option_b,'Attach a name tag.');
+  }
   if(kind==='part3'){
    assert.match(await teacher.locator('#pdfImportStatus').innerText(),/Có 1 câu cần kiểm tra/);
    await teacher.locator('#openQuestionReview').click();const review=teacher.locator('#questionReview');
@@ -201,7 +224,7 @@ await answerListening({wrongFirst:true});
 await student.setViewportSize({width:390,height:920});assert(await student.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));await student.screenshot({path:'screenshots/listening-mobile.png',fullPage:false});await student.setViewportSize({width:1440,height:1000});
 await Promise.all([student.waitForURL('**/results/*/'),student.getByRole('button',{name:'Nộp bài',exact:true}).click()]);
 assert.match(await student.locator('body').innerText(),/Đúng 99\/100/);assert.equal(await student.locator('[data-completion-status]').getAttribute('data-completion-status'),'complete');
-results.listening='4 manually added exercises, 6/25/39/30 questions; two-column multi-page PDF import with source numbers 32–70/71–100; full-text radio choices + short answers; tabs and numbered navigation; CSV and source-numbered keys; draft restored; partial 10-point attempt incomplete; 9.9-point full attempt complete';
+results.listening='4 manually added exercises, 6/25/39/30 questions; two-column multi-page PDF import 32–70, scan-without-text feedback, DOCX import 71–100 without a PDF; full-text radio choices + short answers; tabs and numbered navigation; CSV and source-numbered keys; draft restored; partial 10-point attempt incomplete; 9.9-point full attempt complete';
 const vocab=await createLesson('vocabulary',Number(stamp),'Từ vựng UI '+stamp);await teacher.getByRole('button',{name:'Thêm từ vựng',exact:true}).click();await fill(teacher,'order','1');await fill(teacher,'word','Hello');await fill(teacher,'meaning','Xin chào');await teacher.getByRole('button',{name:'Thêm',exact:true}).click();await assignLesson(vocab);
 await student.goto(base+'/hoc-tap/skill/vocabulary/');await student.locator('.space-y-3 > div').filter({hasText:'Từ vựng UI '+stamp}).getByRole('link',{name:'Làm bài',exact:true}).click();const vocabTaskURL=student.url();await student.screenshot({path:'screenshots/source-vocabulary.png',fullPage:true});await student.getByRole('link',{name:'Cần xin miễn bài này?'}).click();await fill(student,'reason','Xin miễn để kiểm thử quy trình duyệt đúng bài.');await Promise.all([student.waitForURL('**/exemptions/'),student.getByRole('button',{name:'Gửi đơn xin miễn',exact:true}).click()]);
 await teacher.goto(base+'/courses/exemptions/');await teacher.locator('tr').filter({hasText:'Từ vựng UI '+stamp}).getByRole('link',{name:'Xét duyệt'}).click();await teacher.locator('[name=action][value=approve]').check();await fill(teacher,'note','Đồng ý miễn bài theo quy định.');await Promise.all([teacher.waitForURL('**/exemptions/'),teacher.getByRole('button',{name:'Xác nhận xử lý',exact:true}).click()]);results.exemption='requested and approved once';

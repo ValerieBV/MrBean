@@ -55,12 +55,15 @@ theo dạng; backend từ chối số câu không đúng quy định.
 4. Tải file nghe MP3/WAV/M4A/MP4/OGG/WebM, tối đa **50 MiB/bài**. Nên dùng MP3 để
    các trình duyệt phát thuận tiện. PDF tối đa **25 MiB**, bắt buộc với dạng 1.
    PDF cần có đủ hình/đề học viên được xem và không chứa bảng đáp án đúng.
-5. Với dạng 3/4, tải PDF có câu hỏi và đầy đủ lựa chọn. Hệ thống đọc chữ từ PDF
-   để tạo nội dung câu hỏi trên web, giữ nguyên số câu trên đề (ví dụ 32–70).
-   Nếu tài liệu là PDF scan/ảnh, chọn **Đọc bản scan bằng AI**.
-6. Câu hỏi và lựa chọn được lấy tự động từ PDF, không cần nhập lại từng câu.
+5. Với dạng 3/4, chọn một nguồn nội dung câu hỏi:
+   - **PDF có văn bản:** tải PDF; hệ thống tự đọc câu hỏi và lựa chọn.
+   - **Word:** dùng mục **Hoặc đọc câu hỏi từ Word (.docx)**. Chọn file để đọc tự động,
+     hoặc bấm **Đọc câu hỏi từ Word** để thử lại. Không cần đính kèm thêm PDF.
+   - **PDF scan/ảnh:** chọn **Đọc bản scan bằng AI**. Đọc chữ thông thường sẽ báo rõ
+     khi PDF không có văn bản đọc được; hệ thống không tự gọi API có phí.
+6. Câu hỏi và lựa chọn được lấy tự động từ tài liệu, không cần nhập lại từng câu.
    Trang chính chỉ hiển thị tài liệu và bảng đáp án. Nếu cần kiểm tra hoặc sửa lỗi
-   nhận dạng, bấm **Kiểm tra nội dung PDF** để mở cửa sổ riêng.
+   nhận dạng, bấm **Kiểm tra nội dung câu hỏi** để mở cửa sổ riêng.
    Câu AI báo chưa rõ cần kiểm tra rồi bấm
    **Đã kiểm tra câu này**; hệ thống chặn lưu dạng 3/4 nếu chỉ có ký hiệu A/B/C/D.
 7. Nhập đáp án đúng hàng loạt theo mục 3, rồi bấm **Lưu bài nghe và đáp án**.
@@ -68,6 +71,35 @@ theo dạng; backend từ chối số câu không đúng quy định.
 8. Thêm các bài còn lại theo nhu cầu. Kiểm tra file nghe, PDF và bảng đáp án tại
    chi tiết buổi, rồi bấm **Giao buổi cho lớp**. Chọn lớp, thời điểm mở, hạn nộp
    và quy định nhận bài.
+
+### Dùng Word hoặc Google Docs cho dạng 3/4
+
+Nếu đề đang ở Google Docs, tải xuống dưới dạng **Microsoft Word (.docx)** rồi chọn
+file tại mục Word trên trang tạo bài nghe. File `.doc` cũ cần lưu lại thành `.docx`.
+File Word tối đa **10 MiB**, phải có văn bản thực; chèn ảnh chụp đề vào Word không
+biến ảnh thành chữ. Với đề nằm trong ảnh, xuất PDF và dùng chức năng nhận dạng scan.
+
+Word có thể dùng đoạn văn, bảng hai cột hoặc danh sách đánh số tự động thông dụng.
+Để đọc thuận tiện, mỗi câu và mỗi lựa chọn nên nằm trên một dòng. Ví dụ:
+
+```text
+71. What does the man need to do first?
+A. Change his clothes.
+B. Attach a name tag.
+C. Contact a warehouse supervisor.
+D. Read an employee handbook.
+```
+
+Hệ thống hỗ trợ cách ghi như `Question 71:`, `(71)`, `A)`, `(A)`, `a:` và dòng xuống
+hàng. Khi nhập một bộ đầy đủ đánh số cục bộ 1–39 hoặc 1–30, số hiển thị được đổi
+theo Part 3 (32–70) hoặc Part 4 (71–100). Bảng đáp án vẫn có thể nhập theo số cục bộ
+hoặc số TOEIC, không trộn hai cách trong cùng bảng.
+
+Word được đọc trực tiếp trên máy chạy Django, không gọi OpenAI. Câu hỏi và lựa chọn
+được lưu vào đề như nội dung đọc từ PDF, học viên chọn đáp án trên web. File Word
+chỉ dùng trong lần nhập, không được công bố cho học viên hoặc lưu thành tài liệu
+PDF. Nếu muốn cung cấp thêm PDF để đối chiếu, tải PDF và Word; hệ thống ưu tiên Word
+khi đã chọn làm nguồn câu hỏi. Đáp án đúng vẫn được nhập riêng ở phần 2.
 
 PDF có lớp chữ được đọc bằng PDF.js ngay trong trình duyệt, không gọi OpenAI.
 Mỗi PDF nhập câu hỏi tối đa 40 trang; nên tách đúng phần cần giao. Cơ chế đọc hỗ trợ
