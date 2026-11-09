@@ -2,25 +2,25 @@
 
 Áp dụng trên nhánh `codex/mrbean-full-integration`.
 
-## 1. Phân biệt trạng thái và điểm
+## 1. Đánh giá hoàn thành
 
 | Trạng thái | Ý nghĩa | Tính hoàn thành |
 | --- | --- | --- |
 | Chưa làm | Chưa có bài nộp hoặc bản nháp | Không |
 | Đang làm | Đã lưu nháp, chưa nộp | Không |
 | Đã nộp / chờ chấm | Đã gửi, chưa có xác nhận cuối cùng | Không |
-| Bài làm bị thiếu | Đã chấm và xác định còn thiếu yêu cầu | Không |
+| Chưa hoàn thành | Đã chấm và xác định còn thiếu yêu cầu | Không |
 | Hoàn thành | Đã chấm và xác nhận làm đủ yêu cầu | Có |
 | Đã chấm · chờ xác nhận hoàn thành | Điểm cũ có sẵn nhưng chưa xác định đủ/thiếu | Không |
 
-Điểm đúng/sai và mức hoàn thành được lưu riêng. Với bài nghe mới, học viên phải chọn
+Bài mới chỉ có kết luận hoàn thành/chưa hoàn thành, không tạo điểm 0–10. Số câu đúng/sai được giữ để tham khảo. Với bài nghe mới, học viên phải chọn
 đáp án và ghi câu trả lời ngắn cho **tất cả các câu trong buổi**. Chọn sai vẫn có thể
 hoàn thành nếu đã làm đủ; chọn đúng toàn bộ nhưng bỏ câu trả lời ngắn vẫn bị thiếu.
-Điểm trắc nghiệm = số câu chọn đúng / tổng số câu × 10. Nội dung câu trả lời ngắn được
+Nội dung câu trả lời ngắn được
 lưu cho giáo viên xem; hệ thống không tự chấm đúng/sai nội dung đó bằng AI.
 
 Với bài đọc theo video và từ vựng, AI đưa đề xuất; giáo viên/admin xác nhận mức hoàn
-thành cùng điểm cuối cùng. Không suy ra thiếu bài chỉ vì nhận dạng giọng nói hoặc
+thành và nhận xét cuối cùng. Không suy ra thiếu bài chỉ vì nhận dạng giọng nói hoặc
 chữ viết không chính xác. Không chấm phát âm hay độ đẹp của chữ.
 
 Dashboard và trang học tập tính tiến độ theo số lượt giao đã được xác nhận hoàn thành,
@@ -195,13 +195,25 @@ chọn và câu trả lời ngắn được lưu nháp; có thể tải lại đ
 Vẫn cho phép nộp khi còn thiếu để ghi nhận đúng tình trạng bài đã làm.
 
 Sau khi nộp, bài nghe được chấm ngay theo bảng đáp án đã giao, không gọi OpenAI.
-Kết quả cho biết điểm, từng câu đúng/sai, câu trả lời ngắn và các câu còn thiếu.
+Kết quả cho biết mức hoàn thành, từng câu đúng/sai, câu trả lời ngắn và các câu còn thiếu.
 Bài thiếu có thể bổ sung và nộp lại nếu quy định nhận bài cho phép. Học viên chỉ xem
 dữ liệu của mình; giáo viên chỉ xem/chấm lớp được phân công, admin xem toàn hệ thống.
 
 Đối với bài đọc/từ vựng, giáo viên chọn **Hoàn thành · làm đủ yêu cầu** hoặc
-**Bài làm bị thiếu · cần bổ sung** trước khi xác nhận điểm. Điểm AI không thay điểm
-cuối cùng trong báo cáo.
+**Chưa hoàn thành · cần bổ sung**, rồi bấm **Xác nhận kết quả**. AI chỉ đưa đề xuất
+và bằng chứng; báo cáo và CSV dùng kết luận cuối cùng, không còn cột điểm.
+
+### Nghe lại đúng vị trí
+
+Trình phát giữ thanh kéo thời gian của trình duyệt và bổ sung **Lùi 10 giây**,
+**Tiến 10 giây**, **Nghe từ đầu**, cùng ô nhập mốc `phút:giây` (ví dụ `02:30`)
+và nút **Đi đến**. Có thể nhập `giờ:phút:giây` với file dài. Enter trong ô mốc
+chỉ chuyển vị trí nghe, không nộp bài. Các nút chờ thông tin thời lượng trước khi bật.
+
+Endpoint tệp đã được cấp quyền hỗ trợ HTTP byte ranges (206) để trình duyệt tải
+đoạn cần nghe. Không cần tải hết file trước khi tua; quyền xem bài vẫn được kiểm tra
+trước khi trả bất kỳ đoạn dữ liệu nào. Với bản ghi chưa có thời lượng đầy đủ, các
+mốc chọn được giới hạn trong phần trình duyệt đã đọc được.
 
 ## 5. Cập nhật trên máy đang có dữ liệu
 

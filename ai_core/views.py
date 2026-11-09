@@ -1,7 +1,6 @@
 import json
-import math
 from django.core.exceptions import ValidationError
-from django.http import FileResponse, JsonResponse
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.db import transaction
 from django.utils import timezone
@@ -10,6 +9,16 @@ from django.views.decorators.http import require_GET, require_POST
 from .models import GradingJob, VocabularyPage
 from .permissions import staff_required, tasks_for, is_manager
 from .services import enqueue_submission
+
+
+def assessment_result(result):
+    if not isinstance(result, dict):
+        return {}
+    allowed = {'needs_manual','feedback','complete','comparison','pronunciation','details','expected_total','matched_total','correct_count','total','missing_count','transcript','transcript_source'}
+    clean = {key:value for key,value in result.items() if key in allowed}
+    if isinstance(clean.get('comparison'), dict):
+        clean['comparison'] = {key:value for key,value in clean['comparison'].items() if key != 'score'}
+    return clean
 
 
 def serialize(job, *, include_ai=True):
@@ -21,7 +30,7 @@ def serialize(job, *, include_ai=True):
         'learner_id': job.task.learner_id, 'learner_name': job.task.learner.get_full_name() or job.task.learner.username,
         'title': job.task.title, 'kind': job.kind, 'status': job.status,
         'status_label': job.public_status_label, 'submitted_at': job.submitted_at.isoformat(),
-        'result': job.result, 'suggested_score': job.suggested_score, 'final_score': job.final_score,
+        'result': assessment_result(job.result),
         'completion_status': job.completion_status,
         'teacher_feedback': job.teacher_feedback, 'text': job.text, 'transcript': job.transcript,
         'reference_text': job.reference_text, 'grading_method': job.grading_method,
@@ -73,12 +82,13 @@ def audio(request, job_id):
     job = get_object_or_404(GradingJob.objects.filter(task__in=tasks_for(request.user)), pk=job_id)
     if not job.audio:
         return JsonResponse({'error': 'no_audio'}, status=404)
-    return private_file(job.audio)
+    return private_file(job.audio, request)
 
 
-def private_file(field):
+def private_file(field, request=None):
     try:
-        response = FileResponse(field.open('rb'))
+        from core.media import private_media_response
+        response = private_media_response(field.open('rb'), request)
         response['Cache-Control'] = 'private, no-store'
         response['X-Content-Type-Options'] = 'nosniff'
         return response
@@ -97,15 +107,13 @@ def image(request, page_id):
 @require_POST
 @staff_required
 def review(request, job_id):
-    # Managers monitor; admin/superuser and assigned teachers confirm scores.
+    # Managers monitor; admin/superuser and assigned teachers confirm completion.
     if request.user.role == 'manager' and not request.user.is_superuser:
         return JsonResponse({'error': 'grading_for_teacher_or_admin'}, status=403)
     try:
         data = json.loads(request.body)
-        score, feedback, completion = data['score'], data['feedback'], data['completion_status']
+        feedback, completion = data['feedback'], data['completion_status']
         if completion not in ('complete', 'incomplete'):
-            raise ValueError()
-        if type(score) not in (int, float) or not math.isfinite(score) or not 0 <= score <= 10:
             raise ValueError()
         if not isinstance(feedback, str) or not feedback.strip() or len(feedback) > 10000:
             raise ValueError()
@@ -116,7 +124,7 @@ def review(request, job_id):
         if job.status not in ('manual', 'ai_reviewed'):
             return JsonResponse({'error': 'not_reviewable'}, status=409)
         changed = GradingJob.objects.filter(pk=job.pk, status__in=['manual', 'ai_reviewed']).update(
-            status='graded', final_score=score, teacher_feedback=feedback,
+            status='graded', final_score=None, teacher_feedback=feedback,
             reviewed_by=request.user, finished_at=timezone.now(), grading_method='teacher',
             completion_status=completion, completion_confirmed_at=timezone.now(), completion_confirmed_by=request.user)
         if not changed:
@@ -125,7 +133,7 @@ def review(request, job_id):
         from submissions.progress import sync_progress
         sync_progress(job)
         from accounts.notifications import notify
-        notify(recipient=job.task.learner, sender=request.user, title='Đã có điểm: '+job.task.title,
+        notify(recipient=job.task.learner, sender=request.user, title='Đã có kết quả: '+job.task.title,
             message=feedback, target_url=reverse('submissions:result',args=[job.pk]), event_key=f'result:{job.pk}')
     return JsonResponse(serialize(job))
 
@@ -163,15 +171,16 @@ def reference_video(request, job_id):
     if not request.user.is_authenticated:
         return JsonResponse({'error':'authentication_required'},status=401)
     job=get_object_or_404(GradingJob.objects.filter(task__in=tasks_for(request.user)),pk=job_id)
-    return private_path(job.rubric_snapshot.get('video_name',''))
+    return private_path(job.rubric_snapshot.get('video_name',''), request)
 
 
-def private_path(name):
+def private_path(name, request=None):
     from django.core.files.storage import default_storage
     if not name:
         return JsonResponse({'error':'file_missing'},status=404)
     try:
-        response=FileResponse(default_storage.open(name,'rb'))
+        from core.media import private_media_response
+        response=private_media_response(default_storage.open(name,'rb'), request)
         response['Cache-Control']='private, no-store'
         response['X-Content-Type-Options']='nosniff'
         return response
@@ -179,9 +188,9 @@ def private_path(name):
         return JsonResponse({'error':'file_missing'},status=404)
 
 
-def private_pdf(name):
-    response = private_path(name)
-    if response.status_code == 200:
+def private_pdf(name, request=None):
+    response = private_path(name, request)
+    if response.status_code in (200, 206):
         response['Content-Type'] = 'application/pdf'
         response['X-Frame-Options'] = 'SAMEORIGIN'
     return response
@@ -196,4 +205,4 @@ def listening_material(request, job_id, exercise_id, kind):
     exercise = next((x for x in job.rubric_snapshot.get('exercises', []) if x['id'] == exercise_id), None)
     if not exercise or kind not in ('audio', 'document'):
         raise Http404
-    return private_pdf(exercise.get('document_name', '')) if kind == 'document' else private_path(exercise.get('audio_name', ''))
+    return private_pdf(exercise.get('document_name', ''), request) if kind == 'document' else private_path(exercise.get('audio_name', ''), request)

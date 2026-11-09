@@ -19,7 +19,7 @@ FALLBACK_HINTS = {
     'ai_invalid_evidence': 'Ảnh hoặc bản ghi chưa đủ điều kiện để AI đánh giá. Giáo viên cần kiểm tra bài làm gốc.',
     'ai_evidence_missing': 'Tiến trình chấm không tìm thấy tệp bài làm. Kiểm tra thư mục media và cấu hình lưu trữ dùng chung.',
     'ai_invalid_reference': 'Bài đã giao thiếu hoặc có mẫu chấm không hợp lệ. Giáo viên cần kiểm tra yêu cầu và mẫu của bài.',
-    'ai_invalid_result': 'Phản hồi AI không đủ dữ liệu hợp lệ để tính điểm. Giáo viên cần kiểm tra và chấm bài.',
+    'ai_invalid_result': 'Phản hồi AI không đủ dữ liệu hợp lệ để đánh giá mức hoàn thành. Giáo viên cần kiểm tra và chấm bài.',
     'ai_error': 'Lượt đánh giá AI chưa thành công. Bản ghi cũ có thể chưa lưu nguyên nhân chi tiết; quản trị viên cần kiểm tra tiến trình chấm.',
 }
 
@@ -79,7 +79,7 @@ def staff_grading_state(job):
     states = {
         'queued': ('Đang chờ AI xử lý', 'Bài đã được tiếp nhận, đang chờ tiến trình AI đánh giá và chưa chuyển sang chấm thủ công.'),
         'processing': ('AI đang xử lý bài', 'Hệ thống đang đánh giá bài làm trước khi chuyển kết quả gợi ý cho giáo viên xác nhận.'),
-        'ai_reviewed': ('AI đã đánh giá — chờ giáo viên xác nhận', 'AI đã tạo điểm và nhận xét gợi ý. Giáo viên kiểm tra bài làm, điều chỉnh nếu cần và xác nhận điểm cuối cùng ở biểu mẫu bên dưới.'),
+        'ai_reviewed': ('AI đã đánh giá — chờ giáo viên xác nhận', 'AI đã tạo kết luận hoàn thành/chưa hoàn thành và nhận xét gợi ý. Giáo viên kiểm tra bài làm, điều chỉnh nếu cần và xác nhận mức hoàn thành ở biểu mẫu bên dưới.'),
         'manual': ('Bài cần chấm thủ công', 'Lượt đánh giá AI chưa hoàn tất. Giáo viên có thể chấm từ bài làm gốc.'),
     }
     if job.status not in states:

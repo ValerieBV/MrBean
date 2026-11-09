@@ -1,7 +1,7 @@
 <div class="stats dashboard-stats" aria-label="Thống kê học tập">
     <article class="stat"><div class="stat-icon">{% include 'core/icon.html' with name='chart' %}</div><div class="stat-body"><div class="stat-label">Tiến độ hoàn thành</div><div class="stat-value" id="rate">—</div><div class="stat-foot" id="counts">Chỉ tính bài đã được xác nhận làm đủ yêu cầu</div></div></article>
     {% if not is_reporting_manager %}
-    <article class="stat"><div class="stat-icon">{% include 'core/icon.html' with name='score' %}</div><div class="stat-body"><div class="stat-label">Điểm cuối cùng / 10</div><div class="stat-value" id="score">—</div><div class="stat-foot">Trung bình các bài đã có điểm cuối cùng</div></div></article>
+    <article class="stat"><div class="stat-icon">{% include 'core/icon.html' with name='score' %}</div><div class="stat-body"><div class="stat-label">Bài cần bổ sung</div><div class="stat-value" id="incompleteCount">—</div><div class="stat-foot">Đã đánh giá và xác định còn thiếu yêu cầu</div></div></article>
     {% endif %}
     <article class="stat"><div class="stat-icon">{% include 'core/icon.html' with name='time' %}</div><div class="stat-body"><div class="stat-label">{% if is_reporting_staff %}Bài chờ giáo viên{% else %}Bài cần hoàn thành{% endif %}</div><div class="stat-value" id="fourth">—</div><div class="stat-foot" id="scope">Đang tải phạm vi</div></div></article>
 </div>

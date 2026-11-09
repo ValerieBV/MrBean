@@ -26,6 +26,10 @@ Phạm vi kiểm tra:
 - Đọc PDF hai cột/nhiều trang, nối lựa chọn xuống dòng, chọn đúng phần trong đề 100 câu;
   giữ số câu gốc, key theo số gốc hoặc thứ tự; scan OpenAI dùng mock, không đoán key;
   chặn nội dung chưa rõ/thiếu câu hỏi hoặc lựa chọn ở dạng 3/4, kiểm tra quyền endpoint.
+- HTTP ranges: toàn file, đoạn đầu/giữa/cuối, mốc không hợp lệ và quyền tệp; trình phát
+  tua ±10 giây, nhập mốc và Enter không nộp bài.
+- AI chỉ trả kết luận/nhận xét và bằng chứng, không tạo điểm; API xác nhận không cần
+  số điểm; báo cáo/CSV/tutor không lộ dữ liệu số cũ và giữ kết quả khi nộp lại đang chờ.
 - Chấm nghe theo key, câu bỏ trống, chống câu hỏi lạ và chống tạo trùng lần nộp.
 - Chỉ nhận ghi âm cho bài đọc, ASR transcript, so lời mẫu, phiên bản mẫu và snapshot cũ.
 - Từ vựng đủ/thiếu lượt, không dùng lượt thừa bù từ thiếu, ảnh lỗi/trùng chuyển thủ công.
@@ -68,12 +72,13 @@ chạy web tại `127.0.0.1:8765` rồi thực hiện:
    nhập Word DOCX cho dạng 4 không kèm PDF. Giữ số 32–70 và 71–100, dán key theo
    số gốc. Học viên dùng tab bài nghe, số câu, chọn lựa chọn có đầy đủ nội dung và
    ghi câu trả lời ngắn; xem PDF trực tiếp và khôi phục nháp. Nộp
-   thiếu câu trả lời dù được 10 điểm vẫn chưa hoàn thành; nộp đủ nhưng sai một câu
-   được 9,9 điểm vẫn hoàn thành.
+   thiếu câu trả lời dù chọn đúng toàn bộ vẫn chưa hoàn thành; nộp đủ nhưng sai
+   một câu vẫn hoàn thành. Không tạo điểm 0–10.
 5. Học viên xin miễn từ vựng; giáo viên chấp thuận; mẫu số báo cáo thay đổi đúng.
 6. Giáo viên tải video kiểm thử, nhập lời mẫu, giao bài; học viên dùng micro giả lập của
    Chromium để ghi âm, nghe lại, nộp. Đây là fixture kỹ thuật, không phải bài nói đã xác minh.
-7. Worker không có key chuyển bài thủ công; giáo viên chấm 7,5; học viên thấy kết quả.
+7. Worker không có key chuyển bài thủ công; giáo viên xác nhận hoàn thành không nhập
+   điểm; học viên thấy kết luận cuối cùng.
 8. Kiểm tra menu cả ba vai trò, quản lý chỉ xem kết quả; rà header chung và trang bảng,
    biểu mẫu, giao bài, làm bài ở 1440/1200/1024/768/390 px, mở/đóng thanh bên;
    không tràn ngang trang, không lỗi JavaScript/HTTP trên các trang sử dụng.

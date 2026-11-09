@@ -82,16 +82,13 @@ Một số màu chữ nhỏ của nguồn chưa đủ tương phản WCAG AA. Đ
 `prefers-contrast: more`; kiểm tra Axe trong workflow trình duyệt áp dụng rõ chế
 độ này. Ảnh so sánh và ảnh giao diện mặc định dùng `no-preference`.
 
-## Điểm trên dashboard và báo cáo
+## Kết quả hoàn thành trên dashboard và báo cáo
 
-Phần tổng quan quản lý/admin chỉ giữ tỷ lệ nộp và số bài chờ giáo viên; bỏ hai ô
-điểm theo ảnh yêu cầu. Giáo viên/học viên có một ô điểm cuối cùng, tính trung bình
-từ các điểm đã công bố. Số ô thay đổi theo vai trò và tự chia đều chiều rộng.
+Các vai trò xem tỷ lệ hoàn thành, bài cần bổ sung, bài chờ đánh giá và nhận xét.
+Bảng báo cáo, lịch sử, API và CSV không có điểm số hoặc điểm trung bình. Kết luận
+Hoàn thành/Chưa hoàn thành chỉ công bố sau khi giáo viên xác nhận; Listening được
+kiểm tra đủ các phần trả lời ngay khi nộp. Bản mới đang chờ giữ kết luận đã xác nhận
+của lần trước. Học viên không thấy đề xuất hay nhận xét AI nội bộ.
 
-Mọi bảng báo cáo, lịch sử nộp và CSV chỉ có điểm cuối cùng. Bài đang xử lý/chờ giáo
-viên không lấy điểm gợi ý thay thế. Nếu nộp lại, thống kê vẫn giữ điểm đã xác nhận
-gần nhất cho đến khi lần mới được chấm; lịch sử lần mới hiển thị chưa có điểm.
-
-API dashboard dùng danh sách trường công khai, không gửi điểm gợi ý hay kết quả
-thô của mô hình. Trang/API kết quả học viên chỉ công bố điểm và nhận xét chính thức.
-Quy trình AI nội bộ và quyền xác nhận điểm của giáo viên/admin vẫn được giữ nguyên.
+Trình phát audio giữ giao diện gốc và có dãy nút tua/gõ mốc thời gian nhỏ bên dưới,
+tự xuống hàng theo chiều rộng còn lại khi mở thanh bên. Không thêm dropdown vào sidebar.

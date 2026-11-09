@@ -43,7 +43,7 @@ def export_csv(request):
     response['Cache-Control'] = 'private, no-store'
     response.write('\ufeff')
     writer = csv.writer(response)
-    writer.writerow(['Lớp','Mã học viên','Học viên','Bài tập','Hạn nộp','Trạng thái','Điểm cuối cùng /10'])
+    writer.writerow(['Lớp','Mã học viên','Học viên','Bài tập','Hạn nộp','Trạng thái','Nhận xét giáo viên'])
     from .services import task_state
     from django.utils import timezone
     def safe(value):
@@ -53,5 +53,5 @@ def export_csv(request):
         state, _ = task_state(task, timezone.now())
         writer.writerow([safe(v) for v in [task.assignment.classroom.class_code if task.assignment_id else 'Bài cũ',
             task.learner.student_code, task.learner.get_full_name() or task.learner.username, task.title,
-            timezone.localtime(task.due_at).strftime('%d/%m/%Y %H:%M'), REPORT_STATUS_LABELS.get(state,state), task.confirmed_score]])
+            timezone.localtime(task.due_at).strftime('%d/%m/%Y %H:%M'), REPORT_STATUS_LABELS.get(state,state), task.confirmed_feedback]])
     return response

@@ -1,4 +1,4 @@
-{% extends 'base.html' %}{% load l10n static %}
+{% extends 'base.html' %}{% load static %}
 {% block title %}Kết quả bài nộp{% endblock %}{% block page_class %}integration-content{% endblock %}
 {% block extra_css %}<link rel="stylesheet" href="{% static 'assignments/listening.css' %}">{% endblock %}
 {% block content %}
@@ -6,11 +6,11 @@
 {% if staff_grading_state %}<section class="panel" aria-labelledby="grading-state-title" data-grading-state="{{ staff_grading_state.status }}"><h2 id="grading-state-title">{{ staff_grading_state.title }}</h2><p>{{ staff_grading_state.message }}</p>{% if staff_grading_state.hint %}<p class="report-subtle" data-grading-reason="{{ staff_grading_state.reason }}">{{ staff_grading_state.hint }}</p>{% endif %}</section>{% endif %}
 <section class="report-panel">
 <p class="badge {{ published.completion_status }}" data-completion-status="{{ published.completion_status }}">{{ published.status_label }}</p>
-<div class="report-card" data-final-score>Điểm cuối cùng / 10<strong>{{ published.final_score|default_if_none:'—' }}</strong></div>
-{% if job.status == 'graded' %}<p class="report-subtle">Mức hoàn thành được xác nhận riêng với điểm số. Chỉ bài đủ yêu cầu mới tính vào tiến độ hoàn thành.</p>{% endif %}
+<div class="report-card" data-final-completion>Kết quả đánh giá<strong>{{ published.completion_label }}</strong></div>
+{% if job.status == 'graded' %}<p class="report-subtle">Chỉ bài đã được xác nhận làm đủ yêu cầu mới tính vào tiến độ hoàn thành.</p>{% endif %}
 {% if job.status == 'graded' and job.completion_status == 'incomplete' %}<div class="listening-note">Bài đã được chấm nhưng còn thiếu yêu cầu, chưa được tính hoàn thành. Xem nhận xét để bổ sung và nộp lại khi bài còn nhận.</div>{% if request.user.role == 'student' and not request.user.is_superuser %}<a class="btn secondary" href="{% url 'submissions:do_task' job.task_id %}">Bổ sung / nộp lại bài</a>{% endif %}{% endif %}
 <h2>{% if job.kind == 'listening' %}Nhận xét kết quả{% else %}Nhận xét của giáo viên{% endif %}</h2>
-{% if published.teacher_feedback %}<p class="report-feedback">{{ published.teacher_feedback }}</p>{% elif job.status != 'graded' %}<p class="report-subtle">Bài đang chờ chấm điểm. Kết quả sẽ được công bố sau khi giáo viên xác nhận.</p>{% elif job.kind == 'listening' %}<p class="report-subtle">Kết quả được tính theo đáp án giáo viên đã thiết lập.</p>{% else %}<p class="report-subtle">Chưa có nhận xét của giáo viên.</p>{% endif %}
+{% if published.teacher_feedback %}<p class="report-feedback">{{ published.teacher_feedback }}</p>{% elif job.status != 'graded' %}<p class="report-subtle">Bài đang chờ đánh giá. Kết quả sẽ được công bố sau khi giáo viên xác nhận.</p>{% elif job.kind == 'listening' %}<p class="report-subtle">Kết quả được tính theo đáp án giáo viên đã thiết lập.</p>{% else %}<p class="report-subtle">Chưa có nhận xét của giáo viên.</p>{% endif %}
 {% if can_ask_tutor %}<div class="actions" style="margin:1rem 0"><a class="btn" href="{% url 'support:start' job.pk %}">Hỏi AI về kiến thức bài này</a><a class="btn secondary" href="{% url 'support:contact_new' %}?job={{ job.pk }}">Liên hệ giáo viên / quản lý</a></div><p class="report-subtle">Bạn có thể hỏi AI để hiểu thêm kiến thức, rồi chuyển câu hỏi cho giáo viên nếu cần giải thích thêm.</p>{% endif %}
 {% if job.kind == 'speaking' %}
 {% if request.user.role != 'student' or request.user.is_superuser %}<h3>Lời mẫu của lần nộp này</h3><p class="feedback">{{ job.rubric_snapshot.reference_transcript|default:'Bài cũ chưa có lời mẫu.' }}</p>{% endif %}
@@ -26,27 +26,26 @@
 {% for page in job.pages.all %}<img class="report-img" src="{% url 'ai_core:image' page.pk %}" alt="Ảnh bài từ vựng trang {{ forloop.counter }}">{% endfor %}
 {% endif %}
 {% if job.kind == 'listening' %}
-<p>Đúng {{ job.result.correct_count }}/{{ job.result.total }} câu. Điểm chấm theo đáp án; mức hoàn thành yêu cầu đủ lựa chọn và câu trả lời ngắn.</p>
+<p>Đúng {{ job.result.correct_count }}/{{ job.result.total }} câu. Số câu đúng dùng để tham khảo; hoàn thành yêu cầu đủ lựa chọn và câu trả lời ngắn.</p>
 <div class="table-wrap"><table><thead><tr><th>Bài / Câu</th><th>Nội dung</th><th>Bạn chọn</th><th>Câu trả lời ngắn</th><th>Kết quả</th></tr></thead><tbody>{% for row in listening_details %}<tr><td>{% if row.exercise_order %}Bài {{ row.exercise_order }} · {% endif %}Câu {{ row.number|default:forloop.counter }}</td><td>{{ row.question_text }}</td><td>{{ row.chosen|default:'Bỏ trống' }}</td><td>{{ row.short_answer|default:'Chưa ghi' }}</td><td>{% if row.correct %}<span class="badge green">Đúng</span>{% else %}<span class="badge red">Chưa đúng</span>{% endif %}{% if row.answered == False %}<span class="badge incomplete">Thiếu yêu cầu</span>{% endif %}</td></tr>{% endfor %}</tbody></table></div>
 {% for exercise in job.rubric_snapshot.exercises %}{% if exercise.audio_name %}<h3>Bài {{ exercise.order }} · {{ exercise.title }}</h3><audio controls preload="metadata" style="width:100%" src="{% url 'ai_core:listening_material' job.pk exercise.id 'audio' %}"></audio>{% endif %}{% if exercise.document_name %}{% url 'ai_core:listening_material' job.pk exercise.id 'document' as pdf_url %}{% include 'assignments/_pdf_viewer.html' with pdf_title='Đề bài PDF của lần nộp' %}{% endif %}{% endfor %}
 {% endif %}
-{% if job.status == 'manual' %}<p class="report-error">Bài đã có trong danh sách chờ giáo viên chấm điểm.</p>{% endif %}
+{% if job.status == 'manual' %}<p class="report-error">Bài đã có trong danh sách chờ giáo viên đánh giá.</p>{% endif %}
 {% if request.user.role != 'student' or request.user.is_superuser %}{% if job.status == 'queued' or job.status == 'processing' %}<p>Bài nộp đang được xử lý. Trang sẽ kiểm tra kết quả sau 10 giây.</p>{% endif %}{% endif %}
 </section>
 {% include 'submissions/_ai_trial.html' %}
 {% if can_review %}
-<section class="report-panel review-form form-panel"><h2>Xác nhận điểm của giáo viên</h2><form id="reviewForm" data-review-url="{% url 'ai_core:review' job.pk %}">
+<section class="report-panel review-form form-panel"><h2>Xác nhận mức hoàn thành</h2><form id="reviewForm" data-review-url="{% url 'ai_core:review' job.pk %}">
 {% csrf_token %}
-<label for="score">Điểm chính thức (0–10)</label><input type="number" id="score" name="score" min="0" max="10" step="0.01" value="{{ job.suggested_score|default_if_none:''|unlocalize }}" required>
 <label for="completion_status">Mức hoàn thành sau khi kiểm tra bài</label>
-<select id="completion_status" name="completion_status" required><option value="">Chọn mức hoàn thành</option><option value="complete" {% if job.result.complete == True %}selected{% endif %}>Hoàn thành · làm đủ yêu cầu</option><option value="incomplete" {% if job.result.complete == False %}selected{% endif %}>Bài làm bị thiếu · cần bổ sung</option></select>
-<p class="report-subtle">Xác nhận riêng với điểm số. Không đánh giá thiếu chỉ vì nhận dạng lời nói hoặc chữ viết chưa chính xác.</p>
-<label for="feedback">Nhận xét</label><textarea id="feedback" name="feedback" rows="4" maxlength="10000" required>{{ job.result.feedback }}</textarea><p id="reviewStatus" role="status"></p><button type="submit" class="report-button">Xác nhận điểm</button>
+<select id="completion_status" name="completion_status" required><option value="">Chọn mức hoàn thành</option><option value="complete" {% if job.result.complete == True %}selected{% endif %}>Hoàn thành · làm đủ yêu cầu</option><option value="incomplete" {% if job.result.complete == False %}selected{% endif %}>Chưa hoàn thành · cần bổ sung</option></select>
+<p class="report-subtle">Chọn theo yêu cầu đã giao. Nếu nhận dạng lời nói hoặc chữ viết chưa rõ, kiểm tra bài gốc trước khi kết luận còn thiếu.</p>
+<label for="feedback">Nhận xét</label><textarea id="feedback" name="feedback" rows="4" maxlength="10000" required>{{ job.result.feedback }}</textarea><p id="reviewStatus" role="status"></p><button type="submit" class="report-button">Xác nhận kết quả</button>
 </form></section>
 {% endif %}
 {% if can_confirm_completion %}
-<section class="report-panel form-panel"><h2>Xác nhận mức hoàn thành của bài đã chấm</h2><p>Điểm và nhận xét cũ được giữ nguyên. Xem bài làm rồi chọn trạng thái để cập nhật tiến độ.</p>
-<form id="completionForm" data-review-url="{% url 'ai_core:confirm_completion' job.pk %}">{% csrf_token %}<label for="legacy_completion_status">Mức hoàn thành</label><select id="legacy_completion_status" name="completion_status" required><option value="">Chọn mức hoàn thành</option><option value="complete">Hoàn thành · làm đủ yêu cầu</option><option value="incomplete">Bài làm bị thiếu · cần bổ sung</option></select><p id="completionStatus" role="status"></p><button type="submit" class="report-button">Lưu mức hoàn thành</button></form>
+<section class="report-panel form-panel"><h2>Xác nhận mức hoàn thành của bài đã chấm</h2><p>Xem bài làm rồi xác nhận mức hoàn thành để cập nhật tiến độ. Dữ liệu lịch sử được giữ nguyên.</p>
+<form id="completionForm" data-review-url="{% url 'ai_core:confirm_completion' job.pk %}">{% csrf_token %}<label for="legacy_completion_status">Mức hoàn thành</label><select id="legacy_completion_status" name="completion_status" required><option value="">Chọn mức hoàn thành</option><option value="complete">Hoàn thành · làm đủ yêu cầu</option><option value="incomplete">Chưa hoàn thành · cần bổ sung</option></select><p id="completionStatus" role="status"></p><button type="submit" class="report-button">Lưu mức hoàn thành</button></form>
 </section>
 {% endif %}
 <a href="{% url 'dashboard:index' %}">← Về dashboard</a>

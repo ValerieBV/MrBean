@@ -48,13 +48,13 @@ Prompt nằm trong `support/ai.py`, biến `TUTOR_PROMPT`. Model nhận ngữ c�
 đã công bố của đúng học viên và tối đa 12 tin hỏi/đáp gần nhất. Lịch sử đầy đủ
 vẫn lưu trong database và có phân trang trên giao diện.
 
-Ngữ cảnh AI chỉ chứa điểm cuối cùng/nhận xét giáo viên; không chứa điểm gợi ý,
+Ngữ cảnh AI chỉ chứa mức hoàn thành/nhận xét giáo viên; không chứa điểm số,
 nhận xét nội bộ, dữ liệu học viên khác hoặc ngân hàng câu hỏi. Với bài nghe, chỉ
 lần đã có kết quả mới được dùng đề/đáp án snapshot để giải thích. Ảnh và ghi âm
 không được gửi lại cho AI hỏi đáp; AI không được tự nhận đã nghe/xem chúng.
 
 Kết quả AI dùng JSON schema gồm `answer`, `route` (`knowledge`, `teacher`, `contact`).
-Đây chỉ là lời giải thích/định hướng; AI không có công cụ sửa điểm hoặc gửi liên
+Đây chỉ là lời giải thích/định hướng; AI không có công cụ sửa kết quả hoặc gửi liên
 hệ. Chuyển giáo viên và gửi phản ánh luôn do học viên bấm xác nhận thao tác.
 Tin nhắn được hiển thị như văn bản, không thực thi HTML do người dùng/AI trả về.
 
@@ -93,7 +93,7 @@ khi người dùng truy cập. Người học không thấy lệnh hay thông ti
 python manage.py test support
 ```
 
-Các kiểm thử dùng OpenAI giả lập, bao phủ ngữ cảnh theo quyền, điểm đã công bố,
+Các kiểm thử dùng OpenAI giả lập, bao phủ ngữ cảnh theo quyền, kết quả đã công bố,
 hội thoại nhiều lượt, API lỗi, hạn mức, gửi trùng, retry, kết quả trả muộn,
 chuyển giáo viên, liên hệ riêng, thông báo, đổi giáo viên, đóng/mở lại và CSRF/XSS.
 Kiểm tra trình duyệt toàn dự án cũng chạy luồng AI lỗi → hỏi giáo viên → phản hồi,

@@ -58,7 +58,7 @@ class CompletionTests(IntegratedFixture):
         data=metrics_for(self.student)
         self.assertEqual(data['completed_count'],1)
         self.assertEqual(data['completion_rate'],33.33)
-        self.assertEqual(data['average_score'],6.5)
+        self.assertNotIn('average_score',data)
 
     def test_incomplete_even_at_ten_points_does_not_unlock_next_lesson(self):
         next_task=self.next_task()
@@ -88,7 +88,7 @@ class CompletionTests(IntegratedFixture):
     def test_listening_wrong_choices_still_complete_when_all_fields_are_filled(self):
         job,_=enqueue_submission(task=self.listening_task,submission_key='wrong-but-done',
             answers=self.listening_answers(correct=False))
-        self.assertEqual(job.final_score,0)
+        self.assertIsNone(job.final_score)
         self.assertEqual(job.completion_status,'complete')
         self.assertEqual(job.progress.status,'completed')
         self.assertEqual(metrics_for(self.student)['completed_count'],1)
@@ -97,7 +97,7 @@ class CompletionTests(IntegratedFixture):
     def test_listening_correct_choices_without_short_answers_are_incomplete(self):
         job,_=enqueue_submission(task=self.listening_task,submission_key='missing-short',
             answers=self.listening_answers(short=False))
-        self.assertEqual(job.final_score,10)
+        self.assertIsNone(job.final_score)
         self.assertEqual(job.completion_status,'incomplete')
         self.assertEqual(job.result['missing_count'],2)
         self.assertEqual(job.progress.status,'incomplete')
@@ -176,5 +176,5 @@ class CompletionTests(IntegratedFixture):
         self.review(newer,'incomplete',score=4)
         self.review(older,'complete',score=9)
         newer.progress.refresh_from_db()
-        self.assertEqual((newer.progress.status,newer.progress.score),('incomplete',40))
+        self.assertEqual((newer.progress.status,newer.progress.score),('incomplete',None))
         self.assertEqual(metrics_for(self.student)['completed_count'],0)

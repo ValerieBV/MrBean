@@ -1,4 +1,4 @@
-"""Integrated from B's _submit_listening, normalized to the reporting 0–10 scale."""
+"""Assess required listening responses; retain answer-key feedback without numerical grades."""
 from django.core.exceptions import ValidationError
 
 
@@ -31,7 +31,7 @@ def grade_listening(questions, answers):
     correct = sum(row['correct'] for row in details)
     complete = all(row['answered'] for row in details)
     missing = sum(not row['answered'] for row in details)
-    return {'score': round(correct / len(details) * 10, 2), 'correct_count': correct,
+    return {'correct_count': correct,
             'total': len(details), 'details': details, 'complete': complete, 'missing_count': missing,
             'feedback': f'Đúng {correct}/{len(details)} câu. ' + (
                 'Đã làm đủ lựa chọn và câu trả lời theo yêu cầu.' if complete else f'Còn {missing} câu chưa làm đủ yêu cầu.')}

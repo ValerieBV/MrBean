@@ -137,7 +137,7 @@ class PDFImportWorkflowTests(IntegratedFixture):
         self.assertNotContains(page,'data-pdf-url')
         answers={str(q.pk):{'chosen':'B','short_answer':'The answer I heard.'} for q in exercise.questions.all()}
         job,_=enqueue_submission(task=task,submission_key='part2-audio-only',answers=answers)
-        self.assertEqual(job.final_score,10)
+        self.assertIsNone(job.final_score)
         page=self.client.get(reverse('submissions:result',args=[job.pk]))
         self.assertEqual([q['number'] for q in page.context['listening_details']],list(range(7,32)))
         # Old snapshots lack source_number; their public numbering still follows the selected part.

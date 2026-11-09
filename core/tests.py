@@ -80,7 +80,7 @@ class CompleteWorkflowTests(IntegratedFixture):
         provider=Mock();provider.grade.return_value={'needs_manual':False,'feedback':'Đã chép đủ lượt.',
             'counts':[{'word':'Hello','count':2}]}
         process_job(job.pk,provider);job.refresh_from_db()
-        self.assertEqual(job.status,'ai_reviewed');self.assertEqual(job.suggested_score,10)
+        self.assertEqual(job.status,'ai_reviewed');self.assertIsNone(job.suggested_score)
         self.assertIsNone(job.final_score)
         self.login(self.teacher)
         response=self.post_json(reverse('ai_core:review',args=[job.pk]),{'score':10,'feedback':'Hoàn thành tốt, giữ thói quen luyện tập.','completion_status':'complete'})
@@ -88,7 +88,7 @@ class CompleteWorkflowTests(IntegratedFixture):
         self.login(learner)
         self.assertContains(self.client.get(reverse('submissions:result',args=[job.pk])),'Hoàn thành tốt')
         metrics=self.client.get(reverse('dashboard:metrics')).json()
-        self.assertEqual((metrics['assigned_count'],metrics['submitted_count'],metrics['average_score']),(1,1,10))
+        self.assertEqual((metrics['assigned_count'],metrics['submitted_count'],metrics['completed_count']),(1,1,1))
         self.assertTrue(learner.notifications.filter(event_key=f'result:{job.pk}').exists())
         self.assertContains(self.client.get(reverse('dashboard:export')),'B1 first words')
 
@@ -338,7 +338,7 @@ class CompleteWorkflowTests(IntegratedFixture):
         self.assertRedirects(self.client.get(reverse('submissions:do_lesson',args=[self.listening.pk])),reverse('submissions:do_task',args=[self.listening_task.pk]))
         self.assertEqual(self.client.get(reverse('submissions:enter_class',args=[self.other_classroom.class_code])).status_code,404)
         response=self.post_json(reverse('submissions:submit_lesson',args=[self.listening.pk]),{'submission_key':'legacy-alias','answers':{str(self.q1.pk):'B',str(self.q2.pk):'A'}})
-        self.assertEqual(response.status_code,201);self.assertEqual(response.json()['final_score'],10)
+        self.assertEqual(response.status_code,201);self.assertNotIn('final_score',response.json())
         response=self.post_json(reverse('submissions:submit_lesson',args=[self.speaking.pk]),{'submission_key':'typed-alias','text':'Typed transcript'})
         self.assertEqual(response.status_code,400)
 

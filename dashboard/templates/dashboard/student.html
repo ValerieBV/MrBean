@@ -10,11 +10,11 @@
 {% include 'dashboard/_filters.html' %}
 <section class="panel">
     <div class="panel-head"><div><h2>Bài tập được giao</h2><p>Bài sau mở khi các bài trước cùng kỹ năng được xác nhận hoàn thành hoặc được miễn. Bài mới nộp hoặc đã chấm còn thiếu chưa được tính hoàn thành. Chọn “Cả lịch sử” để xem bài của lớp đã kết thúc.</p></div><small id="exemptCount"></small></div>
-    <div class="table-wrap"><table><thead><tr><th>Bài tập</th><th>Lớp</th><th>Hạn nộp</th><th>Trạng thái</th><th>Điểm cuối cùng</th><th>Thao tác</th></tr></thead><tbody id="tasks"><tr><td colspan="6" class="empty">Đang tải bài tập của bạn…</td></tr></tbody></table></div><div id="tasksPager" class="pager"></div>
+    <div class="table-wrap"><table><thead><tr><th>Bài tập</th><th>Lớp</th><th>Hạn nộp</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody id="tasks"><tr><td colspan="5" class="empty">Đang tải bài tập của bạn…</td></tr></tbody></table></div><div id="tasksPager" class="pager"></div>
 </section>
 <section class="panel">
-    <div class="panel-head"><div><h2>Lịch sử nộp và nhận xét</h2><p>Bài đọc và từ vựng hiển thị điểm sau khi giáo viên xác nhận. Bài nghe có điểm theo đáp án đã được giáo viên thiết lập.</p></div><a href="{% url 'courses:exemption_list' %}" class="text-link">Đơn miễn bài của tôi →</a></div>
-    <div class="table-wrap"><table><thead><tr><th>Bài tập</th><th>Ngày nộp</th><th>Trạng thái</th><th>Điểm cuối cùng</th><th>Kết quả</th></tr></thead><tbody id="history"><tr><td colspan="5" class="empty">Đang tải lịch sử…</td></tr></tbody></table></div><div id="historyPager" class="pager"></div>
+    <div class="panel-head"><div><h2>Lịch sử nộp và nhận xét</h2><p>Bài đọc và từ vựng hiển thị kết luận hoàn thành/chưa hoàn thành sau khi giáo viên xác nhận. Bài nghe được kiểm tra đủ câu trả lời theo yêu cầu.</p></div><a href="{% url 'courses:exemption_list' %}" class="text-link">Đơn miễn bài của tôi →</a></div>
+    <div class="table-wrap"><table><thead><tr><th>Bài tập</th><th>Ngày nộp</th><th>Trạng thái</th><th>Kết quả</th></tr></thead><tbody id="history"><tr><td colspan="4" class="empty">Đang tải lịch sử…</td></tr></tbody></table></div><div id="historyPager" class="pager"></div>
 </section>
 {% endblock %}
 {% block extra_js %}<script src="{% static 'dashboard/reports.js' %}" defer></script>{% endblock %}

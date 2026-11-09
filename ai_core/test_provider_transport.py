@@ -44,7 +44,7 @@ class ProviderTransportTests(IntegratedFixture):
         with patch('openai.OpenAI', return_value=self.client_for(handler)):
             call_command('run_ai_worker', once=True, stdout=output)
         job.refresh_from_db()
-        self.assertEqual(job.status, 'ai_reviewed'); self.assertEqual(job.suggested_score, 10)
+        self.assertEqual(job.status, 'ai_reviewed'); self.assertIsNone(job.suggested_score)
         self.assertIsNone(job.final_score)
         self.assertIn('AI đã đánh giá, chờ giáo viên xác nhận', output.getvalue())
         self.assertNotIn('transport-test-secret', output.getvalue())
@@ -67,7 +67,7 @@ class ProviderTransportTests(IntegratedFixture):
         self.assertNotContains(response, 'data-grading-state=')
         self.assertNotContains(response, 'Đã viết đủ lượt.')
         self.assertNotContains(response, 'id="resultPoll"')
-        self.assertIsNone(self.client.get(reverse('ai_core:detail', args=[job.pk])).json()['final_score'])
+        self.assertNotIn('final_score',self.client.get(reverse('ai_core:detail', args=[job.pk])).json())
 
     def test_recording_sdk_transcription_then_structured_grade(self):
         job, _ = enqueue_submission(task=self.task, submission_key='transport-audio', audio=self.audio())
@@ -87,7 +87,7 @@ class ProviderTransportTests(IntegratedFixture):
             process_job(job.pk)
         job.refresh_from_db()
         self.assertEqual(paths, ['/v1/audio/transcriptions', '/v1/responses'])
-        self.assertEqual(job.status, 'ai_reviewed'); self.assertEqual(job.suggested_score, 7.5)
+        self.assertEqual(job.status, 'ai_reviewed'); self.assertIsNone(job.suggested_score)
         self.assertEqual(job.transcript, 'My hobby is swimming.')
 
     def test_sdk_http_failures_keep_safe_specific_reasons(self):

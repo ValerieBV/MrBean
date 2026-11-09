@@ -15,7 +15,7 @@ from .models import GradingJob
 from .services import enqueue_submission, process_job, expire_jobs
 from .providers import validate_result, OpenAIGrader
 
-GOOD = {'transcript':'My hobby is reading.','feedback':'Transcript khớp lời mẫu. Giáo viên kiểm tra bản ghi.','needs_manual':False}
+GOOD = {'complete':True,'transcript':'My hobby is reading.','feedback':'Transcript khớp lời mẫu. Giáo viên kiểm tra bản ghi.','needs_manual':False}
 
 
 class GradingTests(IntegratedFixture):
@@ -30,7 +30,7 @@ class GradingTests(IntegratedFixture):
     def test_recording_transcript_success_and_single_claim(self):
         job=self.job(); provider=Mock();provider.grade.return_value=GOOD
         self.assertTrue(process_job(job.pk,provider)); self.assertFalse(process_job(job.pk,provider))
-        job.refresh_from_db();self.assertEqual(job.status,'ai_reviewed');self.assertEqual(job.suggested_score,10)
+        job.refresh_from_db();self.assertEqual(job.status,'ai_reviewed');self.assertIsNone(job.suggested_score)
         self.assertEqual(job.transcript,'My hobby is reading.');self.assertIsNone(job.result['pronunciation'])
         provider.grade.assert_called_once()
 
@@ -54,12 +54,12 @@ class GradingTests(IntegratedFixture):
         with patch('ai_core.services.OpenAIGrader') as api:
             job,_=enqueue_submission(task=self.listening_task,submission_key='listen',answers={str(self.q1.pk):'B',str(self.q2.pk):'B'})
             self.assertFalse(process_job(job.pk));api.assert_not_called()
-        self.assertEqual(job.final_score,5);self.assertEqual(job.status,'graded');self.assertEqual(job.grading_method,'answer_key')
-        self.assertEqual(job.progress.responses.count(),2);self.assertEqual(job.progress.score,50)
+        self.assertIsNone(job.final_score);self.assertEqual(job.status,'graded');self.assertEqual(job.grading_method,'answer_key')
+        self.assertEqual(job.progress.responses.count(),2);self.assertIsNone(job.progress.score)
 
     def test_listening_missing_answer_is_zero_not_omitted(self):
         job,_=enqueue_submission(task=self.listening_task,submission_key='listen',answers={str(self.q1.pk):'B'})
-        self.assertEqual(job.final_score,5);self.assertEqual(job.result['total'],2)
+        self.assertIsNone(job.final_score);self.assertEqual(job.result['total'],2)
 
     def test_listening_rejects_unknown_question(self):
         with self.assertRaises(ValidationError):
@@ -69,20 +69,20 @@ class GradingTests(IntegratedFixture):
     def test_snapshot_survives_answer_edit(self):
         self.q1.correct_option='A';self.q1.save()
         job,_=enqueue_submission(task=self.listening_task,submission_key='old-key',answers={str(self.q1.pk):'B',str(self.q2.pk):'A'})
-        self.assertEqual(job.final_score,10)
+        self.assertIsNone(job.final_score)
 
     def test_vocabulary_missing_word_not_compensated_by_extra_repeats(self):
         job,_=enqueue_submission(task=self.vocab_task,submission_key='vocab',text='Customer Customer Customer Customer Customer Customer')
         provider=Mock();provider.grade.return_value={'needs_manual':False,'feedback':'Thiếu Deadline.','counts':[{'word':'Customer','count':6}]}
         process_job(job.pk,provider);job.refresh_from_db()
-        self.assertEqual(job.suggested_score,5);self.assertEqual(job.result['matched_total'],3)
+        self.assertIsNone(job.suggested_score);self.assertEqual(job.result['matched_total'],3)
         self.assertEqual(job.result['expected_total'],6);self.assertFalse(job.result['complete'])
         self.assertNotIn('handwriting',job.result)
 
     def test_vocab_complete_and_strict_count_validation(self):
         rubric=self.assignments['vocabulary'].rubric
         value={'needs_manual':False,'feedback':'Đủ lượt.','counts':[{'word':'customer','count':3},{'word':'Deadline','count':3}]}
-        self.assertEqual(validate_result(value,'vocabulary',rubric)['score'],10)
+        self.assertTrue(validate_result(value,'vocabulary',rubric)['complete'])
         for counts in [[{'word':'unknown','count':3}],[{'word':'Customer','count':True}],[{'word':'Customer','count':-1}],[{'word':'Customer','count':2},{'word':'Customer','count':2}]]:
             with self.assertRaises(ValueError):validate_result(dict(value,counts=counts),'vocabulary',rubric)
 
@@ -128,7 +128,7 @@ class GradingTests(IntegratedFixture):
         for user,status in [(self.student,403),(self.manager,403),(self.other_teacher,404),(self.teacher,200)]:
             self.client.force_login(user);self.assertEqual(self.client.post(url,body,content_type='application/json').status_code,status)
         self.assertEqual(self.client.post(url,body,content_type='application/json').status_code,409)
-        job.refresh_from_db();self.assertEqual(job.reviewed_by,self.teacher);self.assertEqual(job.final_score,8)
+        job.refresh_from_db();self.assertEqual(job.reviewed_by,self.teacher);self.assertIsNone(job.final_score)
 
     def test_csrf_submission_and_review(self):
         browser=Client(enforce_csrf_checks=True);browser.force_login(self.student)
@@ -200,11 +200,11 @@ class GradingTests(IntegratedFixture):
         provider=Mock();provider.grade.return_value=GOOD
         process_job(legacy.pk,provider);legacy.refresh_from_db();self.assertEqual(legacy.status,'manual')
 
-    def test_server_computes_reading_score_ignoring_model_score(self):
+    def test_server_does_not_use_model_score_for_reading_assessment(self):
         job=self.job();provider=Mock()
         provider.grade.return_value=dict(GOOD,transcript='My hobby is swimming.',score=10,content=10)
         process_job(job.pk,provider);job.refresh_from_db()
-        self.assertEqual(job.suggested_score,7.5)
+        self.assertIsNone(job.suggested_score)
         self.assertEqual(job.result['comparison']['different_words'],1)
         self.assertNotIn('content',job.result)
 

@@ -33,6 +33,7 @@ class GradingJob(models.Model):
     finished_at = models.DateTimeField(null=True, blank=True)
     status = models.CharField(max_length=16, choices=Status.choices, default=Status.QUEUED, db_index=True)
     result = models.JSONField(default=dict, blank=True)
+    # Legacy numeric grades are retained for history; current assessments do not write them.
     suggested_score = models.FloatField(null=True, blank=True)
     final_score = models.FloatField(null=True, blank=True)
     completion_status = models.CharField(max_length=12, choices=Completion.choices, default=Completion.PENDING, db_index=True)
@@ -46,7 +47,7 @@ class GradingJob(models.Model):
     @property
     def public_status_label(self):
         if self.status == self.Status.GRADED:
-            return self.get_completion_status_display() if self.completion_status != self.Completion.PENDING else 'Đã chấm · cần xác nhận hoàn thành'
+            return {'complete':'Hoàn thành','incomplete':'Chưa hoàn thành'}.get(self.completion_status, 'Đã chấm · cần xác nhận hoàn thành')
         from .reporting import REPORT_STATUS_LABELS
         return REPORT_STATUS_LABELS.get(self.status, self.get_status_display())
 

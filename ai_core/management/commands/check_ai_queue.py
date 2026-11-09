@@ -25,16 +25,16 @@ class Command(BaseCommand):
                 reason = diagnostic_code(job.fallback_reason)
                 self.stdout.write(f'Nguyên nhân={reason}: {FALLBACK_HINTS[reason]}')
             elif job.status == 'ai_reviewed':
-                self.stdout.write('AI đã đánh giá thành công. Bài đang chờ giáo viên xác nhận điểm cuối cùng.')
+                self.stdout.write('AI đã đánh giá thành công. Bài đang chờ giáo viên xác nhận mức hoàn thành.')
             elif job.status in ('queued', 'processing'):
                 self.stdout.write('Bài chưa hoàn tất AI. Giữ run_ai_worker và expire_ai_jobs --loop chạy cùng website.')
             elif job.status == 'graded':
-                self.stdout.write('Bài đã có điểm cuối cùng.')
+                self.stdout.write('Bài đã có kết quả đánh giá.')
             return
         counts = {row['status']: row['total'] for row in jobs.values('status').annotate(total=Count('pk'))}
         for status, label in [('queued', 'Chờ AI'), ('processing', 'AI đang xử lý'),
                               ('ai_reviewed', 'AI đã đánh giá, chờ xác nhận'), ('manual', 'Cần chấm thủ công'),
-                              ('graded', 'Đã có điểm cuối cùng')]:
+                              ('graded', 'Đã xác nhận kết quả')]:
             self.stdout.write(f'{status}: {counts.get(status, 0)} — {label}')
         for row in jobs.filter(status='manual').values('fallback_reason').annotate(total=Count('pk')):
             reason = diagnostic_code(row['fallback_reason'])

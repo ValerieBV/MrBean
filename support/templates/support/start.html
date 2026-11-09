@@ -3,10 +3,10 @@
 {% block page_class %}support-content{% endblock %}
 {% block content %}
 <div class="row justify-content-center"><div class="col-lg-8">
-    <div class="mb-4"><h1 class="page-title-h1">HỎI AI VỀ BÀI HỌC</h1><p class="small text-secondary mb-0">{{ job.task.title }} · Điểm cuối cùng: {{ job.final_score|default_if_none:'—' }}/10</p></div>
+    <div class="mb-4"><h1 class="page-title-h1">HỎI AI VỀ BÀI HỌC</h1><p class="small text-secondary mb-0">{{ job.task.title }} · Kết quả: {{ job.public_status_label }}</p></div>
     <div class="data-card-wrapper"><h2 class="section-title-h2 mb-3">BẠN MUỐN ĐƯỢC GIẢI THÍCH THÊM?</h2><p class="small text-secondary">Ví dụ: “Vì sao câu này dùng thì hiện tại hoàn thành?” hoặc “Từ này dùng như thế nào?”. AI dựa vào nội dung bài và nhận xét đã công bố để giải thích kiến thức. Bạn có thể hỏi giáo viên nếu cần.</p>
     <form method="post" data-support-form>{% csrf_token %}{% include 'core/bootstrap_fields.html' %}<div class="d-flex flex-wrap justify-content-between gap-2 mt-4"><a class="btn-action-edit" href="{% url 'submissions:result' job.pk %}">Về kết quả bài</a><button class="btn-cta-orange" type="submit" data-waiting-label="Đang hỏi AI…">Hỏi AI</button></div><p class="small text-secondary mt-3 mb-0" data-support-status role="status"></p></form></div>
-    <p class="small text-secondary">Phản ánh điểm, lịch học hoặc lỗi hệ thống: <a href="{% url 'support:contact_new' %}?job={{ job.pk }}">Liên hệ giáo viên hoặc quản lý</a>.</p>
+    <p class="small text-secondary">Phản ánh kết quả, lịch học hoặc lỗi hệ thống: <a href="{% url 'support:contact_new' %}?job={{ job.pk }}">Liên hệ giáo viên hoặc quản lý</a>.</p>
 </div></div>
 {% endblock %}
 {% block extra_js %}<script src="{% static 'support/forms.js' %}" defer></script>{% endblock %}

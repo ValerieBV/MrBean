@@ -80,7 +80,7 @@ def enqueue_submission(*, task, submission_key, kind=None, text='', audio=None, 
             from submissions.grading import grade_listening
             result = grade_listening(rubric.get('questions', []), {} if answers is None else answers)
             job.answers = {str(row['question_id']): {'chosen': row['chosen'], 'short_answer': row['short_answer']} for row in result['details']}
-            job.result, job.final_score = result, result['score']
+            job.result = result
             job.status, job.grading_method, job.finished_at = 'graded', 'answer_key', timezone.now()
             job.teacher_feedback = result['feedback']
             job.completion_status = 'complete' if result['complete'] else 'incomplete'
@@ -105,7 +105,7 @@ def enqueue_submission(*, task, submission_key, kind=None, text='', audio=None, 
             title='Bài nộp mới: '+task.title, message=task.learner.get_full_name() or task.learner.username,
             target_url=reverse('submissions:result',args=[job.pk]), event_key=f'submission:{job.pk}')
         if job.status == 'graded':
-            notify(recipient=task.learner, title='Đã có điểm: '+task.title, message=job.teacher_feedback,
+            notify(recipient=task.learner, title='Đã có kết quả: '+task.title, message=job.teacher_feedback,
                 target_url=reverse('submissions:result',args=[job.pk]), event_key=f'result:{job.pk}')
         return job, True
 
@@ -131,7 +131,7 @@ def notify_manual_jobs():
     for job in rows.select_related('task__assignment__classroom__teacher','task__teacher'):
         teacher = job.task.assignment.classroom.teacher if job.task.assignment_id else job.task.teacher
         notify(recipient=teacher, title='Bài cần chấm thủ công: '+job.task.title,
-            message='AI chưa hoàn tất. Vui lòng kiểm tra bài làm và xác nhận điểm.',
+            message='AI chưa hoàn tất. Vui lòng kiểm tra bài làm và xác nhận mức hoàn thành.',
             target_url=reverse('submissions:result',args=[job.pk]), event_key=f'manual:{job.pk}')
 
 
@@ -158,14 +158,14 @@ def process_job(job_id, provider=None):
         if job.kind == 'speaking':
             result['transcript_source'] = 'openai_transcription'
         changed = GradingJob.objects.filter(pk=job_id, status='processing').update(
-            status='ai_reviewed', result=result, suggested_score=result['score'],
+            status='ai_reviewed', result=result, suggested_score=None,
             transcript=transcript, grading_method='openai', finished_at=finished)
         if changed:
             from accounts.notifications import notify
             from django.urls import reverse
             teacher = job.task.assignment.classroom.teacher if job.task.assignment_id else job.task.teacher
-            notify(recipient=teacher,title='AI đã gợi ý điểm: '+job.task.title,
-                message='Kiểm tra bản ghi hoặc ảnh và nhận xét trước khi xác nhận điểm chính thức.',
+            notify(recipient=teacher,title='AI đã đánh giá mức hoàn thành: '+job.task.title,
+                message='Kiểm tra bản ghi hoặc ảnh và nhận xét trước khi xác nhận kết quả cuối cùng.',
                 target_url=reverse('submissions:result',args=[job.pk]),event_key=f'ai-reviewed:{job.pk}')
     except Exception as exc:
         reason = failure_reason(exc)

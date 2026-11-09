@@ -5,13 +5,13 @@
 {% block content %}
 <div class="page-header">
     <div><div class="eyebrow">{% if is_reporting_manager %}ĐIỀU HÀNH & ĐÀO TẠO{% else %}KHÔNG GIAN GIÁO VIÊN{% endif %}</div><h1>{{ dashboard_title }}</h1>
-        <p>{% if is_reporting_manager %}Theo dõi lớp học, kết quả luyện tập và những học viên cần được hỗ trợ.{% else %}Theo dõi tiến độ lớp, chấm bài và công bố điểm cuối cùng cho học viên.{% endif %}</p>
+        <p>{% if is_reporting_manager %}Theo dõi lớp học, kết quả luyện tập và những học viên cần được hỗ trợ.{% else %}Theo dõi tiến độ lớp, đánh giá và công bố mức hoàn thành cho học viên.{% endif %}</p>
     </div>
     <div class="actions"><a id="exportLink" class="btn export" href="{% url 'dashboard:export' %}">↓ Xuất báo cáo CSV</a><a class="btn" href="{% url 'assignments:assign' %}">+ Giao bài cho lớp</a></div>
 </div>
 {% include 'dashboard/_filters.html' %}
 <section id="grading-queue" class="panel">
-    <div class="panel-head"><div><h2>Bài chờ chấm điểm</h2><p>{% if user.role == 'manager' and not user.is_superuser %}Quản lý theo dõi; giáo viên phụ trách hoặc admin xác nhận điểm.{% else %}Mở bài để kiểm tra nội dung, nhập điểm cuối cùng và nhận xét.{% endif %}</p></div><a class="text-link" href="{% url 'assignments:assigned_list' %}">Tất cả lượt giao →</a></div>
+    <div class="panel-head"><div><h2>Bài chờ đánh giá</h2><p>{% if user.role == 'manager' and not user.is_superuser %}Quản lý theo dõi; giáo viên phụ trách hoặc admin xác nhận kết quả.{% else %}Mở bài để kiểm tra nội dung, xác nhận mức hoàn thành và nhận xét.{% endif %}</p></div><a class="text-link" href="{% url 'assignments:assigned_list' %}">Tất cả lượt giao →</a></div>
     <div class="table-wrap"><table><thead><tr><th>Bài tập</th><th>Học viên</th><th>Trạng thái</th><th>Xử lý</th></tr></thead><tbody id="queue"><tr><td colspan="4" class="empty">Đang tải danh sách…</td></tr></tbody></table></div><div id="queuePager" class="pager"></div>
 </section>
 <section class="panel">
@@ -19,16 +19,16 @@
     <div class="table-wrap"><table><thead><tr><th>Học viên</th><th>Bài quá hạn chưa hoàn thành</th><th>Dấu hiệu</th></tr></thead><tbody id="risks"><tr><td colspan="3" class="empty">Đang kiểm tra tiến độ…</td></tr></tbody></table></div>
 </section>
 <section class="panel">
-    <div class="panel-head"><div><h2>Tiến độ từng học viên</h2><p>Chỉ bài được xác nhận đủ yêu cầu mới tính hoàn thành; bài miễn được loại khỏi số phải làm. Điểm số và số bài đã nộp được theo dõi riêng.</p></div></div>
-    <div class="table-wrap"><table><thead><tr><th>Học viên</th><th>Phải làm</th><th>Hoàn thành</th><th>Bị thiếu</th><th>Chưa làm</th><th>Đang làm</th><th>Chờ chấm</th><th>Cần xác nhận hoàn thành</th><th>Được miễn</th><th>Tiến độ</th><th>Điểm TB cuối cùng</th></tr></thead><tbody id="progress"><tr><td colspan="11" class="empty">Đang tải tiến độ…</td></tr></tbody></table></div><div id="progressPager" class="pager"></div>
+    <div class="panel-head"><div><h2>Tiến độ từng học viên</h2><p>Chỉ bài được xác nhận đủ yêu cầu mới tính hoàn thành; bài miễn được loại khỏi số phải làm. Bài đã nộp nhưng chưa xác nhận làm đủ vẫn được theo dõi riêng.</p></div></div>
+    <div class="table-wrap"><table><thead><tr><th>Học viên</th><th>Phải làm</th><th>Hoàn thành</th><th>Bị thiếu</th><th>Chưa làm</th><th>Đang làm</th><th>Chờ chấm</th><th>Cần xác nhận hoàn thành</th><th>Được miễn</th><th>Tiến độ</th></tr></thead><tbody id="progress"><tr><td colspan="10" class="empty">Đang tải tiến độ…</td></tr></tbody></table></div><div id="progressPager" class="pager"></div>
 </section>
 <section class="panel">
-    <div class="panel-head"><h2>Điểm cuối cùng và nhận xét</h2><small>Lịch sử các lần đã chấm</small></div>
-    <div class="table-wrap"><table><thead><tr><th>Bài tập</th><th>Học viên</th><th>Điểm cuối cùng</th><th>Nhận xét</th><th>Chi tiết</th></tr></thead><tbody id="grades"><tr><td colspan="5" class="empty">Đang tải kết quả…</td></tr></tbody></table></div><div id="gradesPager" class="pager"></div>
+    <div class="panel-head"><h2>Kết quả đánh giá và nhận xét</h2><small>Lịch sử các lần đã chấm</small></div>
+    <div class="table-wrap"><table><thead><tr><th>Bài tập</th><th>Học viên</th><th>Mức hoàn thành</th><th>Nhận xét</th><th>Chi tiết</th></tr></thead><tbody id="grades"><tr><td colspan="5" class="empty">Đang tải kết quả…</td></tr></tbody></table></div><div id="gradesPager" class="pager"></div>
 </section>
 <section class="panel">
     <div class="panel-head"><h2>Lượt giao và tình trạng nộp</h2><small id="exemptCount"></small></div>
-    <div class="table-wrap"><table><thead><tr><th>Bài tập</th><th>Lớp</th><th>Học viên</th><th>Hạn nộp</th><th>Trạng thái</th><th>Điểm cuối cùng</th></tr></thead><tbody id="tasks"><tr><td colspan="6" class="empty">Đang tải lượt giao…</td></tr></tbody></table></div><div id="tasksPager" class="pager"></div>
+    <div class="table-wrap"><table><thead><tr><th>Bài tập</th><th>Lớp</th><th>Học viên</th><th>Hạn nộp</th><th>Trạng thái</th></tr></thead><tbody id="tasks"><tr><td colspan="5" class="empty">Đang tải lượt giao…</td></tr></tbody></table></div><div id="tasksPager" class="pager"></div>
 </section>
 {% endblock %}
 {% block extra_js %}<script src="{% static 'dashboard/reports.js' %}" defer></script>{% endblock %}

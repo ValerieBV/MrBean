@@ -22,7 +22,7 @@ class DashboardTests(IntegratedFixture):
         self.assertEqual(data['assigned_count'],3);self.assertEqual(data['submission_rate'],0)
         enqueue_submission(task=self.listening_task,submission_key='listen',answers={str(self.q1.pk):'B',str(self.q2.pk):'A'})
         data=metrics_for(self.teacher);self.assertEqual(data['submitted_count'],1);self.assertEqual(data['submission_rate'],33.33)
-        self.assertEqual(data['average_score'],10)
+        self.assertNotIn('average_score',data)
 
     def test_duplicate_submit_and_multiple_attempts_do_not_inflate_rate(self):
         enqueue_submission(task=self.task,submission_key='first',audio=self.audio())
@@ -35,7 +35,7 @@ class DashboardTests(IntegratedFixture):
         GradingJob.objects.create(task=self.task,submission_key='old',kind='speaking',status='graded',final_score=8,submitted_at=self.now-timedelta(hours=1),teacher_feedback='Official feedback')
         enqueue_submission(task=self.task,submission_key='new',audio=self.audio())
         data=metrics_for(self.teacher);row=data['learner_progress'][0]
-        self.assertEqual(row['average_score'],8);self.assertEqual(row['resubmissions_pending'],1)
+        self.assertNotIn('average_score',row);self.assertEqual(row['resubmissions_pending'],1)
         self.assertEqual(row['graded'],0);self.assertEqual(row['awaiting_grade'],1)
         self.assertEqual(data['graded_report'][0]['teacher_feedback'],'Official feedback')
 
@@ -183,7 +183,9 @@ class DashboardTests(IntegratedFixture):
         self.student.refresh_from_db();self.assertFalse(self.student.is_active)
         self.assertEqual(LearningTask.objects.filter(learner=self.student).count(),3)
 
-    def test_review_numeric_value_not_localized_with_comma(self):
+    def test_review_does_not_show_a_numeric_input(self):
         job=GradingJob.objects.create(task=self.task,submission_key='fraction',kind='speaking',status='ai_reviewed',suggested_score=7.33)
         self.client.force_login(self.teacher)
-        self.assertContains(self.client.get(f'/hoc-tap/results/{job.pk}/'),'value="7.33"')
+        response=self.client.get(f'/hoc-tap/results/{job.pk}/')
+        self.assertNotContains(response,'id="score"')
+        self.assertContains(response,'name="completion_status"')

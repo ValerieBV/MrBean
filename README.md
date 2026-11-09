@@ -102,16 +102,16 @@ nó không thay thế thử nghiệm chuyển âm thanh thành transcript hoặc
 
 | Loại bài | Bài làm học viên | Cách chấm |
 | --- | --- | --- |
-| Listening | Chọn A/B/C/D | Backend so đáp án đã giao, trả điểm chính thức ngay |
+| Listening | Chọn A/B/C/D | Backend so đáp án đã giao, kết luận đủ/thiếu yêu cầu ngay |
 | Đọc theo video / Speaking | Ghi âm trực tiếp bằng micro | OpenAI tạo transcript; backend so thứ tự từ với lời mẫu; AI nhận xét; giáo viên xác nhận |
-| Vocabulary | Văn bản hoặc tối đa 5 ảnh bài chép | AI đếm lượt từng từ; backend tính điểm đủ số lượng; giáo viên xác nhận |
+| Vocabulary | Văn bản hoặc tối đa 5 ảnh bài chép | AI đếm lượt từng từ; backend kiểm tra đủ số lượng; giáo viên xác nhận |
 
 Không chấm phát âm, giọng hay chữ đẹp/xấu. Đây là prompt và quy tắc chấm có kiểm tra
 đầu ra, **không phải mô hình đã fine-tune riêng**. Khi API lỗi, dữ liệu không chắc chắn
 hoặc vượt hạn 300 giây, bài vào hàng chấm thủ công. Watchdog kiểm tra mỗi giây;
 không cam kết độ trễ tuyệt đối khi máy chủ ngừng hoạt động. Nghe trắc nghiệm không cần API key/worker.
 
-Chi tiết cấu hình, prompt, thang điểm, API và nhập kết quả cũ: [README_AI.md](README_AI.md).
+Chi tiết cấu hình, prompt, tiêu chí hoàn thành, API và nhập kết quả cũ: [README_AI.md](README_AI.md).
 
 ## 4. Quy trình vận hành
 
@@ -122,12 +122,12 @@ Hỏi đáp sau khi có kết quả và mục liên hệ riêng đã có trong m
 2. **Giáo viên/admin/quản lý:** tạo buổi trong ngân hàng → thêm câu hỏi/đáp án, từ vựng hoặc video/lời mẫu → giao cho đúng lớp, đặt hạn và quy định nộp.
 3. **Học viên:** xem bài của mình → làm theo thứ tự → lưu nháp nghe/từ vựng → nộp.
 4. **Hệ thống:** chấm nghe ngay hoặc đưa vào AI; AI lỗi chuyển thủ công; lưu mọi lần nộp cùng đề đã dùng.
-5. **Giáo viên đúng lớp/admin:** xem bản ghi/ảnh/transcript → xác nhận điểm, nhận xét và mức hoàn thành (đủ yêu cầu/còn thiếu).
-6. **Học viên:** nhận thông báo → xem điểm/nhận xét/lịch sử → nộp lại nếu bài còn nhận.
-7. **Quản lý:** theo dõi tỷ lệ hoàn thành, số đã nộp, điểm chính thức, tiến độ, tín hiệu học viên cần hỗ trợ; xuất CSV.
+5. **Giáo viên đúng lớp/admin:** xem bản ghi/ảnh/transcript → xác nhận nhận xét và mức hoàn thành (đủ yêu cầu/còn thiếu).
+6. **Học viên:** nhận thông báo → xem kết quả/nhận xét/lịch sử → nộp lại nếu bài còn nhận.
+7. **Quản lý:** theo dõi tỷ lệ hoàn thành, số đã nộp, kết quả đã xác nhận, tiến độ, tín hiệu học viên cần hỗ trợ; xuất CSV.
 
 Nhánh có cả quản lý và admin như các model gốc. Quản lý tạo học viên, quản lý lớp,
-giao bài và theo dõi; quyền thay vai trò, đặt lại mật khẩu và xác nhận điểm được tách rõ.
+giao bài và theo dõi; quyền thay vai trò, đặt lại mật khẩu và xác nhận kết quả được tách rõ.
 
 Xin miễn: chọn bài Speaking/Vocabulary chưa nộp → giáo viên duyệt đúng lớp → trừ
 một lượt và loại bài khỏi số phải nộp. Listening luôn bắt buộc. Có thể hủy đơn đang chờ.
@@ -165,7 +165,7 @@ python manage.py test
 
 Kiểm thử không gọi API có phí. Đã kiểm tra quyền theo lớp, CSRF, chấm nghe, chỉ nhận
 bản ghi, snapshot đề, miễn bài, quota, lưu nháp, chuyển giáo viên, thống kê và nâng cấp DB.
-Kiểm tra giao diện trên Chromium gồm luồng tạo lớp đến công bố điểm, menu ba vai trò,
+Kiểm tra giao diện trên Chromium gồm luồng tạo lớp đến công bố kết quả, menu ba vai trò,
 mobile 390/768 px và kiểm tra truy cập tự động. Cách chạy lại: [docs/TESTING.md](docs/TESTING.md).
 
 Cần thử nghiệm cuối với API key, video/lời mẫu và bài làm thật của trung tâm để đánh giá

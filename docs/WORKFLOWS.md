@@ -13,8 +13,8 @@
 | Sao chép buổi để tạo phiên bản mới | Có | Có | Có | Không |
 | Giao bài/cập nhật hạn, quy định/video mẫu | Mọi lớp | Mọi lớp | Lớp phụ trách | Không |
 | Nộp bài/lưu nháp | Không | Không | Không | Bài của chính mình, đủ điều kiện |
-| Xem bài làm/điểm | Mọi lớp | Mọi lớp | Lớp phụ trách | Bài của chính mình |
-| Xác nhận điểm AI/chấm thủ công | Có | Theo dõi | Lớp phụ trách | Không |
+| Xem bài làm/kết quả | Mọi lớp | Mọi lớp | Lớp phụ trách | Bài của chính mình |
+| Xác nhận mức hoàn thành | Có | Theo dõi | Lớp phụ trách | Không |
 | Xin/hủy đơn miễn chờ duyệt | Không | Không | Không | Bài Speaking/Vocabulary chưa nộp của mình |
 | Duyệt đơn miễn | Có | Theo dõi | Lớp phụ trách | Không |
 | Báo cáo, xuất CSV | Mọi lớp | Mọi lớp | Lớp phụ trách | Dữ liệu của mình |
@@ -90,7 +90,7 @@ kỹ năng/chương trình/lớp phải được xác nhận **hoàn thành** ho
 chưa đủ điều kiện mở bài sau; bài còn thiếu cũng chưa được tính hoàn thành.
 
 Listening: nghe, xem PDF và chọn đáp án kèm câu trả lời ngắn cho từng câu. Câu chọn
-sai ảnh hưởng điểm; bỏ lựa chọn hoặc câu trả lời ngắn ảnh hưởng mức hoàn thành. Văn
+sai được ghi nhận để tham khảo; bỏ lựa chọn hoặc câu trả lời ngắn ảnh hưởng mức hoàn thành. Văn
 bản từ vựng, lựa chọn nghe và câu trả lời ngắn tự lưu nháp sau thay đổi, giữ trong 24 giờ. Ảnh và ghi âm không lưu nháp; cần chọn
 hoặc ghi lại sau khi đóng trang. Bản nháp không được tính là đã nộp.
 
@@ -104,42 +104,37 @@ Hệ thống chuẩn hóa ảnh và từ chối trang ảnh trùng. Nếu gửi 
 ảnh để không đếm hai lần cùng nội dung. Ảnh mờ/không đủ chứng cứ chuyển giáo viên.
 
 Nộp lại tạo lần nộp riêng. Mã lần nộp chống tạo bản ghi trùng khi mạng lỗi và gửi lại.
-Nếu có điểm chính thức cũ mà lần mới đang chờ, dashboard vẫn giữ điểm đã xác nhận và
-thể hiện lần nộp lại đang chờ. Không thay điểm chính thức bằng điểm AI.
+Nếu có kết luận đã xác nhận mà lần mới đang chờ, dashboard vẫn giữ mức hoàn thành
+đã xác nhận và thể hiện lần nộp lại đang chờ.
 
 Bài đóng, lớp kết thúc, ghi danh ngừng hoạt động, đã được miễn hoặc đơn miễn đang chờ
 thì không nhận bài mới. Quá hạn vẫn nhận nếu giáo viên bật nộp muộn; lưu thời điểm thật.
 
-## 4. Chấm điểm và công bố
+## 4. Đánh giá mức hoàn thành và công bố
 
-Listening được backend chấm ngay theo snapshot đáp án: số câu đúng / tổng câu × 10.
-AI không được sử dụng để đoán đáp án. Đủ lựa chọn và câu trả lời ngắn cho mọi câu mới
-được tính hoàn thành, độc lập với số câu chọn đúng. Nội dung câu trả lời ngắn được
-lưu để giáo viên xem; hệ thống kiểm tra có điền, không tự chấm ngữ nghĩa của phần này.
+Bài mới không tạo điểm 0–10. Listening kiểm tra lựa chọn và câu trả lời ngắn ở mọi
+câu theo snapshot đề đã giao. Làm đủ yêu cầu được tính hoàn thành dù có chọn sai;
+số câu đúng/sai và từng câu trả lời được giữ làm thông tin tham khảo. Không dùng AI
+đoán key hoặc tự chấm ngữ nghĩa câu trả lời ngắn.
 
-Bài đọc/từ vựng vào queue trong DB. Worker yêu cầu OpenAI theo deadline, nhận JSON
-có schema và kiểm tra lại kiểu dữ liệu. Bài đọc được chuyển từ audio sang transcript;
-backend chuẩn hóa văn bản, so thứ tự từ và tính mức khớp. AI chỉ nhận xét khác biệt
-transcript; không kết luận phát âm sai, vì nhận dạng có thể sai. Từ vựng được AI đếm
-lượt mỗi từ, backend giới hạn số lượt hữu ích để từ viết thừa không bù từ bị thiếu.
+Bài đọc/từ vựng vào queue. Worker nhận JSON có schema và kiểm tra lại dữ liệu. Bài
+đọc đánh giá đã đọc đủ nội dung theo video, không chấm phát âm, giọng, ngữ pháp hay
+độ trùng khớp transcript thành điểm. So khớp văn bản chỉ hỗ trợ đối chiếu; nếu chưa
+đủ bằng chứng, AI trả kết luận chưa xác định để giáo viên nghe bản ghi. Từ vựng
+kiểm tra đủ số lượt của từng từ; lượt thừa của từ khác không bù lượt thiếu. Chữ khó
+đọc hoặc ảnh không rõ cần giáo viên kiểm tra, không tự kết luận làm thiếu vì OCR sai.
 
-AI thành công → **AI đã nhận xét** và thông báo cho giáo viên. AI lỗi, thiếu key,
-ảnh/transcript không chắc chắn hoặc quá 300 giây → **Chờ giáo viên**. Watchdog chạy
-độc lập với worker, kiểm tra mỗi giây; kết quả AI trả muộn không ghi đè trạng thái đã xử lý.
+AI hoàn tất → **Chờ giáo viên xác nhận**. AI lỗi, thiếu key hoặc quá 300 giây →
+**Chờ giáo viên**. Watchdog và quy tắc chống ghi đè kết quả trả muộn được giữ nguyên.
+Giáo viên/admin đúng quyền mở **Bài chờ đánh giá**, kiểm tra bản ghi/ảnh, chọn
+**Hoàn thành** hoặc **Chưa hoàn thành**, nhập nhận xét và bấm **Xác nhận kết quả**.
+Biểu mẫu và API không yêu cầu điểm. Quản lý chỉ theo dõi, không chấm thay giáo viên.
 
-Giáo viên mở **Tổng quan → Bài chờ chấm điểm**, nghe bản ghi/xem ảnh, đối chiếu
-lời mẫu và transcript, nhập điểm 0–10 cùng nhận xét, chọn mức **Hoàn thành/Bài làm bị thiếu**,
-rồi bấm **Xác nhận điểm**. Không suy ra thiếu bài chỉ từ điểm hoặc lỗi nhận dạng.
-Bài cũ đã có điểm nhưng chưa có mức hoàn thành có form xác nhận riêng, giữ nguyên điểm.
-Chỉ giáo viên lớp hiện tại hoặc admin được xác nhận; quản lý chỉ theo dõi.
-Điểm không được xác nhận hai lần trên cùng lần nộp.
-
-Học viên nhận thông báo nội bộ có liên kết đến kết quả. Báo cáo/dashboard và file CSV
-chỉ hiển thị điểm cuối cùng; học viên xem điểm và nhận xét đã được giáo viên xác nhận.
-Điểm gợi ý và nhận xét tự động được lưu nội bộ để hỗ trợ giáo viên chấm, không công bố
-trong báo cáo hay API kết quả của học viên. Bài chưa được xác nhận hiển thị chờ chấm.
-Bài nghe tiếp tục có điểm cuối cùng theo đáp án giáo viên đã thiết lập.
-File chứng cứ được tải qua endpoint kiểm tra quyền; không mở công khai thư mục media.
+Học viên chỉ xem kết luận và nhận xét đã công bố. Đề xuất AI chỉ dành cho người
+có quyền chấm. Dashboard, CSV, lịch sử và ngữ cảnh AI hỏi đáp không công bố điểm số.
+Các giá trị điểm từ dữ liệu cũ được giữ trong database để bảo toàn lịch sử, không
+được dùng làm ngưỡng hoàn thành. Bài cũ chưa rõ đủ/thiếu có form xác nhận riêng.
+File chứng cứ được tải qua endpoint kiểm tra quyền, hỗ trợ tải theo đoạn để tua lại.
 
 ## 5. Xin miễn và duyệt
 
@@ -163,8 +158,8 @@ cùng phạm vi quyền và bộ lọc, bảo vệ giá trị có thể bị hi�
 Chỉ số chính là **tỷ lệ hoàn thành** = số lượt giao đã được xác nhận làm đủ / số lượt
 phải làm, loại bài miễn. Tỷ lệ nộp vẫn được giữ riêng: số lượt giao đã có ít nhất một
 lần nộp / số lượt phải nộp. Bản nháp và bài đang chờ chấm chưa được tính hoàn thành.
-Nộp lại không tăng mẫu số/tử số. Điểm trung bình lấy điểm chính thức gần nhất của từng
-lượt giao. Bảng lịch sử vẫn giữ từng lần nộp, có thể nhiều dòng cho một bài.
+Nộp lại không tăng mẫu số/tử số. Kết quả lấy mức hoàn thành đã xác nhận gần nhất
+của từng lượt giao. Bảng lịch sử vẫn giữ từng lần nộp, có thể nhiều dòng cho một bài.
 
 Cảnh báo học viên cần hỗ trợ dùng bài quá hạn chưa nộp, bài đã chấm còn thiếu và thời
 gian ít hoạt động. Không quy trách nhiệm chậm tiến độ cho học viên chỉ vì đang chờ chấm.

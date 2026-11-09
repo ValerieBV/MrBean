@@ -1,12 +1,12 @@
 from datetime import timedelta
 from django.conf import settings
 from django.core.paginator import Paginator
-from django.db.models import Avg, OuterRef, Subquery, Q, Exists
+from django.db.models import OuterRef, Subquery, Q, Exists
 from django.utils import timezone
 from django.utils.dateparse import parse_date
 from ai_core.models import GradingJob
 from ai_core.permissions import tasks_for, classes_for, is_manager
-from ai_core.reporting import report_job
+from ai_core.reporting import report_job, REPORT_STATUS_LABELS
 from ai_core.diagnostics import review_status_label
 from courses.models import Enrollment, ExemptionRequest
 from .models import LearningTask
@@ -57,7 +57,7 @@ def annotated_tasks(user, filters=None, now=None):
     earlier = unfinished_tasks(earlier, now)
     return tasks.annotate(latest_status=Subquery(latest.values('status')[:1]),
         latest_job_id=Subquery(latest.values('pk')[:1]), latest_at=Subquery(latest.values('submitted_at')[:1]),
-        confirmed_score=Subquery(grade.values('final_score')[:1]), confirmed_job_id=Subquery(grade.values('pk')[:1]),
+        confirmed_feedback=Subquery(grade.values('teacher_feedback')[:1]), confirmed_job_id=Subquery(grade.values('pk')[:1]),
         confirmed_completion=Subquery(grade.values('completion_status')[:1]),
         confirmed_submission_at=Subquery(grade.values('submitted_at')[:1]),
         has_draft=Exists(LessonProgress.objects.filter(student_id=OuterRef('learner_id'),
@@ -86,8 +86,6 @@ def task_state(task, now):
 def metrics_for(user, now=None, filters=None):
     now, filters = now or timezone.now(), filters or {}
     tasks = annotated_tasks(user, filters, now)
-    eligible = tasks.filter(exemption__isnull=True)
-    totals = eligible.aggregate(average_score=Avg('confirmed_score'))
     all_tasks = list(tasks)
     assigned = submitted = completed = incomplete = on_time = exempt = pending_exemptions = 0
     learners = {}
@@ -108,7 +106,7 @@ def metrics_for(user, now=None, filters=None):
             learner_name=task.learner.get_full_name() or task.learner.username, student_code=task.learner.student_code or '',
             assigned=0, submitted=0, exempt=0, not_submitted=0, awaiting_grade=0, graded=0,
             completed=0, incomplete=0, in_progress=0, on_time_completed=0, completion_pending=0,
-            overdue_not_submitted=0, overdue_incomplete=0, resubmissions_pending=0, _scores=[], _first=task.assigned_at, _last=None))
+            overdue_not_submitted=0, overdue_incomplete=0, resubmissions_pending=0, _first=task.assigned_at, _last=None))
         row['_first'] = min(row['_first'], task.assigned_at)
         if excused: row['exempt'] += 1
         else:
@@ -121,7 +119,7 @@ def metrics_for(user, now=None, filters=None):
                 row['submitted'] += 1
                 row['graded' if task.latest_status=='graded' else 'awaiting_grade'] += 1
                 row['_last'] = max(row['_last'] or task.latest_at, task.latest_at)
-                if task.confirmed_score is not None and task.latest_status!='graded': row['resubmissions_pending'] += 1
+                if task.confirmed_job_id is not None and task.latest_status!='graded': row['resubmissions_pending'] += 1
             else:
                 row['not_submitted'] += int(not task.has_draft)
                 row['in_progress'] += int(task.has_draft)
@@ -131,21 +129,18 @@ def metrics_for(user, now=None, filters=None):
             row['overdue_not_submitted'] += int(not done and task.due_at < now and risk_eligible)
             # Pending teacher/AI review is not learner inactivity.
             row['overdue_incomplete'] += int(missing and task.latest_status == 'graded' and task.due_at < now and risk_eligible)
-            if task.confirmed_score is not None: row['_scores'].append(task.confirmed_score)
         task_rows.append(dict(id=task.pk, title=task.title, learner_name=row['learner_name'],
             classroom=task.assignment.classroom.class_code if task.assignment_id else 'Bài cũ',
             skill=task.assignment.rubric.get('skill','') if task.assignment_id else '', due_at=task.due_at.isoformat(),
-            latest_status=state, final_score=task.confirmed_score,
+            latest_status=state,
             completion_status=task.confirmed_completion or 'pending',
-            completion_label=state, completed_on_time=bool(completed_in_time),
+            completion_label=REPORT_STATUS_LABELS.get(state,state), completed_on_time=bool(completed_in_time),
             processing_status=task.latest_status, resubmission_pending=bool(task.latest_status in ('queued','processing','ai_reviewed','manual') and task.confirmed_job_id),
             is_late=task.due_at < now and not complete and not excused, blocked_reason=blocked,
             submit_url=f'/hoc-tap/tasks/{task.pk}/' if task.assignment_id else None,
             result_url=f'/hoc-tap/results/{task.latest_job_id}/' if task.latest_job_id else None))
     risks = []
     for row in learners.values():
-        scores = row.pop('_scores')
-        row['average_score'] = round(sum(scores)/len(scores),2) if scores else None
         row['submission_rate'] = round(row['submitted']/row['assigned']*100,2) if row['assigned'] else 0
         row['completion_rate'] = round(row['completed']/row['assigned']*100,2) if row['assigned'] else 0
         first, last = row.pop('_first'), row.pop('_last')
@@ -168,7 +163,6 @@ def metrics_for(user, now=None, filters=None):
         'submission_rate':round(submitted/assigned*100,2) if assigned else 0,
         'completed_count':completed, 'incomplete_count':incomplete, 'on_time_completed_count':on_time,
         'completion_rate':round(completed/assigned*100,2) if assigned else 0,
-        **{k:round(v,2) if v is not None else None for k,v in totals.items()},
         'class_count':classes_for(user).count(), 'learner_count':len(learners),
         'learner_progress':list(progress_page), 'progress_pagination':progress_meta,
         'tasks':list(task_page), 'tasks_pagination':task_meta,

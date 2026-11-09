@@ -305,7 +305,7 @@ def lesson_media(request, pk, kind):
     from django.http import Http404
     field = lesson.audio_file if kind == 'audio' else lesson.video_file
     if not field: raise Http404
-    return private_file(field)
+    return private_file(field, request)
 
 
 @login_required
@@ -442,7 +442,7 @@ def listening_exercise_media(request, pk, kind):
     from ai_core.views import private_file, private_pdf
     exercise = get_object_or_404(ListeningExercise, pk=pk)
     if kind == 'document' and exercise.document_file:
-        return private_pdf(exercise.document_file.name)
+        return private_pdf(exercise.document_file.name, request)
     if kind == 'audio' and exercise.audio_file:
-        return private_file(exercise.audio_file)
+        return private_file(exercise.audio_file, request)
     raise Http404

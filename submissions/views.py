@@ -145,8 +145,9 @@ def result(request, job_id):
     can_review = (request.user.is_superuser or request.user.role in ('admin','teacher')) and job.status in ('manual','ai_reviewed')
     ai_trial = None
     if (request.user.is_superuser or request.user.role in ('admin','teacher')) and job.kind in ('speaking','vocabulary'):
-        available = job.status in ('ai_reviewed','graded') and job.suggested_score is not None
-        ai_trial = {'available': available, 'score': job.suggested_score if available else None,
+        available = isinstance(job.result, dict) and (job.status == 'ai_reviewed' or job.status == 'graded' and type(job.result.get('complete')) is bool) and isinstance(job.result.get('feedback'), str) and bool(job.result.get('feedback'))
+        complete = job.result.get('complete') if available and type(job.result.get('complete')) is bool else None
+        ai_trial = {'available': available, 'complete':complete, 'label':{True:'Hoàn thành',False:'Chưa hoàn thành',None:'Cần giáo viên kiểm tra'}[complete],
                     'feedback': job.result.get('feedback','') if available else '',
                     'pending': job.status in ('queued','processing'), 'status': job.status}
     from assignments.video import youtube_embed
@@ -225,14 +226,14 @@ def lesson_audio(request, task_id):
     task = media_task(request, task_id)
     from ai_core.views import private_path
     # Fallback reads historical rubrics created before media snapshots were introduced.
-    return private_path(task.assignment.rubric.get('audio_name', task.assignment.lesson.audio_file.name or ''))
+    return private_path(task.assignment.rubric.get('audio_name', task.assignment.lesson.audio_file.name or ''), request)
 
 
 @login_required
 def lesson_video(request, task_id):
     task = media_task(request, task_id)
     from ai_core.views import private_path
-    return private_path(task.assignment.rubric.get('video_name', ''))
+    return private_path(task.assignment.rubric.get('video_name', ''), request)
 
 
 @login_required
@@ -251,4 +252,4 @@ def listening_material(request, task_id, exercise_id, kind):
     exercise = next((x for x in task.assignment.rubric.get('exercises', []) if x['id']==exercise_id), None)
     if not exercise or kind not in ('audio','document'):
         raise Http404
-    return private_pdf(exercise.get('document_name', '')) if kind=='document' else private_path(exercise.get('audio_name', ''))
+    return private_pdf(exercise.get('document_name', ''), request) if kind=='document' else private_path(exercise.get('audio_name', ''), request)

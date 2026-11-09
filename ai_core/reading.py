@@ -54,6 +54,5 @@ def compare_reading(reference, transcript):
     return {'reference_words':n,'transcript_words':m,'matched_words':counts['match'],
             'missing_words':counts['missing'],'different_words':counts['substitution'],
             'extra_words':counts['extra'],'coverage_percent':round(counts['match']/n*100,2),
-            'score':round(max(0,1-errors/n)*10,2),
             'differences':[{'type':kind,'reference':r,'transcript':t} for kind,r,t in ops if kind!='match'][:100],
             'difference_count':errors}

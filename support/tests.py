@@ -71,7 +71,8 @@ class SupportTests(IntegratedFixture):
 
     def test_context_uses_only_published_result_and_no_private_ai_scores(self):
         context=context_for(self.thread)
-        self.assertEqual(context['final_score'],7.5)
+        self.assertNotIn('final_score',context)
+        self.assertIn('completion_status',context)
         self.assertEqual(context['teacher_feedback'],self.job.teacher_feedback)
         self.assertIn('My hobby',context['reference'])
         payload=json.dumps(context)

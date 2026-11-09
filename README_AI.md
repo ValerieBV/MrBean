@@ -117,9 +117,10 @@ và web server. `python manage.py run_ai_worker --once` xử lý tối đa một
 thoát. Không có worker thì bài chỉ nằm chờ; hết 5 phút phải qua watchdog để
 chuyển manual.
 
-6. Học viên ghi âm trực tiếp cho bài đọc theo video, hoặc nộp ảnh/text cho từ vựng. Sau khi worker xử lý, vào kết quả bài nộp
-để xem điểm AI gợi ý; giáo viên xác nhận điểm chính thức. Nghe không cần key
-hay worker: chấm ngay bằng đáp án ở backend.
+6. Học viên ghi âm trực tiếp cho bài đọc theo video, hoặc nộp ảnh/text cho từ vựng.
+Sau khi worker xử lý, giáo viên mở kết quả để xem đề xuất **Hoàn thành / Chưa hoàn thành**
+và nhận xét AI, rồi xác nhận kết quả chính thức. Nghe không cần key hay worker:
+backend đối chiếu đáp án và kiểm tra việc làm đủ từng câu ngay khi nộp.
 
 ### Đã kết nối API nhưng bài vẫn xuất hiện ở giáo viên
 
@@ -141,14 +142,14 @@ python manage.py check_ai_queue --job MA_BAI_NOP
 | Trạng thái | Ý nghĩa |
 | --- | --- |
 | `queued` / `processing` | Đang chờ/đang xử lý AI, chưa nằm trong hàng chấm của giáo viên. |
-| `ai_reviewed` | AI đã đánh giá thành công; giáo viên xác nhận điểm cuối cùng. |
+| `ai_reviewed` | AI đã đánh giá thành công; giáo viên xác nhận mức hoàn thành và nhận xét. |
 | `manual` | AI chưa hoàn tất; trang giáo viên hiển thị nguyên nhân dự phòng. |
-| `graded` | Đã có điểm cuối cùng; học viên nhận thông báo. |
+| `graded` | Đã xác nhận kết quả; học viên nhận thông báo. |
 
 Hàng chấm giáo viên phân biệt **Chờ giáo viên xác nhận** với **Cần chấm thủ công**;
-trang kết quả có giải thích nội bộ theo trạng thái. Học viên vẫn chỉ xem điểm
-cuối cùng, không thấy nguyên nhân kỹ thuật hoặc phần đánh giá nội bộ.
-Các báo cáo không bổ sung cột điểm AI.
+trang kết quả có giải thích nội bộ theo trạng thái. Học viên chỉ xem mức hoàn thành
+đã xác nhận và nhận xét, không thấy nguyên nhân kỹ thuật hoặc đánh giá AI nội bộ.
+Giao diện, dashboard, CSV và API kết quả không hiển thị điểm số 0–10.
 
 Các mã thường gặp: `provider_not_configured` (worker chưa có key),
 `ai_authentication` (key bị từ chối), `ai_quota_exceeded` / `ai_rate_limited`,
@@ -159,17 +160,18 @@ Bài đã sang `manual` không tự chạy lại khi đổi key; giáo viên có
 công hoặc học viên nộp lần mới theo quy định của bài. Không tự đổi ngày nộp,
 reset bài cũ hoặc gọi lại API âm thầm.
 
-### Điểm AI chấm thử trên trang chấm bài
+### Đánh giá mức hoàn thành của AI trên trang chấm bài
 
 Giáo viên phụ trách lớp hoặc admin mở trang kết quả/chấm bài sẽ thấy mục
-**Kết quả AI chấm thử** ngay trước biểu mẫu xác nhận điểm. Bài nói và từ vựng
-hiển thị điểm gợi ý trên thang10 cùng nhận xét AI khi có kết quả hợp lệ;
-điểm0 vẫn hiển thị đúng. Bài đang xử lý hoặc chuyển thủ công hiển thị trạng
-thái chưa có điểm, không tự thay bằng0. Bài nghe trắc nghiệm không có khối này.
+**Đánh giá mức hoàn thành của AI** ngay trước biểu mẫu xác nhận kết quả.
+Bài nói và từ vựng hiển thị **Hoàn thành**, **Chưa hoàn thành** hoặc
+**Cần giáo viên kiểm tra** cùng nhận xét AI khi có bằng chứng hợp lệ.
+Không chắc chắn hoặc chưa có kết quả không đồng nghĩa học viên làm thiếu.
+Bài nghe trắc nghiệm không có khối AI này.
 
-Điểm chấm thử giữ nguyên để đối chiếu sau khi giáo viên công bố một điểm cuối
-cùng khác. Học viên và quản lý theo dõi không thấy khối này; dashboard, CSV
-và API kết quả của học viên vẫn chỉ công bố điểm cuối cùng.
+Đánh giá AI được giữ để giáo viên đối chiếu với bài gốc trước khi xác nhận.
+Học viên và quản lý theo dõi không thấy khối này. Các trường điểm số cũ vẫn được
+giữ trong database để bảo toàn lịch sử, nhưng không dùng cho lần đánh giá mới.
 
 ### Xử lý lỗi thường gặp
 
@@ -196,11 +198,17 @@ A–C và các dạng còn lại A–D. Mỗi bài có audio và bảng đáp á
 PDF hiển thị trực tiếp. Giáo viên dán đáp án từ Excel hoặc tải CSV/TXT, backend kiểm
 tra đủ số câu, không trùng, lựa chọn hợp lệ rồi tạo toàn bộ câu hỏi.
 
-Học viên chọn đáp án kèm câu trả lời ngắn cho từng câu. Điểm chính thức = số câu
-chọn đúng / tổng câu × 10, chấm ngay không gọi OpenAI. Mức hoàn thành được xét riêng:
-chỉ đủ lựa chọn và câu trả lời ngắn cho tất cả câu mới hoàn thành. Không chấm ngữ nghĩa
-câu trả lời ngắn tự động. Đáp án đúng không có trong HTML/form/API đề của học viên.
+Học viên chọn đáp án kèm câu trả lời ngắn cho từng câu. Backend kiểm tra ngay,
+không gọi OpenAI: chỉ đủ lựa chọn và câu trả lời ngắn cho tất cả câu mới hoàn thành.
+Số câu đúng/sai giữ làm thông tin tham khảo, không đổi sang điểm 0–10 và không
+quyết định mức hoàn thành. Không chấm ngữ nghĩa câu trả lời ngắn tự động.
+Đáp án đúng không có trong HTML/form/API đề của học viên.
 Đề lịch sử giữ snapshot và các yêu cầu cũ. Hướng dẫn: [LISTENING_AND_COMPLETION.md](docs/LISTENING_AND_COMPLETION.md).
+
+Trình phát giữ thanh tua của trình duyệt và bổ sung **Lùi 10 giây**, **Tiến 10 giây**,
+**Nghe từ đầu**, **Nghe tại mốc** (ví dụ `02:30`). Backend hỗ trợ HTTP Range cho
+media đã kiểm tra quyền truy cập, để học viên chọn đoạn nghe mà không phải tải lại
+toàn bộ file. Có thể dùng các điều khiển này khi nghe lại bản ghi của bài nói.
 
 ### Nghe video và đọc lại — chỉ nộp ghi âm
 
@@ -227,20 +235,21 @@ câu trả lời ngắn tự động. Đáp án đúng không có trong HTML/for
 4. Worker dùng OpenAI chuyển audio sang transcript tiếng Anh. Không đưa lời
    mẫu vào prompt chuyển giọng nói để tránh gợi ý ASR chép lại đáp án. Sau đó
    backend chuẩn hóa chữ hoa/thường, dấu câu và một số dạng rút gọn thông dụng,
-   so khớp **thứ tự từ** bằng khoảng cách chỉnh sửa. Bỏ/đổi/thêm từ đều được
-   tính; lặp một từ nhiều lần không bù cho từ bị thiếu.
+   so khớp **thứ tự từ** bằng khoảng cách chỉnh sửa để cung cấp bằng chứng
+   tham khảo. Khác/thiếu/thừa trong bản chép không tự quyết định học viên làm thiếu.
 
-`điểm gợi ý = max(0, 1 − (số từ khác + thiếu + thừa) / số từ mẫu) × 10`
-
-OpenAI viết nhận xét tiếng Việt dựa trên lời mẫu, transcript và bảng so khớp;
-backend tự tính lại điểm, không nhận điểm do model hoặc client tự đặt.
+OpenAI đề xuất mức hoàn thành và viết nhận xét tiếng Việt dựa trên lời mẫu,
+transcript và bảng so khớp. Không có công thức quy đổi sang điểm số hoặc ngưỡng
+tỷ lệ khớp để đánh trượt. Khi có bằng chứng bỏ sót rõ ràng thì đề xuất chưa hoàn thành;
+nếu không phân biệt được bài thiếu với lỗi nhận dạng giọng nói, AI phải để
+`complete: null` và chuyển giáo viên kiểm tra, không đoán học viên làm thiếu.
 Không chấm ý tưởng, độ đa dạng từ vựng, ngữ pháp của bài nói tự do, phát âm,
 giọng hay độ trôi chảy. Khác biệt trong transcript **không khẳng định** học
-viên phát âm sai. ASR có thể sai tên riêng/số; cách viết số bằng chữ và chữ số
-chưa được quy đổi tương đương, nên giáo viên cần nghe bản ghi trước khi duyệt.
+viên phát âm sai. ASR có thể sai tên riêng/số; giáo viên có bản ghi gốc để kiểm tra
+khi bằng chứng chưa rõ trước khi xác nhận mức hoàn thành.
 
 Trang kết quả hiển thị transcript, lời mẫu đã dùng, số từ khớp/thiếu/khác/thừa
-và tối đa 100 khác biệt đầu tiên (điểm vẫn tính trên toàn bộ đoạn). Audio và
+và tối đa 100 khác biệt đầu tiên. Audio và
 transcript được lưu để giáo viên kiểm tra. Transcript rỗng, lời mẫu thiếu,
 API lỗi hoặc AI không chắc chắn sẽ chuyển sang chấm thủ công.
 
@@ -257,28 +266,27 @@ Giáo viên thiết lập từ phải viết và số lượt viết mỗi từ 
 Học viên gửi text hoặc tối đa 5 ảnh JPEG/PNG/WebP, mỗi ảnh tối đa 8 MiB và
 20 triệu điểm ảnh. Ảnh được kiểm tra, xoay theo EXIF và chuẩn hóa JPEG.
 OpenAI đọc bài và trả số lượt quan sát của từng từ. Backend kiểm tra kiểu,
-word thuộc rubric, không trùng, không âm và tính lại:
+word thuộc rubric, không trùng, không âm và tính lại mức hoàn thành:
 
-`matched = tổng min(số lượt quan sát từng từ, số lượt yêu cầu)`
-
-`điểm AI = matched / tổng lượt yêu cầu × 10`
+`Hoàn thành = mọi từ được giao đều có đủ số lượt yêu cầu`
 
 Ví dụ: 2 từ, mỗi từ 3 lượt → cần 6 lượt. Viết Customer 6 lần nhưng không viết
 Deadline chỉ đáp ứng 3/6, không được tính là đủ. **Không chấm chữ đẹp/xấu**.
 Ảnh trùng nội dung byte sau chuẩn hóa bị từ chối. Khi gửi cả ảnh và text, AI chỉ đếm trên ảnh để tránh cộng trùng bản chép.
-Ảnh không rõ hoặc không chắc số lượt → manual, không đoán thành điểm 0/10.
+Ảnh không rõ hoặc không chắc số lượt → manual, không tự kết luận làm thiếu.
 Kết quả OCR/AI là gợi ý cần giáo viên kiểm tra; chống nhầm lẫn khi ảnh trùng
 hoặc chứa cả bản in đề bài cần kiểm tra bằng dữ liệu thật trước vận hành.
 
-### Điểm và fallback
+### Xác nhận kết quả và fallback
 
-AI tự tạo điểm gợi ý + nhận xét. Giáo viên phụ trách hoặc admin xác nhận
-điểm cuối; manager theo dõi và giao bài, không xác nhận điểm. Nghe tự có
-điểm chính thức. Điểm trung bình chính thức tách khỏi điểm trung bình AI.
+AI đề xuất mức hoàn thành và nhận xét. Giáo viên phụ trách hoặc admin xác nhận
+**Hoàn thành / Chưa hoàn thành** kèm nhận xét; manager theo dõi và giao bài,
+không xác nhận kết quả. Nghe tự xác định mức hoàn thành theo các câu trả lời.
+Không tạo điểm gợi ý, điểm cuối cùng hoặc điểm trung bình mới.
 
 Queue lưu DB; atomic claim tránh nhiều worker cùng chấm một bài. Deadline
 300 giây tính từ lúc nộp, timeout mỗi tác vụ worker tối đa 120 giây và không
-retry ẩn. Kết quả đến muộn không ghi đè manual hoặc điểm giáo viên.
+retry ẩn. Kết quả đến muộn không ghi đè manual hoặc kết quả giáo viên.
 Có thể chạy nhiều worker với PostgreSQL khi tải tăng.
 
 Chạy watchdog `python manage.py expire_ai_jobs --loop` trong tiến trình độc lập, kiểm tra mỗi giây
@@ -289,22 +297,21 @@ sai số tối đa một chu kỳ; hạ tầng dừng thì không thể cam kế
 ## Dashboard theo vai trò và luồng sử dụng
 
 - **Admin/manager:** xem tổng hợp, lọc lớp/kỹ năng/tên/ngày giao, giao bài, xem tỷ lệ
-  nộp, điểm, tiến độ từng học viên, học viên cần hỗ trợ và lịch sử.
+  nộp, mức hoàn thành, tiến độ từng học viên, học viên cần hỗ trợ và lịch sử.
 - **Giáo viên:** chỉ xem dữ liệu lớp đang phụ trách; tạo buổi học của mình,
   giao cho lớp mình và chấm/duyệt. Giáo viên lớp khác không đọc bài hoặc media.
-- **Học viên:** chỉ xem task/điểm/nhận xét của mình; làm nghe trắc nghiệm,
+- **Học viên:** chỉ xem task/mức hoàn thành/nhận xét của mình; làm nghe trắc nghiệm,
   ghi âm đọc theo video và gửi bài từ vựng; nộp lại giữ lịch sử từng lần.
 
 Các bảng báo cáo có phân trang 25 bản ghi, không giới hạn lịch sử ở 100 bài.
 Polling 10 giây; dữ liệu rỗng/lỗi/phiên hết hạn được thông báo. Khi xác nhận
-điểm thành công chuyển lại kết quả mới ngay. Giao diện dùng base.html được
+kết quả thành công chuyển lại kết quả mới ngay. Giao diện dùng base.html được
 nhập từ nhánh quản trị để thống nhất màu, font và điều hướng.
 
 Tỷ lệ nộp = lượt giao đã có ít nhất một submission / toàn bộ lượt giao đến
 thời điểm hiện tại. Không tính draft là đã nộp, không đếm trùng retry/nộp lại.
-Tỷ lệ hoàn thành chỉ đếm lượt giao đã chấm đủ yêu cầu; điểm và mức hoàn thành lấy
-lần nộp gần nhất đã chấm, có chỉ báo riêng khi nộp lại đang chờ. Điểm số không tự
-quyết định đủ/thiếu. Bài chưa nộp, bản nháp, bài chờ chấm và bài còn thiếu không tính
+Tỷ lệ hoàn thành chỉ đếm lượt giao đã chấm đủ yêu cầu; kết quả lấy lần nộp gần nhất
+đã xác nhận, có chỉ báo riêng khi nộp lại đang chờ. Bài chưa nộp, bản nháp, bài chờ chấm và bài còn thiếu không tính
 hoàn thành. Bài cũ chưa có mức hoàn thành cần giáo viên xác nhận riêng, giữ nguyên điểm. Nguy cơ hỗ trợ: ít nhất 3 task quá hạn
 chưa nộp hoặc đã chấm còn thiếu, hoặc 7 ngày không nộp và còn task quá hạn (quy tắc, không phải ML).
 

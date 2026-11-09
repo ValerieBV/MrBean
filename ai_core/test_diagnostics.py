@@ -29,7 +29,7 @@ class GradingDiagnosticTests(IntegratedFixture):
         rows = self.client.get(reverse('dashboard:metrics')).json()['review_queue']
         self.assertEqual({row['review_status_label'] for row in rows}, {'Chờ giáo viên xác nhận', 'Cần chấm thủ công'})
         for row in rows:
-            self.assertIsNone(row['final_score']); self.assertNotIn('suggested_score', row)
+            self.assertNotIn('final_score',row); self.assertNotIn('suggested_score', row)
 
     def test_safe_manual_hint_visible_only_to_staff_with_access(self):
         job = self.job(status='manual', fallback_reason='provider_not_configured')
