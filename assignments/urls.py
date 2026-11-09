@@ -16,6 +16,7 @@ urlpatterns = [
     path('assign/preview/', views.assign_preview, name='assign_preview'),
     path('lesson/<int:pk>/', views.lesson_detail, name='lesson_detail'),
     path('lesson/<int:pk>/edit/', views.lesson_update, name='lesson_update'),
+    path('lesson/<int:pk>/vocabulary/import/', views.vocabulary_import, name='vocabulary_import'),
     path('lesson/<int:pk>/delete/', views.lesson_delete, name='lesson_delete'),
     path('lesson/<int:pk>/clone/', views.lesson_clone, name='lesson_clone'),
     path('lesson/<int:pk>/media/<str:kind>/', views.lesson_media, name='lesson_media'),

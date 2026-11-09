@@ -18,6 +18,11 @@ Phạm vi kiểm tra:
 - Quyền admin/quản lý/giáo viên/học viên cho trang, JSON API và audio/video/ảnh.
 - Tạo khóa/lớp/tài khoản, ghi danh, chuyển giáo viên/lớp, kết thúc lớp và giữ lịch sử.
 - Ngân hàng bài tập, đáp án nghe, bản sao buổi đã giao, khóa sửa/xóa nội dung có lịch sử.
+- Từ vựng hàng loạt: dán mỗi từ một dòng, cột Excel, CSV/TXT UTF-8, tiêu đề Việt/Anh,
+  cụm từ và nội dung có dấu phẩy/dấu nháy. Xem trước không ghi dữ liệu; xác nhận
+  kiểm tra quyền, CSRF, chữ ký, người tạo, buổi và hạn 30 phút. Bỏ qua từ trùng,
+  nối thứ tự, giữ nghĩa cũ, nhập lại không tạo trùng; cả lô lỗi không lưu một phần.
+  Buổi đã giao hoặc có tiến độ luôn khóa nhập; danh sách mới đi vào rubric giao lớp.
 - Giao bài: buổi rỗng, lỗi đúng bài/câu, dạng 2 chỉ A/B/C, file bị thiếu, thời hạn sai,
   lớp thiếu giáo viên, giao trùng, quyền lớp và danh sách học viên hoạt động.
 - Xóa lượt giao: xác nhận bằng POST/CSRF, đúng giáo viên lớp hoặc admin/quản lý;

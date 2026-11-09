@@ -9,6 +9,33 @@ from .models import ClassAssignment, Lesson, ListeningExercise, ListeningQuestio
 from .listening import LISTENING_SPECS
 
 
+@transaction.atomic
+def import_vocabulary_rows(*, actor, lesson, rows):
+    from django.db.models import Max
+    from ai_core.permissions import is_manager
+    from .models import VocabWord
+    from .vocabulary_import import validate_vocabulary_rows, vocabulary_import_plan
+
+    if not actor.is_authenticated or not actor.is_active:
+        raise PermissionDenied
+    lesson = Lesson.objects.select_for_update().get(pk=lesson.pk)
+    if not (is_manager(actor) or actor.role == 'teacher' and lesson.created_by_id == actor.pk):
+        raise PermissionDenied
+    if lesson.skill != 'vocabulary':
+        raise ValidationError('Chỉ nhập từ hàng loạt vào buổi Vocabulary.')
+    if lesson.class_assignments.exists() or lesson.progress.exists():
+        raise ValidationError('Buổi đã được sử dụng. Sao chép buổi trước khi thêm hoặc thay đổi từ vựng.')
+    preview = vocabulary_import_plan(lesson, validate_vocabulary_rows(rows))
+    additions = [row for row in preview if row['status'] == 'add']
+    last = lesson.words.aggregate(value=Max('order'))['value'] or 0
+    VocabWord.objects.bulk_create([
+        VocabWord(lesson=lesson, order=last + index, **{field: row[field]
+            for field in ('word', 'word_type', 'meaning', 'example')})
+        for index, row in enumerate(additions, 1)
+    ])
+    return len(additions), len(preview) - len(additions)
+
+
 def assignment_delete_block_reason(assignment):
     if assignment.tasks.filter(jobs__isnull=False).exists():
         return 'Lượt giao đã có bài nộp. Giữ lịch sử bài làm và kết quả; có thể tạm dừng nhận bài trong Hạn nộp & quy định.'

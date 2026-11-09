@@ -71,7 +71,7 @@ class VocabWord(models.Model):
     lesson = models.ForeignKey(Lesson, on_delete=models.CASCADE, related_name="words")
     word = models.CharField("Từ", max_length=120)
     word_type = models.CharField("Loại từ", max_length=60, blank=True)
-    meaning = models.CharField("Nghĩa", max_length=255)
+    meaning = models.CharField("Nghĩa", max_length=255, blank=True)
     example = models.TextField("Ví dụ", blank=True)
     order = models.PositiveIntegerField("Thứ tự", default=1)
 

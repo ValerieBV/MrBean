@@ -241,7 +241,28 @@ results.listening='4 manually added exercises, 6/25/39/30 questions; two-column 
 const vocab=await createLesson('vocabulary',Number(stamp),'Từ vựng UI '+stamp);await teacher.getByRole('button',{name:'Thêm từ vựng',exact:true}).click();await fill(teacher,'order','1');await fill(teacher,'word','Hello');await fill(teacher,'meaning','Xin chào');await teacher.getByRole('button',{name:'Thêm',exact:true}).click();await assignLesson(vocab);
 await student.goto(base+'/hoc-tap/skill/vocabulary/');await student.locator('.space-y-3 > div').filter({hasText:'Từ vựng UI '+stamp}).getByRole('link',{name:'Làm bài',exact:true}).click();const vocabTaskURL=student.url();await student.screenshot({path:'screenshots/source-vocabulary.png',fullPage:true});await student.getByRole('link',{name:'Cần xin miễn bài này?'}).click();await fill(student,'reason','Xin miễn để kiểm thử quy trình duyệt đúng bài.');await Promise.all([student.waitForURL('**/exemptions/'),student.getByRole('button',{name:'Gửi đơn xin miễn',exact:true}).click()]);
 await teacher.goto(base+'/courses/exemptions/');await teacher.locator('tr').filter({hasText:'Từ vựng UI '+stamp}).getByRole('link',{name:'Xét duyệt'}).click();await teacher.locator('[name=action][value=approve]').check();await fill(teacher,'note','Đồng ý miễn bài theo quy định.');await Promise.all([teacher.waitForURL('**/exemptions/'),teacher.getByRole('button',{name:'Xác nhận xử lý',exact:true}).click()]);results.exemption='requested and approved once';
-const vocabSubmit=await createLesson('vocabulary',Number(stamp)+1,'Từ nộp UI '+stamp);await teacher.getByRole('button',{name:'Thêm từ vựng',exact:true}).click();await fill(teacher,'order','1');await fill(teacher,'word','Hello');await fill(teacher,'meaning','Xin chào');await teacher.getByRole('button',{name:'Thêm',exact:true}).click();await assignLesson(vocabSubmit);
+const vocabSubmit=await createLesson('vocabulary',Number(stamp)+1,'Từ nộp UI '+stamp);
+await teacher.getByRole('link',{name:'Nhập từ hàng loạt',exact:true}).click();
+await fill(teacher,'text','Hello\tinterj\tXin chào\tHello there!\nhello\tinterj\tDòng trùng\t');
+await teacher.getByRole('button',{name:'Xem trước danh sách',exact:true}).click();
+await teacher.locator('#vocabulary-preview').waitFor();
+assert.match(await teacher.locator('#vocabulary-preview').innerText(),/1 từ mới · 1 dòng trùng/);
+assert.equal(await teacher.locator('#vocabulary-preview tbody tr').count(),2);
+results.vocabularyBulkResponsive=[];
+for(const width of [1440,768,390]){
+ await teacher.setViewportSize({width,height:950});
+ if(width<992)await teacher.waitForFunction(()=>document.getElementById('sidebarMenu').getBoundingClientRect().right<=0);
+ await teacher.evaluate(()=>document.activeElement?.blur());
+ assert(await teacher.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
+ await teacher.screenshot({path:'screenshots/vocabulary-import-'+width+'.png',fullPage:true});
+ results.vocabularyBulkResponsive.push(width);
+}
+await teacher.setViewportSize({width:1440,height:1000});
+const vocabBulkAudit=await new (require('@axe-core/playwright').default)({page:teacher}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze();
+assert.equal(vocabBulkAudit.violations.length,0,'Vocabulary import accessibility: '+JSON.stringify(vocabBulkAudit.violations.map(v=>({id:v.id,targets:v.nodes.map(n=>n.target)}))));
+await Promise.all([teacher.waitForURL(url=>/\/lesson\/\d+\/$/.test(url.pathname)),teacher.getByRole('button',{name:'Thêm 1 từ vào buổi',exact:true}).click()]);
+assert.match(await teacher.locator('#main-content').innerText(),/Hello/);
+await assignLesson(vocabSubmit);
 await student.goto(base+'/hoc-tap/skill/vocabulary/');await student.locator('.space-y-3 > div').filter({hasText:'Từ nộp UI '+stamp}).getByRole('link',{name:'Làm bài',exact:true}).click();const vocabSubmissionURL=student.url();await fill(student,'text','Hello Hello');await student.waitForFunction(()=>document.getElementById('draftStatus').textContent.startsWith('Đã lưu nháp'));await student.screenshot({path:'screenshots/source-vocabulary-submit.png',fullPage:true});await Promise.all([student.waitForURL('**/results/*/'),student.getByRole('button',{name:'Nộp bài',exact:true}).click()]);const vocabJobID=student.url().match(/results\/(\d+)/)[1];
 execFileSync(python,['manage.py','run_ai_worker','--once'],{cwd:root,env,stdio:'pipe'});
 await teacher.goto(base+`/hoc-tap/results/${vocabJobID}/`);assert.equal(await teacher.locator('[name=score]').count(),0);await fill(teacher,'feedback','Đã kiểm tra đủ lượt viết từ vựng.');await teacher.locator('[name=completion_status]').selectOption('complete');await teacher.getByRole('button',{name:'Xác nhận kết quả',exact:true}).click();await teacher.waitForFunction(()=>!document.getElementById('reviewForm'));await student.reload();assert.equal(await student.locator('[data-completion-status]').getAttribute('data-completion-status'),'complete');assert.equal(await student.locator('[data-final-score]').count(),0);results.vocabulary='text draft/submission → unavailable AI → manual completion confirmation without points';
@@ -363,9 +384,14 @@ results.authoring='Compact authoring with no inline question editor or 0/N count
 // Delete an unsubmitted class assignment through its confirmation page.
 const deleteLessonTitle='Bài giao để xóa UI '+stamp;
 const deleteLesson=await createLesson('vocabulary',Number(stamp)+3,deleteLessonTitle);
-await teacher.getByRole('button',{name:'Thêm từ vựng',exact:true}).click();
-await fill(teacher,'order','1');await fill(teacher,'word','Customer');await fill(teacher,'meaning','Khách hàng');
-await teacher.getByRole('button',{name:'Thêm',exact:true}).click();
+await teacher.getByRole('link',{name:'Nhập từ hàng loạt',exact:true}).click();
+fs.writeFileSync('vocabulary-import.csv','\ufeffword,word_type,meaning,example\nCustomer,n,Khách hàng,A regular customer.\nDepartment,,,\nSign up,,,\n');
+await teacher.locator('[name=upload]').setInputFiles('vocabulary-import.csv');
+await teacher.getByRole('button',{name:'Xem trước danh sách',exact:true}).click();
+await teacher.locator('#vocabulary-preview').waitFor();
+assert.match(await teacher.locator('#vocabulary-preview').innerText(),/3 từ mới · 0 dòng trùng/);
+await Promise.all([teacher.waitForURL(url=>/\/lesson\/\d+\/$/.test(url.pathname)),teacher.getByRole('button',{name:'Thêm 3 từ vào buổi',exact:true}).click()]);
+results.vocabularyBulk='Paste Excel columns or upload UTF-8 CSV; preview before writes; case-insensitive duplicates skipped; optional meaning; assign imported words through existing class workflow';
 const deleteAssignmentURL=await assignLesson(deleteLesson);
 await teacher.goto(base+'/quan-ly/bai-tap/assigned/');
 await teacher.locator('tbody tr').filter({hasText:deleteLessonTitle}).getByRole('link',{name:/Xóa lượt giao/}).click();

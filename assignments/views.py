@@ -1,5 +1,6 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core import signing
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.paginator import Paginator
 from django.db import transaction
@@ -10,10 +11,11 @@ from django.views.decorators.http import require_GET, require_POST, require_http
 from ai_core.permissions import is_manager, classes_for, staff_required
 from .models import Lesson, ClassAssignment, VocabWord, ListeningQuestion, SpeakingTask, Skill, ListeningExercise
 from .forms import (LessonForm, VocabWordForm, ListeningQuestionForm, SpeakingTaskForm,
-                    AssignmentForm, AssignmentUpdateForm, ReadingReferenceForm, ListeningExerciseForm)
+                    AssignmentForm, AssignmentUpdateForm, ReadingReferenceForm, ListeningExerciseForm, VocabularyImportForm)
 from .services import assign_to_class, save_listening_exercise, assignment_delete_block_reason, delete_class_assignment
 from .listening import FIRST_NUMBER, LISTENING_SPECS
 from .preview import build_assignment_preview
+from .vocabulary_import import vocabulary_import_plan
 
 ITEMS = {'vocabulary': (VocabWordForm, VocabWord, 'words'),
          'listening': (ListeningQuestionForm, ListeningQuestion, 'questions'),
@@ -123,6 +125,49 @@ def lesson_detail(request, pk):
     return render(request, 'assignments/lesson_detail.html', {'lesson': lesson, 'items': getattr(lesson, relation).all(),
         'form': form, 'can_edit': can_edit,
         'reading_assignments': lesson.class_assignments.filter(classroom__in=classes_for(request.user)).select_related('classroom')})
+
+
+@login_required
+@require_http_methods(['GET', 'POST'])
+def vocabulary_import(request, pk):
+    staff(request.user)
+    lesson = get_object_or_404(editable_lessons(request.user), pk=pk, skill='vocabulary')
+    try:
+        assert_editable(request, lesson)
+    except ValidationError as exc:
+        messages.error(request, ' '.join(exc.messages))
+        return redirect('assignments:lesson_detail', pk=pk)
+    form = VocabularyImportForm()
+    preview, token, error = [], '', ''
+    if request.method == 'POST' and request.POST.get('action') == 'confirm':
+        try:
+            token = request.POST.get('preview_token', '')
+            if len(token) > 500000:
+                raise signing.BadSignature
+            data = signing.loads(token, salt='vocabulary-import', max_age=1800)
+            if not isinstance(data, dict) or data.get('lesson_id') != pk or data.get('actor_id') != request.user.pk:
+                raise signing.BadSignature
+            from .services import import_vocabulary_rows
+            added, skipped = import_vocabulary_rows(actor=request.user, lesson=lesson, rows=data.get('rows'))
+        except signing.BadSignature:
+            error = 'Danh sách xem trước không hợp lệ hoặc đã quá 30 phút. Nhập lại danh sách để xem trước và xác nhận.'
+        except ValidationError as exc:
+            error = ' '.join(exc.messages)
+        else:
+            messages.success(request, f'Đã thêm {added} từ vào buổi học; bỏ qua {skipped} dòng trùng. Có thể giao buổi này cho lớp.')
+            return redirect('assignments:lesson_detail', pk=pk)
+    elif request.method == 'POST':
+        form = VocabularyImportForm(request.POST, request.FILES)
+        if form.is_valid():
+            rows = form.cleaned_data['rows']
+            preview = vocabulary_import_plan(lesson, rows)
+            token = signing.dumps({'lesson_id': pk, 'actor_id': request.user.pk, 'rows': rows},
+                salt='vocabulary-import', compress=True)
+    return render(request, 'assignments/vocabulary_import.html', {
+        'lesson': lesson, 'form': form, 'preview': preview, 'preview_token': token,
+        'add_count': sum(row['status'] == 'add' for row in preview),
+        'skip_count': sum(row['status'] != 'add' for row in preview), 'error': error,
+    })
 
 
 @login_required

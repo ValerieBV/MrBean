@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Nhập từ hàng loạt · Mr Bean{% endblock %}
+{% block page_class %}integration-content{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <div class="eyebrow"><a href="{% url 'assignments:skill_lessons' 'vocabulary' %}">VOCABULARY</a> / BUỔI {{ lesson.order }}</div>
+        <h1>Nhập từ hàng loạt</h1>
+        <p>{{ lesson.title }} · Dán danh sách hoặc tải tệp để thêm nhiều từ vào buổi học.</p>
+    </div>
+    <a class="btn secondary" href="{% url 'assignments:lesson_detail' lesson.pk %}">Quay lại buổi học</a>
+</div>
+{% if error %}<p class="feedback" role="alert">{{ error }}</p>{% endif %}
+<section class="panel" aria-labelledby="vocabulary-source-title">
+    <div class="panel-head">
+        <h2 id="vocabulary-source-title">Danh sách từ vựng</h2>
+        <a class="text-link" href="{% static 'assignments/vocabulary_template.csv' %}" download="mau_tu_vung.csv">Tải CSV mẫu</a>
+    </div>
+    <p>Chỉ cần nhập từ, mỗi từ hoặc cụm từ trên một dòng. Có thể sao chép cả cột từ từ Excel. Nghĩa, loại từ và ví dụ là tùy chọn.</p>
+    <details class="mb-3">
+        <summary>Cách nhập thêm nghĩa và ví dụ</summary>
+        <p>Dán 2 cột Excel theo thứ tự <strong>Từ · Nghĩa</strong>, hoặc 4 cột <strong>Từ · Loại từ · Nghĩa · Ví dụ</strong>. Có thể dùng dấu | để ngăn cột:</p>
+        <pre class="text-wrap">department | bộ phận
+sign up | đăng ký</pre>
+        <p>CSV có thể dùng tiêu đề word, word_type, meaning, example hoặc Từ, Loại từ, Nghĩa, Ví dụ. Mỗi lần tối đa 500 từ; tệp CSV/TXT UTF-8 tối đa 1 MiB.</p>
+    </details>
+    <form method="post" enctype="multipart/form-data" action="#vocabulary-preview">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="preview">
+        {% if form.non_field_errors %}<div class="form-errors" role="alert">{{ form.non_field_errors }}</div>{% endif %}
+        {% for field in form %}
+            <div class="mb-3">
+                <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                {{ field }}
+                {% if field.errors %}<div class="form-errors" role="alert">{{ field.errors }}</div>{% endif %}
+            </div>
+        {% endfor %}
+        <div class="form-actions"><button class="btn" type="submit">Xem trước danh sách</button></div>
+    </form>
+</section>
+{% if preview %}
+<section id="vocabulary-preview" class="panel" aria-labelledby="vocabulary-preview-title">
+    <div class="panel-head">
+        <h2 id="vocabulary-preview-title">Kiểm tra trước khi thêm</h2>
+        <span class="badge">{{ add_count }} từ mới · {{ skip_count }} dòng trùng</span>
+    </div>
+    <div class="table-wrap">
+        <table>
+            <thead><tr><th>Dòng</th><th>Từ / cụm từ</th><th>Loại từ</th><th>Nghĩa</th><th>Ví dụ</th><th>Thao tác</th></tr></thead>
+            <tbody>{% for row in preview %}<tr>
+                <td>{{ row.line }}</td><td><strong>{{ row.word }}</strong></td><td>{{ row.word_type|default:'—' }}</td>
+                <td>{{ row.meaning|default:'—' }}</td><td>{{ row.example|default:'—' }}</td>
+                <td>{% if row.status == 'add' %}<span class="badge green">Sẽ thêm</span>{% elif row.status == 'existing' %}<span class="badge">Đã có trong buổi</span>{% else %}<span class="badge">Trùng trong danh sách</span>{% endif %}</td>
+            </tr>{% endfor %}</tbody>
+        </table>
+    </div>
+    {% if add_count %}
+        <form method="post" action="{% url 'assignments:vocabulary_import' lesson.pk %}">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="confirm">
+            <input type="hidden" name="preview_token" value="{{ preview_token }}">
+            <div class="form-actions">
+                <button class="btn" type="submit">Thêm {{ add_count }} từ vào buổi</button>
+                <a class="btn secondary" href="{% url 'assignments:lesson_detail' lesson.pk %}">Hủy</a>
+            </div>
+        </form>
+    {% else %}<p class="feedback">Tất cả từ trong danh sách đã có trong buổi học. Có thể giao buổi này cho lớp hoặc nhập danh sách khác.</p>{% endif %}
+</section>
+{% endif %}
+{% endblock %}

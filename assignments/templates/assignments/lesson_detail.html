@@ -1,17 +1,17 @@
 {% extends 'base_admin.html' %}
 {% load static %}{% block title %}{{ lesson.title }}{% endblock %}
 {% block content %}
-<div class="mb-6 flex items-center justify-between">
-    <div>
+<div class="mb-6 flex flex-wrap gap-3 items-center justify-between">
+    <div class="min-w-0">
         <a href="{% url 'assignments:skill_lessons' lesson.skill %}" class="text-amber-700 text-sm hover:underline"><i class="fa-solid fa-angle-left"></i> {{ lesson.get_skill_display }}</a>
         <h2 class="text-2xl font-bold text-gray-900 mt-1 font-title">Buổi {{ lesson.order }}: {{ lesson.title }}</h2>
         <p class="text-gray-500 text-sm">{{ lesson.get_skill_display }} · {{ lesson.get_program_display }}
             {% if lesson.skill == 'listening' %} · {{ lesson.get_listening_type_display }}{% endif %}</p>
     </div>
-    {% if can_edit %}<button type="button" onclick="show('itemModal')" class="btn-brand text-white px-4 py-2.5 rounded-lg font-medium text-sm flex items-center space-x-2 shadow-sm">
+    {% if can_edit %}<div class="flex flex-wrap gap-3"><button type="button" onclick="show('itemModal')" class="btn-brand text-white px-4 py-2.5 rounded-lg font-medium text-sm flex items-center space-x-2 shadow-sm">
         <i class="fa-solid fa-circle-plus"></i>
         <span>{% if lesson.skill == 'vocabulary' %}Thêm từ vựng{% elif lesson.skill == 'listening' %}Thêm câu hỏi{% else %}Thêm câu nói{% endif %}</span>
-    </button>{% endif %}
+    </button>{% if lesson.skill == 'vocabulary' %}<a href="{% url 'assignments:vocabulary_import' lesson.pk %}" class="btn-brand text-white px-4 py-2.5 rounded-lg font-medium text-sm flex items-center space-x-2 shadow-sm"><i aria-hidden="true" class="fa-solid fa-list"></i><span>Nhập từ hàng loạt</span></a>{% endif %}</div>{% endif %}
 </div>
 
 <div class="flex flex-wrap gap-3 mb-5 text-sm"><a class="btn-brand text-white px-4 py-2 rounded-lg" href="{% url 'assignments:assign' %}?lesson={{ lesson.pk }}">Giao cho lớp</a><a class="text-amber-800 underline" href="{% url 'assignments:lesson_clone' lesson.pk %}">Sao chép</a>{% if can_edit %}<a class="text-amber-800 underline" href="{% url 'assignments:lesson_update' lesson.pk %}">Chỉnh sửa buổi học</a>{% endif %}</div>

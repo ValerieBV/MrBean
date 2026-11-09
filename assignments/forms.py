@@ -52,9 +52,41 @@ class VocabWordForm(forms.ModelForm):
     class Meta:
         model = VocabWord
         fields = ["order", "word", "word_type", "meaning", "example"]
+        labels = {'meaning': 'Nghĩa (không bắt buộc)'}
         widgets = {f: forms.TextInput(attrs={"class": INPUT}) for f in ["word", "word_type", "meaning"]}
         widgets["order"] = forms.NumberInput(attrs={"class": INPUT})
         widgets["example"] = forms.Textarea(attrs={"class": INPUT, "rows": 2})
+
+
+class VocabularyImportForm(forms.Form):
+    text = forms.CharField(label='Dán danh sách từ', required=False, max_length=250000, strip=False,
+        widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 9,
+            'placeholder': 'department\nissue\ncorporate\nsign up', 'spellcheck': 'false'}))
+    upload = forms.FileField(label='Hoặc tải tệp CSV / TXT', required=False,
+        widget=forms.ClearableFileInput(attrs={'class': 'form-control', 'accept': '.csv,.txt'}))
+
+    def clean(self):
+        from pathlib import Path
+        from .vocabulary_import import parse_vocabulary_text
+
+        data = super().clean()
+        text, upload = data.get('text', ''), data.get('upload')
+        if self.errors:
+            return data
+        if bool(text.strip()) == bool(upload):
+            raise forms.ValidationError('Chọn một cách nhập: dán danh sách hoặc tải một tệp CSV/TXT.')
+        csv_file = False
+        if upload:
+            suffix = Path(upload.name).suffix.lower()
+            if suffix not in ('.csv', '.txt') or not 0 < upload.size <= 1024 * 1024:
+                raise forms.ValidationError('Chỉ nhận tệp CSV/TXT, tối đa 1 MiB.')
+            try:
+                text = upload.read(1024 * 1024 + 1).decode('utf-8-sig')
+            except UnicodeDecodeError as exc:
+                raise forms.ValidationError('Tệp cần mã hóa UTF-8. Lưu lại bằng CSV UTF-8 hoặc dán trực tiếp từ Excel.') from exc
+            csv_file = suffix == '.csv'
+        data['rows'] = parse_vocabulary_text(text, csv_file=csv_file)
+        return data
 
 
 class ListeningQuestionForm(forms.ModelForm):
