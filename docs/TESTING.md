@@ -20,6 +20,15 @@ Phạm vi kiểm tra:
 - Ngân hàng bài tập, đáp án nghe, bản sao buổi đã giao, khóa sửa/xóa nội dung có lịch sử.
 - Giao bài: buổi rỗng, lỗi đúng bài/câu, dạng 2 chỉ A/B/C, file bị thiếu, thời hạn sai,
   lớp thiếu giáo viên, giao trùng, quyền lớp và danh sách học viên hoạt động.
+- Xóa lượt giao: xác nhận bằng POST/CSRF, đúng giáo viên lớp hoặc admin/quản lý;
+  dọn danh sách chưa nộp và thông báo giao bài, giữ buổi gốc/lớp khác; chặn lượt đã
+  có bài nộp hoặc đơn xin miễn và kiểm tra lại dữ liệu khi xác nhận.
+- Tài khoản: Khóa và Xóa vĩnh viễn là hai thao tác riêng. Chỉ admin được xóa sau
+  khi nhập đúng tên đăng nhập; giáo viên có lớp/bài phụ trách cần người thay thế.
+  Xóa bài nộp và hội thoại do tài khoản tạo, giữ lớp/ngân hàng/bài làm người khác,
+  chuyển liên hệ được giao cho admin thao tác; chặn tự xóa và giữ admin hoạt động.
+  Django Admin dùng cùng trang xác nhận; Conversation/Message/TutorAttempt cho
+  admin quyền xóa. Worker tiếp tục chạy khi bài đang xử lý bị xóa cùng tài khoản.
 - Word DOCX: đoạn văn, bảng hai cột, xuống dòng, danh sách số/chữ tự động và style
   đánh số; kiểm tra ZIP/XML lỗi, giới hạn kích thước, file ảnh không có văn bản, quyền
   nhập và khóa đề đã giao. Word không gọi OpenAI và không cần PDF để giao dạng 3/4.

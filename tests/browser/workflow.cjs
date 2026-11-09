@@ -360,6 +360,54 @@ const authoringStyle=await teacher.evaluate(()=>({body:getComputedStyle(document
 assert.match(authoringStyle.body,/Roboto/);assert.match(authoringStyle.heading,/Montserrat/);assert.equal(authoringStyle.background,'rgb(254, 243, 226)');
 results.authoringStyle=authoringStyle;
 results.authoring='Compact authoring with no inline question editor or 0/N counter; automatic PDF import and bulk keys; optional correction dialog persists edits and reviewed flags; Enter/Escape and mobile keyboard focus; four type cards and fixed 6/25/39/30 counts';
+// Delete an unsubmitted class assignment through its confirmation page.
+const deleteLessonTitle='Bài giao để xóa UI '+stamp;
+const deleteLesson=await createLesson('vocabulary',Number(stamp)+3,deleteLessonTitle);
+await teacher.getByRole('button',{name:'Thêm từ vựng',exact:true}).click();
+await fill(teacher,'order','1');await fill(teacher,'word','Customer');await fill(teacher,'meaning','Khách hàng');
+await teacher.getByRole('button',{name:'Thêm',exact:true}).click();
+const deleteAssignmentURL=await assignLesson(deleteLesson);
+await teacher.goto(base+'/quan-ly/bai-tap/assigned/');
+await teacher.locator('tbody tr').filter({hasText:deleteLessonTitle}).getByRole('link',{name:/Xóa lượt giao/}).click();
+const deleteAssignmentConfirmURL=teacher.url();
+assert.equal(await teacher.getByRole('button',{name:'Xác nhận xóa lượt giao',exact:true}).count(),1);
+await teacher.getByRole('link',{name:'Hủy',exact:true}).click();assert.equal(teacher.url(),deleteAssignmentURL);
+await teacher.goto(classURL);
+await teacher.locator('tbody tr').filter({hasText:deleteLessonTitle}).getByRole('link',{name:/Xóa lượt giao/}).click();
+assert.equal(teacher.url(),deleteAssignmentConfirmURL);
+for(const width of [1440,768,390]){
+ await teacher.setViewportSize({width,height:950});
+ assert(await teacher.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
+ await teacher.screenshot({path:'screenshots/assignment-delete-'+width+'.png',fullPage:true});
+}
+await teacher.setViewportSize({width:1440,height:1000});
+await Promise.all([teacher.waitForURL('**/assigned/'),teacher.getByRole('button',{name:'Xác nhận xóa lượt giao',exact:true}).click()]);
+assert.equal(await teacher.locator('tbody tr').filter({hasText:deleteLessonTitle}).count(),0);
+await teacher.goto(base+`/quan-ly/bai-tap/lesson/${deleteLesson}/`);
+assert.match(await teacher.locator('#main-content').innerText(),/Customer/);
+await student.goto(base+'/hoc-tap/skill/vocabulary/');assert(!(await student.locator('#main-content').innerText()).includes(deleteLessonTitle));
+await teacher.goto(base+'/quan-ly/bai-tap/assigned/');
+await teacher.locator('tbody tr').filter({hasText:'Từ nộp UI '+stamp}).getByRole('link',{name:/Xóa lượt giao/}).click();
+assert.match(await teacher.locator('#main-content').innerText(),/đã có bài nộp/);
+assert.equal(await teacher.getByRole('button',{name:'Xác nhận xóa lượt giao',exact:true}).count(),0);
+await teacher.screenshot({path:'screenshots/assignment-delete-protected.png',fullPage:true});
+results.assignmentDeletion='List, detail and classroom links; cancel and confirm; responsive 390/768/1440; original lesson retained; learner assignment removed; submitted assignment protected';
+// Admin can permanently delete an account with conversations and messages.
+execFileSync(python,['manage.py','shell','-c',`from accounts.models import CustomUser; from support.models import Conversation, Message; u=CustomUser.objects.create_user(username='delete_user_${stamp}',role='student'); c=Conversation.objects.create(student=u,kind='contact',subject='Liên hệ cần xóa',recipient=CustomUser.objects.get(username='demo_admin'),recipient_role='management'); Message.objects.create(conversation=c,author=u,role='student',body='Tin nhắn của tài khoản kiểm thử')`],{cwd:root,env,stdio:'pipe'});
+await admin.goto(base+'/accounts/users/?q=delete_user_'+stamp);
+const userDeleteRow=admin.locator('tbody tr').filter({hasText:'delete_user_'+stamp});
+assert.equal(await userDeleteRow.getByRole('link',{name:'Khóa',exact:true}).count(),1);
+await userDeleteRow.getByRole('link',{name:'Xóa',exact:true}).click();
+for(const width of [1440,768,390]){
+ await admin.setViewportSize({width,height:950});assert(await admin.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
+ await admin.screenshot({path:'screenshots/user-delete-'+width+'.png',fullPage:true});
+}
+await admin.setViewportSize({width:1440,height:1000});
+await fill(admin,'confirm_username','delete_user_'+stamp);
+await Promise.all([admin.waitForURL('**/accounts/users/'),admin.getByRole('button',{name:'Xác nhận xóa vĩnh viễn',exact:true}).click()]);
+await admin.goto(base+'/accounts/users/?q=delete_user_'+stamp);
+assert.equal(await admin.locator('tbody tr').filter({hasText:'delete_user_'+stamp}).count(),0);
+results.userDeletion='Separate Lock/Delete actions; admin permanent deletion with exact username confirmation; related contact/message removed; responsive 390/768/1440';
 results.responsive=[];
 for(const[role,p,urls]of [
  ['admin',admin,['/accounts/users/','/courses/catalog/','/courses/classes/create/','/dashboard/','/accounts/profile/']],

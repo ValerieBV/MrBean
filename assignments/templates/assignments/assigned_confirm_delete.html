@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+{% block title %}Xóa lượt giao bài · Mr Bean{% endblock %}
+{% block page_class %}integration-content{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <div class="eyebrow"><a href="{% url 'assignments:assigned_list' %}">BÀI TẬP ĐÃ GIAO</a> / {{ assignment.classroom.class_code }}</div>
+        <h1>Xóa lượt giao bài</h1>
+        <p>Kiểm tra thông tin trước khi xác nhận xóa bài tập đã giao cho lớp.</p>
+    </div>
+</div>
+<section class="panel form-panel" aria-labelledby="delete-assignment-title">
+    <h2 id="delete-assignment-title">{{ assignment.lesson.title }}</h2>
+    <dl class="data-list">
+        <div><dt>Lớp nhận bài</dt><dd>{{ assignment.classroom.class_code }} · {{ assignment.classroom.name }}</dd></div>
+        <div><dt>Kỹ năng</dt><dd>{{ assignment.lesson.get_skill_display }} · Buổi {{ assignment.lesson.order }}</dd></div>
+        <div><dt>Hạn nộp</dt><dd>{{ assignment.due_at|date:'d/m/Y H:i' }}</dd></div>
+        <div><dt>Học viên được giao</dt><dd>{{ task_count }}</dd></div>
+    </dl>
+    {% if block_reason %}
+        <p class="feedback" role="status">{{ block_reason }}</p>
+        <div class="form-actions">
+            <a class="btn" href="{% url 'assignments:assigned_update' assignment.pk %}">Hạn nộp & quy định</a>
+            <a class="btn secondary" href="{% url 'assignments:assigned_detail' assignment.pk %}">Quay lại lượt giao</a>
+        </div>
+    {% else %}
+        <p class="feedback">Lượt giao này sẽ bị xóa khỏi danh sách bài tập của lớp và học viên. Buổi học gốc trong ngân hàng và các lượt giao cho lớp khác được giữ lại.</p>
+        <form method="post">
+            {% csrf_token %}
+            <div class="form-actions">
+                <button class="btn danger" type="submit">Xác nhận xóa lượt giao</button>
+                <a class="btn secondary" href="{% url 'assignments:assigned_detail' assignment.pk %}">Hủy</a>
+            </div>
+        </form>
+    {% endif %}
+</section>
+{% endblock %}

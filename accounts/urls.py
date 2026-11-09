@@ -12,6 +12,7 @@ urlpatterns = [
     path('users/create/', views.user_create_view, name='user_create'),
     path('users/<int:user_id>/edit/', views.user_update_view, name='user_update'),
     path('users/<int:user_id>/delete/', views.user_delete_view, name='user_delete'),
+    path('users/<int:user_id>/deactivate/', views.user_deactivate_view, name='user_deactivate'),
     path('users/<int:user_id>/password/', views.password_reset_user, name='password_reset'),
     path('notifications/', views.notification_list_view, name='notification_list'),
     path('notifications/read-all/', views.notifications_read_all, name='notifications_read_all'),

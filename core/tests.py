@@ -318,8 +318,8 @@ class CompleteWorkflowTests(IntegratedFixture):
 
     def test_last_admin_and_active_teacher_deactivation_are_blocked(self):
         self.login(self.admin)
-        self.client.post(reverse('accounts:user_delete',args=[self.admin.pk]))
-        self.client.post(reverse('accounts:user_delete',args=[self.teacher.pk]))
+        self.client.post(reverse('accounts:user_deactivate',args=[self.admin.pk]))
+        self.client.post(reverse('accounts:user_deactivate',args=[self.teacher.pk]))
         self.admin.refresh_from_db();self.teacher.refresh_from_db()
         self.assertTrue(self.admin.is_active);self.assertTrue(self.teacher.is_active)
 

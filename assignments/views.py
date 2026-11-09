@@ -6,12 +6,12 @@ from django.db import transaction
 from django.db.models import Q, Max, Count
 from django.shortcuts import render, get_object_or_404, redirect
 from django.urls import reverse
-from django.views.decorators.http import require_GET, require_POST
+from django.views.decorators.http import require_GET, require_POST, require_http_methods
 from ai_core.permissions import is_manager, classes_for, staff_required
 from .models import Lesson, ClassAssignment, VocabWord, ListeningQuestion, SpeakingTask, Skill, ListeningExercise
 from .forms import (LessonForm, VocabWordForm, ListeningQuestionForm, SpeakingTaskForm,
                     AssignmentForm, AssignmentUpdateForm, ReadingReferenceForm, ListeningExerciseForm)
-from .services import assign_to_class, save_listening_exercise
+from .services import assign_to_class, save_listening_exercise, assignment_delete_block_reason, delete_class_assignment
 from .listening import FIRST_NUMBER, LISTENING_SPECS
 from .preview import build_assignment_preview
 
@@ -250,6 +250,26 @@ def assigned_detail(request, pk):
         confirmed_completion=Subquery(final.values('completion_status')[:1])).prefetch_related(
             Prefetch('jobs', queryset=GradingJob.objects.order_by('-submitted_at', '-pk')))
     return render(request, 'assignments/assigned_detail.html', {'assignment': assignment, 'tasks': tasks})
+
+
+@login_required
+@require_http_methods(['GET', 'POST'])
+def assigned_delete(request, pk):
+    staff(request.user)
+    assignment = get_object_or_404(ClassAssignment.objects.select_related('lesson', 'classroom').filter(
+        classroom__in=classes_for(request.user)), pk=pk)
+    if request.method == 'POST':
+        try:
+            delete_class_assignment(actor=request.user, assignment=assignment)
+        except ValidationError as exc:
+            messages.error(request, ' '.join(exc.messages))
+            return redirect('assignments:assigned_delete', pk=pk)
+        messages.success(request, 'Đã xóa lượt giao bài cho lớp. Buổi học trong ngân hàng bài tập được giữ lại.')
+        return redirect('assignments:assigned_list')
+    return render(request, 'assignments/assigned_confirm_delete.html', {
+        'assignment': assignment, 'task_count': assignment.tasks.count(),
+        'block_reason': assignment_delete_block_reason(assignment),
+    })
 
 
 @login_required

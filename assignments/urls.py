@@ -10,6 +10,7 @@ urlpatterns = [
     path('assigned/', views.assigned_list, name='assigned_list'),
     path('assigned/<int:pk>/', views.assigned_detail, name='assigned_detail'),
     path('assigned/<int:pk>/edit/', views.assigned_update, name='assigned_update'),
+    path('assigned/<int:pk>/delete/', views.assigned_delete, name='assigned_delete'),
     path('assigned/<int:pk>/reading-reference/', views.reading_reference, name='reading_reference'),
     path('assign/', views.assign, name='assign'),
     path('assign/preview/', views.assign_preview, name='assign_preview'),

@@ -209,16 +209,20 @@
 
                     <!-- Hành động: Sửa (Nâu) & Xóa (Cam) -->
                     <td class="text-end pe-3">
-                        <div class="d-inline-flex gap-1">
+                        <div class="d-inline-flex flex-wrap justify-content-end gap-1">
                             {% if user.is_superuser or user.role == 'admin' %}
                             <a href="{% url 'accounts:user_update' u.id %}" class="btn-action-edit" title="Chỉnh sửa">
                                 <i aria-hidden="true" class="bi bi-pencil-square"></i>
                                 <span>Sửa</span>
                             </a>
                             {% if u != user %}
-                            <a href="{% url 'accounts:user_delete' u.id %}" class="btn-action-delete" title="Vô hiệu hóa tài khoản">
-                                <i aria-hidden="true" class="bi bi-trash-fill"></i>
+                            <a href="{% url 'accounts:user_deactivate' u.id %}" class="btn-action-delete" title="Khóa tài khoản">
+                                <i aria-hidden="true" class="bi bi-lock-fill"></i>
                                 <span>Khóa</span>
+                            </a>
+                            <a href="{% url 'accounts:user_delete' u.id %}" class="btn-action-delete" title="Xóa vĩnh viễn tài khoản">
+                                <i aria-hidden="true" class="bi bi-trash-fill"></i>
+                                <span>Xóa</span>
                             </a>
                             {% endif %}
                             {% else %}

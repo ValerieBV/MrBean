@@ -5,6 +5,29 @@ from django.contrib.auth.password_validation import validate_password
 from django.db.models import Q
 
 
+class UserDeleteForm(forms.Form):
+    confirm_username = forms.CharField(label='Nhập lại tên đăng nhập để xác nhận xóa',
+        max_length=150, widget=forms.TextInput(attrs={'class': 'form-control', 'autocomplete': 'off'}))
+    replacement_teacher = forms.ModelChoiceField(label='Giáo viên tiếp nhận lớp và bài tập',
+        queryset=CustomUser.objects.none(), required=False,
+        empty_label='Chọn giáo viên thay thế', widget=forms.Select(attrs={'class': 'form-select'}))
+
+    def __init__(self, *args, target_user, needs_replacement=False, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.target_user = target_user
+        self.fields['replacement_teacher'].queryset = CustomUser.objects.filter(
+            role='teacher', is_active=True).exclude(pk=target_user.pk).order_by('username')
+        self.fields['replacement_teacher'].required = needs_replacement
+        if not needs_replacement:
+            self.fields.pop('replacement_teacher')
+
+    def clean_confirm_username(self):
+        value = self.cleaned_data['confirm_username']
+        if value != self.target_user.username:
+            raise forms.ValidationError('Tên đăng nhập xác nhận chưa khớp với tài khoản cần xóa.')
+        return value
+
+
 class CustomUserCreationForm(forms.ModelForm):
     password = forms.CharField(
         widget=forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': 'Nhập mật khẩu'}),

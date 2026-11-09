@@ -27,8 +27,10 @@ class Command(BaseCommand):
                 if job_id:
                     self.stdout.write(f'Đang xử lý bài #{job_id}.')
                     if process_job(job_id):
-                        job = GradingJob.objects.get(pk=job_id)
-                        if job.status == 'ai_reviewed':
+                        job = GradingJob.objects.filter(pk=job_id).first()
+                        if job is None:
+                            self.stdout.write(f'Bài #{job_id} đã được xóa; tiếp tục xử lý hàng đợi.')
+                        elif job.status == 'ai_reviewed':
                             self.stdout.write(self.style.SUCCESS(f'Bài #{job_id}: AI đã đánh giá, chờ giáo viên xác nhận.'))
                         elif job.status == 'manual':
                             self.stdout.write(self.style.WARNING(f'Bài #{job_id}: chuyển chấm thủ công; nguyên nhân={diagnostic_code(job.fallback_reason)}.'))

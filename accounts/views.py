@@ -2,16 +2,18 @@ from django.contrib import messages
 from django.contrib.auth import login, logout, update_session_auth_hash
 from django.contrib.auth.forms import AuthenticationForm, PasswordChangeForm, SetPasswordForm
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.db.models import Q
 from django.http import JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_POST, require_http_methods
 from .models import CustomUser, Notification
-from .forms import CustomUserCreationForm, CustomUserUpdateForm, ProfileForm
+from .forms import CustomUserCreationForm, CustomUserUpdateForm, ProfileForm, UserDeleteForm
 from .permissions import role_required, admin_required
+from .services import user_delete_summary, delete_user_account
 
 
 def home_for(user):
@@ -81,7 +83,32 @@ def user_update_view(request,user_id):
 
 
 @admin_required
+@require_http_methods(['GET', 'POST'])
 def user_delete_view(request,user_id):
+    user=get_object_or_404(CustomUser,pk=user_id)
+    summary=user_delete_summary(user)
+    form=UserDeleteForm(request.POST if request.method=='POST' else None, target_user=user,
+        needs_replacement=bool(summary['classes'] or summary['teaching_tasks']))
+    block_reason='Không thể tự xóa tài khoản đang đăng nhập.' if user.pk==request.user.pk else ''
+    if not block_reason and user.is_admin_user and not CustomUser.objects.filter(
+            Q(role='admin')|Q(is_superuser=True),is_active=True).exclude(pk=user.pk).exists():
+        block_reason='Cần giữ ít nhất một quản trị viên đang hoạt động.'
+    if request.method=='POST' and not block_reason and form.is_valid():
+        try:
+            delete_user_account(actor=request.user,user_id=user.pk,
+                replacement_teacher=form.cleaned_data.get('replacement_teacher'))
+        except ValidationError as exc:
+            form.add_error(None,exc)
+        else:
+            messages.success(request,'Đã xóa vĩnh viễn tài khoản '+user.username+'.')
+            return redirect('accounts:user_list')
+    return render(request,'accounts/user_confirm_permanent_delete.html',{
+        'target_user':user,'summary':summary,'form':form,'block_reason':block_reason})
+
+
+@admin_required
+@require_http_methods(['GET', 'POST'])
+def user_deactivate_view(request,user_id):
     user=get_object_or_404(CustomUser,pk=user_id)
     if request.method=='POST':
         if user.pk==request.user.pk:

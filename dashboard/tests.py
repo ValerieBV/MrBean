@@ -178,7 +178,7 @@ class DashboardTests(IntegratedFixture):
 
     def test_account_with_reporting_history_is_deactivated(self):
         self.client.force_login(self.admin)
-        response=self.client.post(f'/accounts/users/{self.student.pk}/delete/')
+        response=self.client.post(f'/accounts/users/{self.student.pk}/deactivate/')
         self.assertEqual(response.status_code,302)
         self.student.refresh_from_db();self.assertFalse(self.student.is_active)
         self.assertEqual(LearningTask.objects.filter(learner=self.student).count(),3)

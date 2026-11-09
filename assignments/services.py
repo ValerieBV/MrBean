@@ -2,10 +2,42 @@ import re
 from datetime import datetime
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
+from django.db.models.deletion import ProtectedError
 from django.utils import timezone
 from accounts.permissions import can_assign_homework_to_class
 from .models import ClassAssignment, Lesson, ListeningExercise, ListeningQuestion
 from .listening import LISTENING_SPECS
+
+
+def assignment_delete_block_reason(assignment):
+    if assignment.tasks.filter(jobs__isnull=False).exists():
+        return 'Lượt giao đã có bài nộp. Giữ lịch sử bài làm và kết quả; có thể tạm dừng nhận bài trong Hạn nộp & quy định.'
+    if assignment.exemption_requests.exists() or assignment.tasks.filter(exemption__isnull=False).exists():
+        return 'Lượt giao đã có đơn xin miễn. Giữ lịch sử xử lý và hạn mức miễn; có thể tạm dừng nhận bài trong Hạn nộp & quy định.'
+    return ''
+
+
+@transaction.atomic
+def delete_class_assignment(*, actor, assignment):
+    from accounts.models import Notification
+    from courses.models import ClassRoom
+
+    classroom = ClassRoom.objects.select_for_update().get(pk=assignment.classroom_id)
+    if not can_assign_homework_to_class(actor, classroom):
+        raise PermissionDenied
+    locked = ClassAssignment.objects.select_for_update().filter(pk=assignment.pk, classroom=classroom).first()
+    if locked is None:
+        raise ValidationError('Lượt giao này đã được xóa. Tải lại danh sách bài tập đã giao.')
+    task_ids = list(locked.tasks.select_for_update().order_by('pk').values_list('pk', flat=True))
+    reason = assignment_delete_block_reason(locked)
+    if reason:
+        raise ValidationError(reason)
+    try:
+        locked.tasks.all().delete()
+        locked.delete()
+    except ProtectedError as exc:
+        raise ValidationError('Lượt giao vừa phát sinh dữ liệu liên quan nên chưa thể xóa. Tải lại trang để kiểm tra lịch sử.') from exc
+    Notification.objects.filter(event_key__in=[f'assignment:{pk}' for pk in task_ids]).delete()
 
 
 @transaction.atomic

@@ -231,18 +231,6 @@
     </div>
 </div>
 
-{% if assignments %}
-<div class="data-card-wrapper">
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
-        <h2 class="section-title-h2 mb-0">BÀI TẬP ĐÃ GIAO CHO LỚP</h2>
-        {% if is_reporting_staff %}<a class="btn-cta-orange" href="{% url 'assignments:assign' %}?classroom={{ classroom.pk }}"><i aria-hidden="true" class="bi bi-plus-circle-fill"></i>Giao bài cho lớp</a>{% else %}<a class="btn-cta-orange" href="{% url 'submissions:student_home' %}"><i aria-hidden="true" class="bi bi-pencil-square"></i>Vào làm bài</a>{% endif %}
-    </div>
-    <div class="table-responsive"><table class="custom-data-table"><thead><tr><th>Bài tập</th><th>Kỹ năng</th><th>Hạn nộp</th><th>Nhận bài</th><th>Thao tác</th></tr></thead><tbody>
-        {% for a in assignments %}<tr><td class="fw-bold">{{ a.lesson.title }}</td><td>{{ a.lesson.get_skill_display }}</td><td>{{ a.due_at|date:'d/m/Y H:i' }}</td><td>{% if a.is_active %}Đang mở{% else %}Tạm dừng{% endif %}</td><td>{% if is_reporting_staff %}<a class="btn-action-edit" href="{% url 'assignments:assigned_detail' a.pk %}">Tình trạng nộp</a>{% else %}<a class="btn-action-edit" href="{% url 'submissions:student_home' %}">Xem bài tập</a>{% endif %}</td></tr>{% endfor %}
-    </tbody></table></div>
-</div>
-{% elif is_reporting_staff %}
-<div class="data-card-wrapper text-center"><p class="text-secondary">Lớp chưa có bài tập được giao.</p><a class="btn-cta-orange" href="{% url 'assignments:assign' %}?classroom={{ classroom.pk }}"><i aria-hidden="true" class="bi bi-plus-circle-fill"></i>Giao bài cho lớp</a></div>
-{% endif %}
+{% include 'courses/_class_assignments.html' %}
 
 {% endblock %}

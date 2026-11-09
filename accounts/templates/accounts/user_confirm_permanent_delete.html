@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+{% block title %}Xóa tài khoản · Mr Bean{% endblock %}
+{% block page_class %}integration-content{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <div class="eyebrow"><a href="{% url 'accounts:user_list' %}">QUẢN LÝ TÀI KHOẢN</a></div>
+        <h1>Xóa vĩnh viễn tài khoản</h1>
+        <p>Kiểm tra tài khoản và dữ liệu liên quan trước khi xác nhận.</p>
+    </div>
+</div>
+<section class="panel form-panel" aria-labelledby="delete-user-title">
+    <h2 id="delete-user-title">{{ target_user.display_name }} · {{ target_user.username }}</h2>
+    <dl class="data-list">
+        <div><dt>Vai trò</dt><dd>{{ target_user.get_role_display }}</dd></div>
+        <div><dt>Bài tập của tài khoản</dt><dd>{{ summary.tasks }}</dd></div>
+        <div><dt>Bài nộp và kết quả sẽ xóa</dt><dd>{{ summary.submissions }}</dd></div>
+        <div><dt>Hội thoại do tài khoản tạo sẽ xóa</dt><dd>{{ summary.conversations }}</dd></div>
+        {% if summary.classes %}<div><dt>Lớp cần chuyển giáo viên</dt><dd>{{ summary.classes }}</dd></div>{% endif %}
+    </dl>
+    {% if block_reason %}
+        <p class="feedback" role="status">{{ block_reason }}</p>
+        <a class="btn secondary" href="{% url 'accounts:user_list' %}">Quay lại danh sách</a>
+    {% else %}
+        <p class="feedback">Thao tác này xóa tài khoản cùng bài nộp, kết quả, ghi danh và hội thoại do tài khoản tạo. Không thể hoàn tác. Lớp học, ngân hàng bài tập và bài làm của người khác được giữ lại.</p>
+        <p>Liên hệ đang giao cho tài khoản này sẽ chuyển cho admin đang thao tác. Tin nhắn đã gửi trong hội thoại của người khác được giữ nội dung và bỏ liên kết tác giả.</p>
+        <form method="post">
+            {% csrf_token %}
+            {{ form.non_field_errors }}
+            {% for field in form %}
+                <div class="field">
+                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    {{ field }}
+                    {{ field.errors }}
+                </div>
+            {% endfor %}
+            <div class="form-actions">
+                <button class="btn danger" type="submit">Xác nhận xóa vĩnh viễn</button>
+                <a class="btn secondary" href="{% url 'accounts:user_list' %}">Hủy</a>
+            </div>
+        </form>
+    {% endif %}
+</section>
+{% endblock %}
