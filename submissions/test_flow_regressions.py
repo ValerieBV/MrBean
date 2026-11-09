@@ -69,38 +69,42 @@ class AssignmentFlowRegressionTests(IntegratedFixture):
 
     def test_same_lesson_in_new_class_has_its_own_draft_and_dashboard_state(self):
         self.client.force_login(self.student)
-        self.assertEqual(self.save_draft(self.vocab_task, 'OLD_CLASS_DRAFT').status_code, 200)
+        old_answers = {str(self.q1.pk): {'chosen': 'A', 'short_answer': 'OLD_CLASS_DRAFT'},
+            str(self.q2.pk): {'chosen': '', 'short_answer': ''}}
+        new_answers = {str(self.q1.pk): {'chosen': 'B', 'short_answer': 'NEW_CLASS_DRAFT'}}
+        self.assertEqual(self.save_draft(self.listening_task, answers=old_answers).status_code, 200)
         ClassManagementService.remove_student_from_class(self.classroom, self.student)
         ClassManagementService.enroll_student_to_class(self.other_classroom, self.student)
-        assignment = assign_to_class(actor=self.other_teacher, lesson=self.vocab, classroom=self.other_classroom,
+        assignment = assign_to_class(actor=self.other_teacher, lesson=self.listening, classroom=self.other_classroom,
             assigned_at=self.now - timedelta(minutes=1), due_at=self.now + timedelta(days=1), requires_previous=False)
         task = assignment.tasks.get(learner=self.student)
         page = self.client.get(reverse('submissions:do_task', args=[task.pk]))
         self.assertNotContains(page, 'OLD_CLASS_DRAFT')
         self.assertFalse(annotated_tasks(self.student).get(pk=task.pk).has_draft)
         self.assertEqual(metrics_for(self.student)['tasks'][0]['latest_status'], 'not_submitted')
-        self.assertEqual(self.save_draft(task, 'NEW_CLASS_DRAFT').status_code, 200)
-        self.vocab_task.refresh_from_db()
-        self.assertEqual(self.vocab_task.draft['text'], 'OLD_CLASS_DRAFT')
+        self.assertEqual(self.save_draft(task, answers=new_answers).status_code, 200)
+        self.listening_task.refresh_from_db()
+        self.assertEqual(self.listening_task.draft['answers'], old_answers)
         self.assertTrue(annotated_tasks(self.student).get(pk=task.pk).has_draft)
-        enqueue_submission(task=task, submission_key='new-class-only', text='Customer Deadline')
+        enqueue_submission(task=task, submission_key='new-class-only', answers=new_answers)
         task.refresh_from_db()
         self.assertEqual(task.draft, {})
         self.assertIsNone(task.draft_saved_at)
-        self.vocab_task.refresh_from_db()
-        self.assertEqual(self.vocab_task.draft['text'], 'OLD_CLASS_DRAFT')
+        self.listening_task.refresh_from_db()
+        self.assertEqual(self.listening_task.draft['answers'], old_answers)
 
     def test_legacy_or_expired_drafts_cannot_populate_a_task(self):
         self.client.force_login(self.student)
-        LessonProgress.objects.create(student=self.student, lesson=self.vocab,
-            draft={'text': 'LEGACY_DRAFT'}, draft_saved_at=self.now)
-        self.vocab_task.draft = {'text': 'EXPIRED_TASK_DRAFT'}
-        self.vocab_task.draft_saved_at = self.now - timedelta(hours=25)
-        self.vocab_task.save(update_fields=['draft', 'draft_saved_at'])
-        page = self.client.get(reverse('submissions:do_task', args=[self.vocab_task.pk]))
+        LessonProgress.objects.create(student=self.student, lesson=self.listening,
+            draft={'answers': {str(self.q1.pk): {'chosen': 'A', 'short_answer': 'LEGACY_DRAFT'}}}, draft_saved_at=self.now)
+        self.listening_task.draft = {'answers': {str(self.q1.pk): {'chosen': 'A', 'short_answer': 'EXPIRED_TASK_DRAFT'}}}
+        self.listening_task.draft_saved_at = self.now - timedelta(hours=25)
+        self.listening_task.save(update_fields=['draft', 'draft_saved_at'])
+        page = self.client.get(reverse('submissions:do_task', args=[self.listening_task.pk]))
         self.assertNotContains(page, 'LEGACY_DRAFT')
         self.assertNotContains(page, 'EXPIRED_TASK_DRAFT')
-        self.assertFalse(annotated_tasks(self.student).get(pk=self.vocab_task.pk).has_draft)
+        self.assertNotContains(page, 'value="A" checked')
+        self.assertFalse(annotated_tasks(self.student).get(pk=self.listening_task.pk).has_draft)
 
     def test_symbol_only_short_answers_do_not_complete_or_unlock_the_next_lesson(self):
         lesson = Lesson.objects.create(skill='listening', program='CHUNG', order=2,

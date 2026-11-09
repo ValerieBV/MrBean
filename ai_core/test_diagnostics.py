@@ -47,7 +47,7 @@ class GradingDiagnosticTests(IntegratedFixture):
 
     @override_settings(OPENAI_API_KEY='')
     def test_worker_missing_key_is_reported_without_masking_as_generic_error(self):
-        job, _ = enqueue_submission(task=self.vocab_task, submission_key='missing-key', text='Customer')
+        job, _ = enqueue_submission(task=self.vocab_task, submission_key='missing-key', images=[self.vocabulary_image()])
         output = io.StringIO()
         call_command('run_ai_worker', once=True, stdout=output)
         job.refresh_from_db()
@@ -56,7 +56,7 @@ class GradingDiagnosticTests(IntegratedFixture):
         self.assertIn('nguyên nhân=provider_not_configured', output.getvalue())
 
     def test_uncertain_evidence_is_not_reported_as_api_failure(self):
-        job, _ = enqueue_submission(task=self.vocab_task, submission_key='uncertain', text='Customer')
+        job, _ = enqueue_submission(task=self.vocab_task, submission_key='uncertain', images=[self.vocabulary_image()])
         provider = Mock(); provider.grade.return_value = {'needs_manual': True, 'feedback': 'Không đọc rõ', 'counts': []}
         process_job(job.pk, provider); job.refresh_from_db()
         self.assertEqual(job.fallback_reason, 'ai_uncertain_evidence')

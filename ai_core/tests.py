@@ -72,7 +72,7 @@ class GradingTests(IntegratedFixture):
         self.assertIsNone(job.final_score)
 
     def test_vocabulary_missing_word_not_compensated_by_extra_repeats(self):
-        job,_=enqueue_submission(task=self.vocab_task,submission_key='vocab',text='Customer Customer Customer Customer Customer Customer')
+        job,_=enqueue_submission(task=self.vocab_task,submission_key='vocab',images=[self.vocabulary_image()])
         provider=Mock();provider.grade.return_value={'needs_manual':False,'feedback':'Thiếu Deadline.','counts':[{'word':'Customer','count':6}]}
         process_job(job.pk,provider);job.refresh_from_db()
         self.assertIsNone(job.suggested_score);self.assertEqual(job.result['matched_total'],3)
@@ -215,7 +215,7 @@ class GradingTests(IntegratedFixture):
         job.refresh_from_db();self.assertEqual(job.status,'ai_reviewed')
 
     def test_unreadable_vocabulary_routes_to_manual(self):
-        job,_=enqueue_submission(task=self.vocab_task,submission_key='blurred',text='Unreadable')
+        job,_=enqueue_submission(task=self.vocab_task,submission_key='blurred',images=[self.vocabulary_image()])
         provider=Mock();provider.grade.return_value={'needs_manual':True,'feedback':'Không đọc rõ','counts':[]}
         process_job(job.pk,provider);job.refresh_from_db();self.assertEqual(job.status,'manual')
 

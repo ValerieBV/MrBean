@@ -271,9 +271,63 @@ assert.equal(vocabBulkAudit.violations.length,0,'Vocabulary import accessibility
 await Promise.all([teacher.waitForURL(url=>/\/lesson\/\d+\/$/.test(url.pathname)),teacher.getByRole('button',{name:'Thêm 1 từ vào buổi',exact:true}).click()]);
 assert.match(await teacher.locator('#main-content').innerText(),/Hello/);
 await assignLesson(vocabSubmit);
-await student.goto(base+'/hoc-tap/skill/vocabulary/');await student.locator('.space-y-3 > div').filter({hasText:'Từ nộp UI '+stamp}).getByRole('link',{name:'Làm bài',exact:true}).click();const vocabSubmissionURL=student.url();await fill(student,'text','Hello Hello');await student.waitForFunction(()=>document.getElementById('draftStatus').textContent.startsWith('Đã lưu nháp'));await student.screenshot({path:'screenshots/source-vocabulary-submit.png',fullPage:true});await Promise.all([student.waitForURL('**/results/*/'),student.getByRole('button',{name:'Nộp bài',exact:true}).click()]);const vocabJobID=student.url().match(/results\/(\d+)/)[1];
+await student.goto(base+'/hoc-tap/skill/vocabulary/');await student.locator('.space-y-3 > div').filter({hasText:'Từ nộp UI '+stamp}).getByRole('link',{name:'Làm bài',exact:true}).click();
+const vocabSubmissionURL=student.url();
+assert.equal(await student.locator('#submissionForm textarea, #draftStatus').count(),0);
+assert.equal(await student.locator('#submissionForm').getAttribute('data-draft-url'),null);
+await student.getByRole('button',{name:'Nộp bài',exact:true}).click();
+assert.match(await student.locator('#submissionStatus').innerText(),/ít nhất 1 ảnh/);
+execFileSync(python,['-c',`from PIL import Image, ImageDraw
+for index in (1,2):
+ image=Image.new('RGB',(680,420),'white')
+ draw=ImageDraw.Draw(image)
+ draw.text((30,30),'Vocabulary homework - page '+str(index),fill='black')
+ draw.text((30,100),'Hello    Hello',fill='black')
+ image.save('vocabulary-page-'+str(index)+'.png')`],{cwd:output,env,stdio:'pipe'});
+const chooserPromise=student.waitForEvent('filechooser');
+await student.getByRole('button',{name:'Chọn ảnh bài làm',exact:true}).click();
+await (await chooserPromise).setFiles('vocabulary-page-1.png');
+assert.equal(await student.locator('#imagePreviews img').count(),1);
+await student.locator('#images').setInputFiles('vocabulary-page-2.png');
+assert.equal(await student.locator('#imagePreviews img').count(),2);
+await student.locator('#imagePreviews button').first().click();
+assert.equal(await student.locator('#imagePreviews img').count(),1);
+assert.match(await student.locator('#imagePreviews p').innerText(),/1\. vocabulary-page-2\.png/);
+await student.locator('#images').setInputFiles('vocabulary-page-1.png');
+await student.locator('#images').setInputFiles({name:'not-an-image.txt',mimeType:'text/plain',buffer:Buffer.from('bad')});
+assert.match(await student.locator('#submissionStatus').innerText(),/Chỉ nhận ảnh/);
+assert.equal(await student.locator('#imagePreviews img').count(),2);
+await student.locator('#images').setInputFiles({name:'too-large.png',mimeType:'image/png',buffer:Buffer.alloc(8*1024*1024+1)});
+assert.match(await student.locator('#submissionStatus').innerText(),/8 MiB/);
+await student.locator('#images').setInputFiles(Array.from({length:4},()=>path.join(output,'vocabulary-page-1.png')));
+assert.match(await student.locator('#submissionStatus').innerText(),/Tối đa 5 ảnh/);
+assert.equal(await student.locator('#imagePreviews img').count(),2);
+const [imageTab]=await Promise.all([student.waitForEvent('popup'),student.locator('#imagePreviews a').first().click()]);
+await imageTab.waitForLoadState();assert(imageTab.url().startsWith('blob:'));await imageTab.close();
+for(const width of [1440,1024,768,390]){
+ await student.setViewportSize({width,height:950});
+ if(width<992)await student.waitForFunction(()=>document.getElementById('sidebarMenu').getBoundingClientRect().right<=0);
+ assert(await student.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'Image upload overflow at '+width);
+ assert(await student.locator('#imagePreviews img').evaluateAll(images=>images.every(img=>img.complete&&img.naturalWidth>0)));
+ await student.locator('#submissionStatus').evaluate(el=>{el.textContent='';});
+ await student.locator('#vocabularySubmitTitle').scrollIntoViewIfNeeded();
+ await student.screenshot({path:'screenshots/vocabulary-image-upload-'+width+'.png',fullPage:false});
+}
+await student.setViewportSize({width:1440,height:1000});
+const imageAudit=await new (require('@axe-core/playwright').default)({page:student}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze();
+assert.equal(imageAudit.violations.length,0,'Image upload accessibility: '+JSON.stringify(imageAudit.violations.map(v=>({id:v.id,targets:v.nodes.map(n=>n.target)}))));
+// A failed request keeps the same selection and submission key available for retry.
+await student.route('**/ai/submissions/',route=>route.abort('failed'));
+await student.getByRole('button',{name:'Nộp bài',exact:true}).click();
+await student.waitForFunction(()=>!document.getElementById('submitButton').disabled);
+assert.equal(await student.locator('#imagePreviews img').count(),2);
+assert(await student.locator('#submissionStatus').innerText());
+await student.unroute('**/ai/submissions/');
+await Promise.all([student.waitForURL('**/results/*/'),student.getByRole('button',{name:'Nộp bài',exact:true}).click()]);
+assert.equal(await student.locator('img[alt^="Ảnh bài từ vựng trang"]').count(),2);
+const vocabJobID=student.url().match(/results\/(\d+)/)[1];
 execFileSync(python,['manage.py','run_ai_worker','--once'],{cwd:root,env,stdio:'pipe'});
-await teacher.goto(base+`/hoc-tap/results/${vocabJobID}/`);assert.equal(await teacher.locator('[name=score]').count(),0);await fill(teacher,'feedback','Đã kiểm tra đủ lượt viết từ vựng.');await teacher.locator('[name=completion_status]').selectOption('complete');await teacher.getByRole('button',{name:'Xác nhận kết quả',exact:true}).click();await teacher.waitForFunction(()=>!document.getElementById('reviewForm'));await student.reload();assert.equal(await student.locator('[data-completion-status]').getAttribute('data-completion-status'),'complete');assert.equal(await student.locator('[data-final-score]').count(),0);results.vocabulary='text draft/submission → unavailable AI → manual completion confirmation without points';
+await teacher.goto(base+`/hoc-tap/results/${vocabJobID}/`);assert.equal(await teacher.locator('[name=score]').count(),0);await fill(teacher,'feedback','Đã kiểm tra đủ lượt viết từ vựng.');await teacher.locator('[name=completion_status]').selectOption('complete');await teacher.getByRole('button',{name:'Xác nhận kết quả',exact:true}).click();await teacher.waitForFunction(()=>!document.getElementById('reviewForm'));await student.reload();assert.equal(await student.locator('[data-completion-status]').getAttribute('data-completion-status'),'complete');assert.equal(await student.locator('[data-final-score]').count(),0);results.vocabulary='image-only submission; previews, additive selection and removal; empty/type/size/count validation; responsive and accessible; selection retained after network failure; multipart photos without text → unavailable AI → manual completion confirmation without points';
 const speaking=await createLesson('speaking',Number(stamp),'Đọc video UI '+stamp,{video_file:'sample-reference.mp4',reference_transcript:'My hobby is reading.'});await assignLesson(speaking);
 await student.goto(base+'/hoc-tap/skill/speaking/');await student.locator('.space-y-3 > div').filter({hasText:'Đọc video UI '+stamp}).getByRole('link',{name:'Làm bài',exact:true}).click();assert.equal(await student.locator('input[type=file]').count(),0);assert(!(await student.content()).includes('My hobby is reading.'),'Learner exercise must not contain the reference script');assert.equal(await student.getByText('Lời mẫu cần đọc',{exact:true}).count(),0);await student.getByRole('button',{name:'Bắt đầu ghi âm',exact:true}).click();await student.waitForFunction(()=>document.getElementById('recordStatus').textContent.startsWith('Đang ghi âm'));await new Promise(r=>setTimeout(r,1700));await student.getByRole('button',{name:'Dừng ghi âm',exact:true}).click();await student.waitForFunction(()=>!document.getElementById('submitButton').disabled);await student.screenshot({path:'screenshots/student-recording.png',fullPage:true});await Promise.all([student.waitForURL('**/results/*/'),student.getByRole('button',{name:'Nộp bài',exact:true}).click()]);const jobID=student.url().match(/results\/(\d+)/)[1];results.speakingJobID=jobID;
 execFileSync(python,['manage.py','run_ai_worker','--once'],{cwd:root,env,stdio:'pipe'});

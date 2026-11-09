@@ -100,7 +100,7 @@ class ProviderTransportTests(IntegratedFixture):
                  (503, 'server_error', 'ai_provider_unavailable')]
         for index, (status, code, expected) in enumerate(cases):
             with self.subTest(status=status, code=code):
-                job, _ = enqueue_submission(task=self.vocab_task, submission_key=f'transport-error-{index}', text='Customer')
+                job, _ = enqueue_submission(task=self.vocab_task, submission_key=f'transport-error-{index}', images=[self.vocabulary_image()])
 
                 def handler(request):
                     return httpx.Response(status, json={'error': {'message': 'transport-test-secret PRIVATE_SUBMISSION',
@@ -118,7 +118,7 @@ class ProviderTransportTests(IntegratedFixture):
         for index, (exception, expected) in enumerate([(httpx.ConnectError, 'ai_connection_error'),
                                                       (httpx.ReadTimeout, 'ai_timeout')]):
             with self.subTest(reason=expected):
-                job, _ = enqueue_submission(task=self.vocab_task, submission_key=f'transport-network-{index}', text='Customer')
+                job, _ = enqueue_submission(task=self.vocab_task, submission_key=f'transport-network-{index}', images=[self.vocabulary_image()])
 
                 def handler(request):
                     raise exception('transport-test-secret', request=request)

@@ -73,8 +73,8 @@ class CompleteWorkflowTests(IntegratedFixture):
             'repetitions':2,'allow_late_submission':'on','requires_previous':'on'}).status_code,302)
         task=LearningTask.objects.get(assignment__lesson=lesson,learner=learner)
         self.login(learner)
-        response=self.post_json(reverse('ai_core:submit'),{'task_id':task.pk,'submission_key':'flow-vocab',
-            'text':'Hello Hello','reference_version':task.assignment.reference_version})
+        response=self.client.post(reverse('ai_core:submit'),{'task_id':task.pk,'submission_key':'flow-vocab',
+            'images':[self.vocabulary_image()],'reference_version':task.assignment.reference_version})
         self.assertEqual(response.status_code,201,response.content)
         job=GradingJob.objects.get(pk=response.json()['id'])
         provider=Mock();provider.grade.return_value={'needs_manual':False,'feedback':'Đã chép đủ lượt.',
@@ -218,13 +218,13 @@ class CompleteWorkflowTests(IntegratedFixture):
 
     def test_expired_draft_and_stale_reference_are_rejected(self):
         self.login(self.student)
-        self.vocab_task.draft = {'text': 'OLD DRAFT'}
-        self.vocab_task.draft_saved_at = self.now - timedelta(hours=25)
-        self.vocab_task.save(update_fields=['draft', 'draft_saved_at'])
-        self.assertNotContains(self.client.get(reverse('submissions:do_task',args=[self.vocab_task.pk])),'OLD DRAFT')
-        response=self.post_json(reverse('submissions:autosave',args=[self.vocab_task.pk]),{'text':'New','reference_version':'old'})
+        self.listening_task.draft = {'answers': {str(self.q1.pk): {'chosen': 'A', 'short_answer': 'OLD DRAFT'}}}
+        self.listening_task.draft_saved_at = self.now - timedelta(hours=25)
+        self.listening_task.save(update_fields=['draft', 'draft_saved_at'])
+        self.assertNotContains(self.client.get(reverse('submissions:do_task',args=[self.listening_task.pk])),'OLD DRAFT')
+        response=self.post_json(reverse('submissions:autosave',args=[self.listening_task.pk]),{'answers':{},'reference_version':'old'})
         self.assertEqual(response.status_code,400)
-        with self.assertRaises(ValidationError):enqueue_submission(task=self.vocab_task,submission_key='stale',text='Customer',reference_version='old')
+        with self.assertRaises(ValidationError):enqueue_submission(task=self.vocab_task,submission_key='stale',images=[self.vocabulary_image()],reference_version='old')
 
     def test_late_closed_paused_and_reopened_assignment(self):
         self.login(self.teacher)

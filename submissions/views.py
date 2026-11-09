@@ -133,7 +133,7 @@ def do_task(request, task_id):
         'blocked_reason': submission_problem(task), 'is_late': task.due_at < timezone.now(),
         'pending_exemption': task.assignment.exemption_requests.filter(enrollment__student=request.user, status='pending').first(),
         'jobs':jobs,'word_details':rubric.get('word_details') or [{'word':word} for word in rubric.get('words',[])],
-        'submission_key': uuid.uuid4().hex, 'draft_text': draft.get('text', ''),
+        'submission_key': uuid.uuid4().hex,
         'draft_saved_at': task.draft_saved_at if draft else None})
 
 
@@ -177,6 +177,8 @@ def autosave(request, task_id=None, pk=None):
     task = own_task(request, task_id)
     if task.assignment.rubric.get('skill') == 'speaking':
         return JsonResponse({'error':'recording_only', 'message':'Bài đọc theo video chỉ nhận ghi âm.'}, status=400)
+    if task.assignment.rubric.get('skill') == 'vocabulary':
+        return JsonResponse({'error':'images_only', 'message':'Bài từ vựng nộp bằng ảnh; ảnh chưa nộp không được lưu nháp.'}, status=400)
     try:
         with transaction.atomic():
             task = type(task).objects.select_for_update().select_related('learner','assignment__lesson','assignment__classroom').get(pk=task.pk)
@@ -194,7 +196,7 @@ def autosave(request, task_id=None, pk=None):
                 answers = {str(row['question_id']): {'chosen':row['chosen'], 'short_answer':row['short_answer']} for row in result['details']}
             elif answers:
                 raise ValueError()
-            draft = {'text': data.get('text','') if task.assignment.rubric.get('skill')=='vocabulary' else '', 'answers': answers}
+            draft = {'text': '', 'answers': answers}
             LessonProgress.objects.get_or_create(student=request.user, lesson=task.assignment.lesson)
             task.draft, task.draft_saved_at = draft, timezone.now()
             task.save(update_fields=['draft', 'draft_saved_at'])

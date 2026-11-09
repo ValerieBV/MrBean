@@ -43,7 +43,7 @@ Không cần tách `purchase` thành hai dòng trùng từ. Trang xem trước, 
 trang học viên giữ các dòng nghĩa; ô sửa nghĩa cho phép nhập nhiều dòng.
 
 CSV là danh sách **giáo viên giao bài**. Học viên xem các mục từ trực tiếp trên web
-rồi nộp văn bản hoặc ảnh bài viết PNG/JPG/WebP theo biểu mẫu hiện có. Khi chấm,
+rồi nộp ảnh bài viết PNG/JPG/WebP; không cần đánh máy lại bài làm. Khi chấm,
 AI dùng danh sách mẫu làm ngữ cảnh và đếm lượt chép của từng từ/cụm từ, không đếm
 thêm từ nằm trong giải nghĩa hay ví dụ. Từ có nhiều nghĩa vẫn là một mục từ.
 Kết quả theo số lượt yêu cầu là hoàn thành/chưa hoàn thành; ảnh không đủ rõ để

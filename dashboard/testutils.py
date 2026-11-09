@@ -1,4 +1,6 @@
 from datetime import timedelta
+import io
+from PIL import Image
 import tempfile
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -49,3 +51,9 @@ class IntegratedFixture(TestCase):
     @staticmethod
     def audio():
         return SimpleUploadedFile('speech.webm', b'fake-test-audio', content_type='audio/webm')
+
+    @staticmethod
+    def vocabulary_image():
+        stream = io.BytesIO()
+        Image.new('RGB', (20, 20), 'white').save(stream, 'PNG')
+        return SimpleUploadedFile('page.png', stream.getvalue(), content_type='image/png')

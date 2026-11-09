@@ -1,0 +1,12 @@
+<div class="vocabulary-upload">
+    <i class="fa-solid fa-images vocabulary-upload-icon" aria-hidden="true"></i>
+    <div class="vocabulary-upload-copy">
+        <p>Chụp rõ các trang bài viết, chọn ảnh rồi bấm <strong>Nộp bài</strong>.</p>
+        <p id="imageHelp" class="vocabulary-upload-help">Chọn từ 1 đến 5 ảnh PNG, JPG hoặc WebP; mỗi ảnh tối đa 8 MiB. Có thể chọn thêm ảnh nhiều lần.</p>
+    </div>
+    <button id="chooseImages" class="vocabulary-choose-images" type="button" aria-describedby="imageHelp imageSelectionStatus">Chọn ảnh bài làm</button>
+    <input id="images" type="file" name="images" multiple accept="image/png,image/jpeg,image/webp" hidden>
+</div>
+<p id="imageSelectionStatus" class="vocabulary-image-status" role="status">Chưa chọn ảnh.</p>
+<div id="imagePreviews" class="vocabulary-image-previews"></div>
+<p class="vocabulary-upload-help">Ảnh chưa nộp cần được chọn lại nếu tải lại hoặc rời trang.</p>

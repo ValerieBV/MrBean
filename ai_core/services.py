@@ -60,8 +60,12 @@ def enqueue_submission(*, task, submission_key, kind=None, text='', audio=None, 
                 raise ValidationError('Bài đọc theo video chỉ nhận ghi âm; không nhận transcript học viên nhập.')
             if rubric.get('mode') != 'repeat_video' or not rubric.get('reference_transcript') or not (rubric.get('video_embed_url') or rubric.get('video_name')):
                 raise ValidationError('Giáo viên cần cập nhật video và lời mẫu cho lượt giao này trước khi nộp.')
-        if kind == 'vocabulary' and not text.strip() and not images:
-            raise ValidationError('Cần văn bản hoặc ảnh bài từ vựng.')
+        if kind == 'vocabulary':
+            if not images:
+                raise ValidationError('Cần chọn ít nhất 1 ảnh bài từ vựng trước khi nộp.')
+            # Older open forms may still send text alongside photos; only photos
+            # are evidence for new vocabulary submissions.
+            text = ''
         if audio and (kind != 'speaking' or not 0 < audio.size <= settings.AI_MAX_AUDIO_BYTES or Path(audio.name).suffix.lower() not in ('.wav', '.mp3', '.m4a', '.webm', '.mp4', '.ogg')):
             raise ValidationError('File ghi âm không hợp lệ hoặc vượt 20 MiB.')
         if images and kind != 'vocabulary':

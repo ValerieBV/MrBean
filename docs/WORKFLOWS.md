@@ -93,9 +93,9 @@ Thông báo của bài hẹn giờ ghi rõ thời điểm mở. Khi học viên 
 trang chỉ hiển thị lịch và hạn nộp; nội dung bài, file và chức năng nộp vẫn được bảo vệ.
 
 Listening: nghe, xem PDF và chọn đáp án kèm câu trả lời ngắn cho từng câu. Câu chọn
-sai được ghi nhận để tham khảo; bỏ lựa chọn hoặc câu trả lời ngắn ảnh hưởng mức hoàn thành. Văn
-bản từ vựng, lựa chọn nghe và câu trả lời ngắn tự lưu nháp sau thay đổi, giữ trong 24 giờ. Ảnh và ghi âm không lưu nháp; cần chọn
-hoặc ghi lại sau khi đóng trang. Bản nháp không được tính là đã nộp.
+sai được ghi nhận để tham khảo; bỏ lựa chọn hoặc câu trả lời ngắn ảnh hưởng mức hoàn
+thành. Lựa chọn nghe và câu trả lời ngắn tự lưu nháp sau thay đổi, giữ trong 24 giờ.
+Ảnh và ghi âm không lưu nháp; cần chọn hoặc ghi lại sau khi đóng trang. Bản nháp không được tính là đã nộp.
 
 Nháp gắn với từng lượt giao cho từng học viên, nên cùng buổi học ở lớp khác có nháp
 riêng. Nộp bài chỉ xóa nháp của lượt giao đó. Migration `dashboard.0004_learningtask_draft`
@@ -107,9 +107,13 @@ ghi lại nếu cần → nộp. Chỉ có micro, không có ô nhập transcrip
 Backend vẫn từ chối transcript tự nhập, kể cả qua API. Bản ghi tối đa 20 MiB. Micro cần
 HTTPS hoặc localhost và trình duyệt có MediaRecorder.
 
-Vocabulary: nhập văn bản hoặc tải tối đa 5 ảnh PNG/JPEG/WebP, mỗi ảnh tối đa 8 MiB.
-Hệ thống chuẩn hóa ảnh và từ chối trang ảnh trùng. Nếu gửi cả hai dạng, AI ưu tiên
-ảnh để không đếm hai lần cùng nội dung. Ảnh mờ/không đủ chứng cứ chuyển giáo viên.
+Vocabulary: viết bài vào vở rồi chọn từ 1 đến 5 ảnh PNG/JPEG/WebP, mỗi ảnh tối đa
+8 MiB. Có thể chọn thêm nhiều lần, mở ảnh xem trước và bỏ ảnh chọn nhầm trước khi
+nộp. Không có ô đánh máy; backend yêu cầu ảnh cho lần nộp mới. Văn bản gửi kèm từ
+trang cũ không được lưu làm bài mới. Hệ thống chuẩn hóa ảnh và từ chối trang ảnh
+trùng. Ảnh mờ/không đủ chứng cứ chuyển giáo viên. Ảnh chỉ được tải lên khi bấm
+**Nộp bài**; cần chọn lại nếu tải lại hoặc rời trang. Bài văn bản đã nộp trước đây
+vẫn xem được trong lịch sử; nháp văn bản cũ không được tính là đang làm bài mới.
 
 Nộp lại tạo lần nộp riêng. Mã lần nộp chống tạo bản ghi trùng khi mạng lỗi và gửi lại.
 Nếu có kết luận đã xác nhận mà lần mới đang chờ, dashboard vẫn giữ mức hoàn thành

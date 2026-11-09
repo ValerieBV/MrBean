@@ -59,7 +59,7 @@ def annotated_tasks(user, filters=None, now=None):
         confirmed_feedback=Subquery(grade.values('teacher_feedback')[:1]), confirmed_job_id=Subquery(grade.values('pk')[:1]),
         confirmed_completion=Subquery(grade.values('completion_status')[:1]),
         confirmed_submission_at=Subquery(grade.values('submitted_at')[:1]),
-        has_draft=Case(When(Q(draft_saved_at__gte=now-timedelta(hours=24)) & ~Q(draft={}),
+        has_draft=Case(When(Q(assignment__lesson__skill='listening', draft_saved_at__gte=now-timedelta(hours=24)) & ~Q(draft={}),
                            then=Value(True)), default=Value(False), output_field=BooleanField()),
         earlier_unfinished=Exists(earlier),
         pending_exemption_id=Subquery(ExemptionRequest.objects.filter(assignment_id=OuterRef('assignment_id'),

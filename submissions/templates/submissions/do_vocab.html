@@ -14,5 +14,19 @@
     {% endfor %}
 </div>
 
-<form id="submissionForm" method="post" action="{% url 'ai_core:submit' %}" enctype="multipart/form-data" data-kind="{{ rubric.skill }}" data-submit-url="{% url 'ai_core:submit' %}" data-draft-url="{% url 'submissions:autosave' task.pk %}">{% csrf_token %}<input type="hidden" name="task_id" value="{{ task.pk }}"><input type="hidden" name="submission_key" value="{{ submission_key }}"><input type="hidden" name="reference_version" value="{{ task.assignment.reference_version }}">
-<div class="bg-white rounded-xl shadow-sm border p-5 mt-6"><h3 class="font-semibold text-gray-800 mb-3">Nộp bài từ vựng</h3><p class="text-sm text-gray-600 mb-4">Bài có {{ rubric.words|length }} từ / cụm từ. Mỗi từ viết {{ rubric.repetitions }} lượt; một từ có nhiều nghĩa vẫn tính là một mục. Chỉ kiểm tra đủ lượt viết, không chấm chữ đẹp hay xấu.</p><label for="text" class="block text-sm font-medium mb-2">Bài làm dạng văn bản</label><textarea id="text" name="text" rows="8" maxlength="20000" class="w-full px-3 py-2 border rounded-lg">{{ draft_text }}</textarea><label for="images" class="block text-sm font-medium mt-4 mb-2">Hoặc gửi ảnh bài làm</label><input id="images" type="file" name="images" multiple accept="image/png,image/jpeg,image/webp"><p class="text-xs text-gray-500 mt-2">Tối đa 5 ảnh, mỗi ảnh 8 MiB. Nếu gửi cả hai dạng, chỉ đếm trên ảnh.</p></div>{% include 'submissions/_submit_controls.html' %}</form>{% endif %}{% include 'submissions/_submission_history.html' %}{% endblock %}{% block scripts %}{% if not blocked_reason %}<script src="{% static 'submissions/submit.js' %}" defer></script>{% endif %}{% endblock %}
+<form id="submissionForm" method="post" action="{% url 'ai_core:submit' %}" enctype="multipart/form-data" data-kind="{{ rubric.skill }}" data-submit-url="{% url 'ai_core:submit' %}">
+    {% csrf_token %}
+    <input type="hidden" name="task_id" value="{{ task.pk }}">
+    <input type="hidden" name="submission_key" value="{{ submission_key }}">
+    <input type="hidden" name="reference_version" value="{{ task.assignment.reference_version }}">
+    <section class="bg-white rounded-xl shadow-sm border p-5 mt-6" aria-labelledby="vocabularySubmitTitle">
+        <h3 id="vocabularySubmitTitle" class="font-semibold text-gray-800 mb-3">Nộp bài từ vựng bằng ảnh</h3>
+        <p class="text-sm text-gray-600 mb-4">Bài có {{ rubric.words|length }} từ / cụm từ. Mỗi từ viết {{ rubric.repetitions }} lượt; một từ có nhiều nghĩa vẫn tính là một mục. Chỉ kiểm tra đủ lượt viết, không chấm chữ đẹp hay xấu.</p>
+        {% include 'submissions/_vocabulary_images.html' %}
+    </section>
+    {% include 'submissions/_submit_controls.html' %}
+</form>
+{% endif %}
+{% include 'submissions/_submission_history.html' %}
+{% endblock %}
+{% block scripts %}{% if not blocked_reason %}<script src="{% static 'submissions/submit.js' %}" defer></script>{% endif %}{% endblock %}
