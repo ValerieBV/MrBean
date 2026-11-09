@@ -27,8 +27,8 @@
 
 <div class="space-y-3">
     {% for item in items %}
-    <div class="bg-white rounded-xl shadow-sm border border-amber-900/5 p-4 flex justify-between items-start">
-        <div class="text-sm min-w-0">
+    <div class="lesson-content-item bg-white rounded-xl shadow-sm border border-amber-900/5 p-4">
+        <div class="lesson-content-copy text-sm min-w-0">
             {% if lesson.skill == 'vocabulary' %}
                 <b class="text-amber-800">{{ item.word }}</b> <span class="text-gray-400">{{ item.word_type }}</span><br>
                 <div class="text-gray-700 vocabulary-copy">{{ item.meaning|linebreaksbr }}</div>
@@ -46,8 +46,8 @@
                 <b class="text-amber-800">Câu {{ item.order }}.</b> {{ item.sentence }}
             {% endif %}
         </div>
-        {% if can_edit %}<a href="{% url 'assignments:item_edit' lesson.skill item.pk %}" class="ml-3 text-amber-700 text-sm">Sửa</a><button type="button" class="text-gray-400 hover:text-red-600 ml-3" title="Xóa"
-            onclick="openDelete('{% url 'assignments:item_delete' lesson.skill item.pk %}')"><i class="fa-solid fa-trash-can"></i></button>{% endif %}
+        {% if can_edit %}<div class="lesson-content-actions"><a href="{% url 'assignments:item_edit' lesson.skill item.pk %}" class="lesson-item-edit"><i class="fa-solid fa-pen-to-square" aria-hidden="true"></i> Sửa</a><button type="button" class="lesson-item-delete" title="Xóa" aria-label="Xóa mục {{ item.order }}"
+            onclick="openDelete('{% url 'assignments:item_delete' lesson.skill item.pk %}')"><i class="fa-solid fa-trash-can" aria-hidden="true"></i></button></div>{% endif %}
     </div>
     {% empty %}
     <div class="bg-white rounded-xl border border-dashed border-amber-900/20 p-10 text-center text-gray-400">Chưa có nội dung. Bấm nút thêm ở trên.</div>

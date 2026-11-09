@@ -89,10 +89,18 @@ Bài chỉ xuất hiện khi đến thời điểm giao. Nếu bật mở theo t
 kỹ năng/chương trình/lớp phải được xác nhận **hoàn thành** hoặc được miễn. Chỉ nộp bài
 chưa đủ điều kiện mở bài sau; bài còn thiếu cũng chưa được tính hoàn thành.
 
+Thông báo của bài hẹn giờ ghi rõ thời điểm mở. Khi học viên mở liên kết trước giờ,
+trang chỉ hiển thị lịch và hạn nộp; nội dung bài, file và chức năng nộp vẫn được bảo vệ.
+
 Listening: nghe, xem PDF và chọn đáp án kèm câu trả lời ngắn cho từng câu. Câu chọn
 sai được ghi nhận để tham khảo; bỏ lựa chọn hoặc câu trả lời ngắn ảnh hưởng mức hoàn thành. Văn
 bản từ vựng, lựa chọn nghe và câu trả lời ngắn tự lưu nháp sau thay đổi, giữ trong 24 giờ. Ảnh và ghi âm không lưu nháp; cần chọn
 hoặc ghi lại sau khi đóng trang. Bản nháp không được tính là đã nộp.
+
+Nháp gắn với từng lượt giao cho từng học viên, nên cùng buổi học ở lớp khác có nháp
+riêng. Nộp bài chỉ xóa nháp của lượt giao đó. Migration `dashboard.0004_learningtask_draft`
+chuyển nháp cũ khi chỉ có một lượt giao phù hợp. Nháp cũ thuộc nhiều lượt giao vẫn
+được giữ trong dữ liệu lịch sử, không tự gán sang một lớp bất kỳ.
 
 Đọc theo video: xem mẫu → tạm dừng video → cho phép micro → ghi âm → dừng → nghe lại →
 ghi lại nếu cần → nộp. Chỉ có micro, không có ô nhập transcript hoặc chọn file audio.
@@ -116,6 +124,10 @@ Bài mới không tạo điểm 0–10. Listening kiểm tra lựa chọn và c�
 câu theo snapshot đề đã giao. Làm đủ yêu cầu được tính hoàn thành dù có chọn sai;
 số câu đúng/sai và từng câu trả lời được giữ làm thông tin tham khảo. Không dùng AI
 đoán key hoặc tự chấm ngữ nghĩa câu trả lời ngắn.
+
+Câu trả lời ngắn cần có ít nhất một chữ hoặc chữ số. Khoảng trắng, dấu câu hoặc
+biểu tượng đơn thuần vẫn được lưu trong bài làm nhưng chưa đáp ứng yêu cầu hoàn
+thành. Chấp nhận từ ngắn, chữ có dấu, giờ và số; không yêu cầu khớp một câu mẫu.
 
 Bài đọc/từ vựng vào queue. Worker nhận JSON có schema và kiểm tra lại dữ liệu. Bài
 đọc đánh giá đã đọc đủ nội dung theo video, không chấm phát âm, giọng, ngữ pháp hay

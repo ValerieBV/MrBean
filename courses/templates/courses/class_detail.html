@@ -211,10 +211,7 @@
                     <td class="small text-muted">{{ e.enrolled_at|date:"d/m/Y" }}</td>
                     {% if can_manage %}
                     <td class="text-end pe-3">
-                        <a class="btn-action-edit mb-1" href="{% url 'courses:enrollment_update' e.id %}">Trạng thái</a>
-                        <a href="{% url 'courses:remove_student' classroom.id e.student.id %}" class="btn-action-delete" title="Ngừng ghi danh">
-                            <i aria-hidden="true" class="bi bi-person-dash"></i> Ngừng học
-                        </a>
+                        <a class="btn-action-edit" href="{% url 'courses:enrollment_update' e.id %}">Trạng thái</a>
                     </td>
                     {% endif %}
                 </tr>

@@ -1,7 +1,7 @@
 from datetime import timedelta
 from django.conf import settings
 from django.core.paginator import Paginator
-from django.db.models import OuterRef, Subquery, Q, Exists
+from django.db.models import OuterRef, Subquery, Q, Exists, Case, When, Value, BooleanField
 from django.utils import timezone
 from django.utils.dateparse import parse_date
 from ai_core.models import GradingJob
@@ -10,7 +10,6 @@ from ai_core.reporting import report_job, REPORT_STATUS_LABELS
 from ai_core.diagnostics import review_status_label
 from courses.models import Enrollment, ExemptionRequest
 from .models import LearningTask
-from submissions.models import LessonProgress
 from submissions.progress import unfinished_tasks
 
 
@@ -60,8 +59,8 @@ def annotated_tasks(user, filters=None, now=None):
         confirmed_feedback=Subquery(grade.values('teacher_feedback')[:1]), confirmed_job_id=Subquery(grade.values('pk')[:1]),
         confirmed_completion=Subquery(grade.values('completion_status')[:1]),
         confirmed_submission_at=Subquery(grade.values('submitted_at')[:1]),
-        has_draft=Exists(LessonProgress.objects.filter(student_id=OuterRef('learner_id'),
-            lesson_id=OuterRef('assignment__lesson_id'), draft_saved_at__gte=now-timedelta(hours=24)).exclude(draft={})),
+        has_draft=Case(When(Q(draft_saved_at__gte=now-timedelta(hours=24)) & ~Q(draft={}),
+                           then=Value(True)), default=Value(False), output_field=BooleanField()),
         earlier_unfinished=Exists(earlier),
         pending_exemption_id=Subquery(ExemptionRequest.objects.filter(assignment_id=OuterRef('assignment_id'),
             enrollment__student_id=OuterRef('learner_id'), status='pending').values('pk')[:1])).select_related(

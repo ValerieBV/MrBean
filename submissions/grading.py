@@ -2,6 +2,10 @@
 from django.core.exceptions import ValidationError
 
 
+def has_short_answer_content(value):
+    return any(char.isalnum() for char in value)
+
+
 def grade_listening(questions, answers):
     if not questions or not isinstance(answers, dict):
         raise ValidationError('Bài nghe chưa có câu hỏi hoặc đáp án gửi lên không hợp lệ.')
@@ -25,7 +29,7 @@ def grade_listening(questions, answers):
             raise ValidationError('Câu trả lời ngắn tối đa 255 ký tự.')
         chosen = chosen.strip().upper()
         short_answer = short_answer.strip()
-        answered = bool(chosen) and (bool(short_answer) or not q.get('requires_short_answer', False))
+        answered = bool(chosen) and (has_short_answer_content(short_answer) or not q.get('requires_short_answer', False))
         details.append({'question_id': q['id'], 'chosen': chosen, 'short_answer': short_answer,
             'answered': answered, 'correct': chosen == expected})
     correct = sum(row['correct'] for row in details)

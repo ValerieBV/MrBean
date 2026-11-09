@@ -13,6 +13,13 @@ class LearningTask(models.Model):
     assigned_at = models.DateTimeField(default=timezone.now)
     due_at = models.DateTimeField()
     exemption = models.OneToOneField('courses.ExemptionRequest', on_delete=models.PROTECT, null=True, blank=True, related_name='exempt_task')
+    draft = models.JSONField('Bản nháp của lượt giao', default=dict, blank=True)
+    draft_saved_at = models.DateTimeField(null=True, blank=True)
+
+    @property
+    def draft_valid(self):
+        return bool(self.draft and self.draft_saved_at and
+                    timezone.now() - self.draft_saved_at <= timezone.timedelta(hours=24))
 
     class Meta:
         constraints = [models.UniqueConstraint(fields=['assignment_key', 'learner'], name='unique_assignment_learner')]

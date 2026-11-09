@@ -218,7 +218,9 @@ class CompleteWorkflowTests(IntegratedFixture):
 
     def test_expired_draft_and_stale_reference_are_rejected(self):
         self.login(self.student)
-        LessonProgress.objects.create(student=self.student,lesson=self.vocab,draft={'text':'OLD DRAFT'},draft_saved_at=self.now-timedelta(hours=25))
+        self.vocab_task.draft = {'text': 'OLD DRAFT'}
+        self.vocab_task.draft_saved_at = self.now - timedelta(hours=25)
+        self.vocab_task.save(update_fields=['draft', 'draft_saved_at'])
         self.assertNotContains(self.client.get(reverse('submissions:do_task',args=[self.vocab_task.pk])),'OLD DRAFT')
         response=self.post_json(reverse('submissions:autosave',args=[self.vocab_task.pk]),{'text':'New','reference_version':'old'})
         self.assertEqual(response.status_code,400)

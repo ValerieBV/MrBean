@@ -157,7 +157,9 @@ class DashboardTests(IntegratedFixture):
         LearningTask.objects.filter(pk=self.task.pk).update(assigned_at=self.now+timedelta(days=1))
         self.assertEqual(metrics_for(self.student)['assigned_count'],2)
         self.client.force_login(self.student)
-        self.assertEqual(self.client.get(f'/hoc-tap/tasks/{self.task.pk}/').status_code,404)
+        response = self.client.get(f'/hoc-tap/tasks/{self.task.pk}/')
+        self.assertContains(response, 'Bài tập sắp mở')
+        self.assertNotContains(response, 'name="submission_key"')
 
     def test_manager_can_assign_but_other_teacher_cannot(self):
         self.client.force_login(self.manager)

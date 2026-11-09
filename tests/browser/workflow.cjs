@@ -26,12 +26,19 @@ async function session(username){const ctx=await browser.newContext({viewport:{w
 async function fill(p,name,value){await p.locator(`[name="${name}"]`).fill(value);}
 async function save(p,name='Lưu thay đổi'){await Promise.all([p.waitForURL(url=>!url.pathname.endsWith('/new/')&&!url.pathname.endsWith('/create/')&&!url.pathname.endsWith('/edit/')),p.getByRole('button',{name,exact:true}).click()]);}
 const admin=await session('demo_admin');await admin.screenshot({path:'screenshots/admin-desktop.png',fullPage:true});
+assert.deepEqual(await admin.locator('.sidebar-menu>li>a>span:first-of-type').allTextContents(),[
+ 'QUẢN LÝ TÀI KHOẢN','DANH MỤC KHÓA HỌC','QUẢN LÝ LỚP HỌC','KIỂM SOÁT BTVN',
+ 'NGÂN HÀNG BÀI TẬP','BÀI TẬP ĐÃ GIAO','THÔNG BÁO HỆ THỐNG','BÁO CÁO HỌC TẬP',
+ 'LIÊN HỆ & PHẢN ÁNH','DJANGO ADMIN']);
+results.sidebarOrder='Account, course catalog, classes, homework exemptions, bank, assigned work, notifications, reports, contacts, Django Admin';
 await admin.goto(base+'/courses/catalog/new/');await fill(admin,'code','UI-'+stamp);await fill(admin,'name','Khóa học giao diện '+stamp);await admin.locator('[name=course_type]').selectOption('B1');await save(admin);
 await admin.getByRole('article').filter({hasText:'UI-'+stamp}).getByRole('link',{name:'Tạo lớp',exact:true}).click();
 await fill(admin,'class_code','UI-C'+stamp);await fill(admin,'name','Lớp kiểm thử '+stamp);await admin.locator('[name=teacher]').selectOption(await admin.locator('[name=teacher] option').filter({hasText:'demo_teacher'}).getAttribute('value'));await save(admin,'Lưu lớp học');
 const classURL=admin.url();const classID=classURL.match(/classes\/(\d+)/)[1];results.classID=classID;
 await admin.goto(base+'/accounts/users/create/');await fill(admin,'username','ui_student'+stamp);await admin.locator('[name=role]').selectOption('student');await fill(admin,'first_name','Học viên kiểm thử');await fill(admin,'student_code','B2026UI'+stamp);await fill(admin,'password','Learning!8429');await fill(admin,'confirm_password','Learning!8429');await save(admin,'Lưu thông tin');
 await admin.goto(base+`/courses/classes/${classID}/enroll/`);const studentValue=await admin.locator('[name=student] option').filter({hasText:'ui_student'+stamp}).getAttribute('value');await admin.locator('[name=student]').selectOption(studentValue);await save(admin,'Thêm vào lớp');
+assert.equal(await admin.getByRole('link',{name:'Ngừng học',exact:true}).count(),0);
+assert.equal(await admin.getByRole('link',{name:'Trạng thái',exact:true}).count(),1);
 const teacher=await session('demo_teacher');
 async function createLesson(skill,order,title,extras={}){await teacher.goto(base+'/quan-ly/bai-tap/new/');await teacher.locator('[name=skill]').selectOption(skill);await teacher.locator('[name=program]').selectOption('B1');await fill(teacher,'order',String(order));await fill(teacher,'title',title);await fill(teacher,'description','Nội dung dùng kiểm thử giao diện và quy trình.');for(const [key,val]of Object.entries(extras)){if(key==='video_file')await teacher.locator('[name=video_file]').setInputFiles(val);else await fill(teacher,key,val);}await save(teacher,'Lưu buổi');return teacher.url().match(/lesson\/(\d+)/)[1];}
 async function assignLesson(lessonID){
@@ -214,7 +221,7 @@ async function answerListening({incomplete=false,wrongFirst=false}={}){
   for(let i=0;i<questions.length;i++){
    await panel.locator('.listening-question-nav button').nth(i).click();const question=questions[i];
    await question.locator('input[type=radio][value='+((wrongFirst&&order==='1'&&i===0)?'A':'B')+']').check();
-   await question.locator('.listening-answer').fill(incomplete&&order==='1'&&i===0?'':'The answer I heard.');
+   await question.locator('.listening-answer').fill(incomplete&&order==='1'&&i===0?'.':'The answer I heard.');
   }
  }
 }
@@ -226,6 +233,7 @@ assert(await student.locator('#listening-3 canvas').evaluate(canvas=>canvas.widt
 await student.screenshot({path:'screenshots/listening-interactive-questions.png',fullPage:true});
 await student.setViewportSize({width:390,height:920});await student.waitForFunction(()=>document.getElementById('sidebarMenu').getBoundingClientRect().right<=0);await student.screenshot({path:'screenshots/listening-interactive-mobile.png',fullPage:true});await student.setViewportSize({width:1440,height:1000});
 await answerListening({incomplete:true});
+assert.equal(await student.locator('#listeningProgress').innerText(),'Đã trả lời 99/100 câu');
 await student.waitForFunction(()=>document.getElementById('draftStatus')?.textContent.startsWith('Đã lưu nháp'));
 await student.reload();assert(await student.locator('input[type=radio][value=B]').first().isChecked());assert.equal(await student.locator('.listening-answer').nth(1).inputValue(),'The answer I heard.');
 await Promise.all([student.waitForURL('**/results/*/'),student.getByRole('button',{name:'Nộp bài',exact:true}).click()]);
@@ -237,7 +245,7 @@ await answerListening({wrongFirst:true});
 await student.setViewportSize({width:390,height:920});assert(await student.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));await student.screenshot({path:'screenshots/listening-mobile.png',fullPage:false});await student.setViewportSize({width:1440,height:1000});
 await Promise.all([student.waitForURL('**/results/*/'),student.getByRole('button',{name:'Nộp bài',exact:true}).click()]);
 assert.match(await student.locator('body').innerText(),/Đúng 99\/100/);assert.equal(await student.locator('[data-completion-status]').getAttribute('data-completion-status'),'complete');
-results.listening='4 manually added exercises, 6/25/39/30 questions; two-column multi-page PDF import 32–70, scan-without-text feedback, DOCX import 71–100 without a PDF; full-text radio choices + short answers; tabs and numbered navigation; CSV and source-numbered keys; draft restored; all-correct attempt missing a short answer remains incomplete; fully answered attempt with a wrong choice is complete without points';
+results.listening='4 manually added exercises, 6/25/39/30 questions; two-column multi-page PDF import 32–70, scan-without-text feedback, DOCX import 71–100 without a PDF; full-text radio choices + short answers; tabs and numbered navigation; CSV and source-numbered keys; draft restored; punctuation-only response is not counted by progress or completion; fully answered attempt with a wrong choice is complete without points';
 const vocab=await createLesson('vocabulary',Number(stamp),'Từ vựng UI '+stamp);await teacher.getByRole('button',{name:'Thêm từ vựng',exact:true}).click();await fill(teacher,'order','1');await fill(teacher,'word','Hello');await fill(teacher,'meaning','Xin chào');await teacher.getByRole('button',{name:'Thêm',exact:true}).click();await assignLesson(vocab);
 await student.goto(base+'/hoc-tap/skill/vocabulary/');await student.locator('.space-y-3 > div').filter({hasText:'Từ vựng UI '+stamp}).getByRole('link',{name:'Làm bài',exact:true}).click();const vocabTaskURL=student.url();await student.screenshot({path:'screenshots/source-vocabulary.png',fullPage:true});await student.getByRole('link',{name:'Cần xin miễn bài này?'}).click();await fill(student,'reason','Xin miễn để kiểm thử quy trình duyệt đúng bài.');await Promise.all([student.waitForURL('**/exemptions/'),student.getByRole('button',{name:'Gửi đơn xin miễn',exact:true}).click()]);
 await teacher.goto(base+'/courses/exemptions/');await teacher.locator('tr').filter({hasText:'Từ vựng UI '+stamp}).getByRole('link',{name:'Xét duyệt'}).click();await teacher.locator('[name=action][value=approve]').check();await fill(teacher,'note','Đồng ý miễn bài theo quy định.');await Promise.all([teacher.waitForURL('**/exemptions/'),teacher.getByRole('button',{name:'Xác nhận xử lý',exact:true}).click()]);results.exemption='requested and approved once';
@@ -434,10 +442,17 @@ await Promise.all([admin.waitForURL('**/accounts/users/'),admin.getByRole('butto
 await admin.goto(base+'/accounts/users/?q=delete_user_'+stamp);
 assert.equal(await admin.locator('tbody tr').filter({hasText:'delete_user_'+stamp}).count(),0);
 results.userDeletion='Separate Lock/Delete actions; admin permanent deletion with exact username confirmation; related contact/message removed; responsive 390/768/1440';
+const vocabularyLayout=await createLesson('vocabulary',Number(stamp)+4,'Từ vựng căn nút '+stamp);
+await teacher.getByRole('link',{name:'Nhập từ hàng loạt',exact:true}).click();
+await teacher.locator('[name=upload]').setInputFiles(path.join(root,'assignments/testdata/vocabulary_full_entries.csv'));
+await teacher.getByRole('button',{name:'Xem trước danh sách',exact:true}).click();
+assert.equal(await teacher.locator('#vocabulary-preview tbody tr').count(),10);
+await Promise.all([teacher.waitForURL('**/lesson/*/'),teacher.getByRole('button',{name:'Thêm 10 từ vào buổi',exact:true}).click()]);
+const vocabularyLayoutURL=teacher.url();
 results.responsive=[];
 for(const[role,p,urls]of [
  ['admin',admin,['/accounts/users/','/courses/catalog/','/courses/classes/create/','/dashboard/','/accounts/profile/']],
- ['teacher',teacher,['/quan-ly/bai-tap/skill/listening/',listeningFormURL,`/quan-ly/bai-tap/assign/?lesson=${listening}&classroom=${classID}`,'/ho-tro/lien-he/','/dashboard/']],
+ ['teacher',teacher,['/quan-ly/bai-tap/skill/listening/',listeningFormURL,`/quan-ly/bai-tap/assign/?lesson=${listening}&classroom=${classID}`,'/ho-tro/lien-he/','/dashboard/',vocabularyLayoutURL.replace(base,'')]],
  ['student',student,[listeningTaskURL.replace(base,'')+'#listening-3','/hoc-tap/ky-nang/','/ho-tro/lien-he/moi/','/courses/','/dashboard/']],
 ]){
  for(const width of [1440,1200,1024,768,390])for(const url of urls){
@@ -450,6 +465,16 @@ for(const[role,p,urls]of [
    assert(layout.pageWidth<=layout.width+1,`${role} ${width}px sidebar=${open} overflow ${url}: ${JSON.stringify(layout)}`);
    assert(!layout.overlap,`${role} ${width}px header overlap ${url}`);
    assert.equal(await p.locator('.unified-topbar').count(),1);
+   if(role==='admin'&&url==='/accounts/users/'){
+    const rows=await p.locator('.user-row-actions').evaluateAll(groups=>groups.map(group=>[...group.querySelectorAll('a')].map(a=>{const r=a.getBoundingClientRect();return {top:r.top,height:r.height};})));
+    for(const buttons of rows){assert(new Set(buttons.map(b=>Math.round(b.top))).size<=1,'User actions wrapped');assert(buttons.every(b=>b.height<60),'User action label wrapped');}
+    if(width===1024&&open)await p.screenshot({path:'screenshots/users-one-line-actions-1024.png',fullPage:true});
+   }
+   if(role==='teacher'&&url===vocabularyLayoutURL.replace(base,'')){
+    const edits=await p.locator('.lesson-content-actions>a').evaluateAll(as=>as.map(a=>a.getBoundingClientRect().right));
+    assert.equal(edits.length,10);assert(Math.max(...edits)-Math.min(...edits)<1,'Vocabulary edit buttons are misaligned');
+    if(width===1024&&open)await p.screenshot({path:'screenshots/vocabulary-aligned-actions-1024.png',fullPage:true});
+   }
    if(width===1024&&open&&url===listeningFormURL)await p.screenshot({path:'screenshots/listening-form-sidebar-1024.png',fullPage:true});
    if(width===1200&&open&&role==='student'&&url.includes('/tasks/'))await p.screenshot({path:'screenshots/listening-sidebar-1200.png',fullPage:true});
    results.responsive.push({role,width,url,sidebar:open?'open':'closed'});

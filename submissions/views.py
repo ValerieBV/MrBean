@@ -22,7 +22,7 @@ def student_only(user):
 def own_task(request, task_id):
     student_only(request.user)
     return get_object_or_404(tasks_for(request.user).select_related('learner', 'assignment__lesson',
-        'assignment__classroom', 'exemption').filter(assignment__isnull=False, assigned_at__lte=timezone.now()), pk=task_id)
+        'assignment__classroom', 'exemption').filter(assignment__isnull=False), pk=task_id)
 
 
 @login_required
@@ -91,6 +91,8 @@ def listening_question_number(question, exercise_kinds, fallback=1):
 @login_required
 def do_task(request, task_id):
     task = own_task(request, task_id)
+    if task.assigned_at > timezone.now():
+        return render(request, 'submissions/upcoming_task.html', {'task': task})
     rubric = task.assignment.rubric
     video_embed_url = rubric.get('video_embed_url', '')
     from assignments.video import youtube_embed
@@ -99,8 +101,7 @@ def do_task(request, task_id):
     except (ValidationError, ValueError): video_embed_url = ''
     reading_ready = bool(rubric.get('mode') == 'repeat_video' and rubric.get('reference_transcript') and
         (video_embed_url or rubric.get('video_name')))
-    progress = LessonProgress.objects.filter(student=request.user, lesson=task.assignment.lesson).first()
-    draft = progress.draft if progress and progress.draft_valid and isinstance(progress.draft, dict) else {}
+    draft = task.draft if task.draft_valid and isinstance(task.draft, dict) else {}
     answers = draft.get('answers', {})
     questions = []
     exercise_kinds = {item['id']:item.get('kind') for item in rubric.get('exercises', [])}
@@ -133,7 +134,7 @@ def do_task(request, task_id):
         'pending_exemption': task.assignment.exemption_requests.filter(enrollment__student=request.user, status='pending').first(),
         'jobs':jobs,'word_details':rubric.get('word_details') or [{'word':word} for word in rubric.get('words',[])],
         'submission_key': uuid.uuid4().hex, 'draft_text': draft.get('text', ''),
-        'draft_saved_at': progress.draft_saved_at if draft else None})
+        'draft_saved_at': task.draft_saved_at if draft else None})
 
 
 @login_required
@@ -194,12 +195,12 @@ def autosave(request, task_id=None, pk=None):
             elif answers:
                 raise ValueError()
             draft = {'text': data.get('text','') if task.assignment.rubric.get('skill')=='vocabulary' else '', 'answers': answers}
-            progress, _ = LessonProgress.objects.get_or_create(student=request.user, lesson=task.assignment.lesson)
-            progress.draft, progress.draft_saved_at = draft, timezone.now()
-            progress.save(update_fields=['draft','draft_saved_at'])
+            LessonProgress.objects.get_or_create(student=request.user, lesson=task.assignment.lesson)
+            task.draft, task.draft_saved_at = draft, timezone.now()
+            task.save(update_fields=['draft', 'draft_saved_at'])
     except (ValueError, UnicodeDecodeError, ValidationError) as exc:
         return JsonResponse({'error':'invalid_draft', 'message': '; '.join(exc.messages) if isinstance(exc, ValidationError) else 'Bản nháp không hợp lệ.'}, status=400)
-    return JsonResponse({'ok':True, 'saved_at':progress.draft_saved_at.isoformat()})
+    return JsonResponse({'ok':True, 'saved_at':task.draft_saved_at.isoformat()})
 
 
 @login_required

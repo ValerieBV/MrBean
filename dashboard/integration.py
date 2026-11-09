@@ -53,9 +53,14 @@ def sync_class_assignment(assignment):
         if created:
             from accounts.notifications import notify
             from django.urls import reverse
+            upcoming = assignment.assigned_at > timezone.now()
+            message = 'Lớp ' + assignment.classroom.class_code + '. '
+            if upcoming:
+                message += 'Mở bài: ' + timezone.localtime(assignment.assigned_at).strftime('%d/%m/%Y %H:%M') + '. '
+            message += 'Hạn nộp: ' + timezone.localtime(assignment.due_at).strftime('%d/%m/%Y %H:%M')
             notify(recipient=enrollment.student, sender=assignment.created_by,
-                title='Bài tập mới: '+assignment.lesson.title,
-                message='Lớp '+assignment.classroom.class_code+'. Hạn nộp: '+timezone.localtime(assignment.due_at).strftime('%d/%m/%Y %H:%M'),
+                title=('Bài tập sắp mở: ' if upcoming else 'Bài tập mới: ') + assignment.lesson.title,
+                message=message,
                 target_url=reverse('submissions:do_task',args=[task.pk]), event_key=f'assignment:{task.pk}')
         rows.append(task)
     return rows

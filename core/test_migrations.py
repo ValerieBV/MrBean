@@ -129,3 +129,36 @@ class SourceDatabaseUpgradeTests(TransactionTestCase):
         Enrollment.objects.filter(student_id=ids[0],classroom__class_code='OLD-2').update(status='completed')
         MigrationExecutor(connection).migrate(self.migrate_to)
         self.assert_history_after_upgrade(ids)
+
+    def test_drafts_are_copied_only_when_the_source_task_is_unambiguous(self):
+        student_id, task_id, _, progress_id = self.seed_source_history()
+        get = self.old_apps.get_model
+        Task = get('dashboard', 'LearningTask')
+        Progress = get('submissions', 'LessonProgress')
+        Lesson = get('assignments', 'Lesson')
+        Assignment = get('assignments', 'ClassAssignment')
+        Room = get('courses', 'ClassRoom')
+        source = Task.objects.get(pk=task_id)
+        saved_at = timezone.now()
+        Progress.objects.filter(pk=progress_id).update(draft={'text': 'ONE_TASK_DRAFT'}, draft_saved_at=saved_at)
+        lesson = Lesson.objects.create(skill='vocabulary', program='B1', order=90, title='Shared historical lesson')
+        other_room = Room.objects.create(class_code='OLD-OTHER', name='Old other class',
+            course_id=source.assignment.classroom.course_id, teacher_id=source.teacher_id)
+        ambiguous = []
+        for index, room_id in enumerate([source.assignment.classroom_id, other_room.pk]):
+            assignment = Assignment.objects.create(lesson=lesson, classroom_id=room_id,
+                assigned_at=source.assigned_at, due_at=source.due_at, rubric={'skill': 'vocabulary'})
+            task = Task.objects.create(assignment=assignment, assignment_key='shared-draft-' + str(index),
+                title=lesson.title, teacher_id=source.teacher_id, learner_id=student_id,
+                assigned_at=source.assigned_at, due_at=source.due_at)
+            ambiguous.append(task.pk)
+        old_progress = Progress.objects.create(student_id=student_id, lesson=lesson,
+            draft={'text': 'AMBIGUOUS_DRAFT'}, draft_saved_at=saved_at)
+        MigrationExecutor(connection).migrate(self.migrate_to)
+        from dashboard.models import LearningTask
+        from submissions.models import LessonProgress
+        current = LearningTask.objects.get(pk=task_id)
+        self.assertEqual(current.draft, {'text': 'ONE_TASK_DRAFT'})
+        self.assertEqual(current.draft_saved_at, saved_at)
+        self.assertEqual(list(LearningTask.objects.filter(pk__in=ambiguous).values_list('draft', flat=True)), [{}, {}])
+        self.assertEqual(LessonProgress.objects.get(pk=old_progress.pk).draft, {'text': 'AMBIGUOUS_DRAFT'})

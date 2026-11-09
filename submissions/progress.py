@@ -17,6 +17,9 @@ def unfinished_tasks(queryset, now=None):
 @transaction.atomic
 def sync_progress(job, *, clear_draft=False):
     """Project the most recent *graded attempt*; pending resubmits keep its result."""
+    if clear_draft:
+        from dashboard.models import LearningTask
+        LearningTask.objects.filter(pk=job.task_id).update(draft={}, draft_saved_at=None)
     if not job.progress_id:
         return
     progress = LessonProgress.objects.select_for_update().get(pk=job.progress_id)
@@ -31,8 +34,5 @@ def sync_progress(job, *, clear_draft=False):
     else:
         progress.status, progress.completed_at = 'submitted', None
     fields = ['score', 'status', 'completed_at']
-    if clear_draft:
-        progress.draft = {}
-        fields.append('draft')
     progress.save(update_fields=fields)
     job.progress = progress

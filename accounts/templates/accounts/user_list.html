@@ -209,7 +209,7 @@
 
                     <!-- Hành động: Sửa (Nâu) & Xóa (Cam) -->
                     <td class="text-end pe-3">
-                        <div class="d-inline-flex flex-wrap justify-content-end gap-1">
+                        <div class="user-row-actions">
                             {% if user.is_superuser or user.role == 'admin' %}
                             <a href="{% url 'accounts:user_update' u.id %}" class="btn-action-edit" title="Chỉnh sửa">
                                 <i aria-hidden="true" class="bi bi-pencil-square"></i>
