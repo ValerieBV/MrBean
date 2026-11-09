@@ -48,9 +48,9 @@ sign up | đăng ký</pre>
     </div>
     <div class="table-wrap">
         <table>
-            <thead><tr><th>Dòng</th><th>Từ / cụm từ</th><th>Loại từ</th><th>Phiên âm / nghĩa</th><th>Ví dụ</th><th>Thao tác</th></tr></thead>
+            <thead><tr><th>STT</th><th>Từ / cụm từ</th><th>Loại từ</th><th>Phiên âm / nghĩa</th><th>Ví dụ</th><th>Thao tác</th></tr></thead>
             <tbody>{% for row in preview %}<tr>
-                <td>{{ row.line }}</td><td><strong>{{ row.word }}</strong></td><td>{{ row.word_type|default:'—' }}</td>
+                <td>{{ forloop.counter }}</td><td><strong>{{ row.word }}</strong></td><td>{{ row.word_type|default:'—' }}</td>
                 <td class="text-wrap vocabulary-copy">{{ row.meaning|default:'—'|linebreaksbr }}</td><td class="text-wrap vocabulary-copy">{{ row.example|default:'—'|linebreaksbr }}</td>
                 <td>{% if row.status == 'add' %}<span class="badge green">Sẽ thêm</span>{% elif row.status == 'existing' %}<span class="badge">Đã có trong buổi</span>{% else %}<span class="badge">Trùng trong danh sách</span>{% endif %}</td>
             </tr>{% endfor %}</tbody>
