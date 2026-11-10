@@ -1,0 +1,11 @@
+{% if local_recognition.used %}
+<section class="report-panel" aria-labelledby="local-recognition-title" data-local-recognition>
+    <h2 id="local-recognition-title">Bản nhận dạng bổ sung</h2>
+    <p class="report-subtle">Mô hình đã huấn luyện cung cấp bản đọc tham khảo. Đối chiếu ảnh hoặc bản ghi gốc trước khi xác nhận mức hoàn thành.</p>
+    {% if local_recognition.status == 'partial' %}<p class="report-subtle">Bản đọc này chỉ bao gồm một phần bài làm.</p>{% endif %}
+    <details>
+        <summary>Xem nội dung nhận dạng bổ sung</summary>
+        <p class="report-feedback">{{ local_recognition.text }}</p>
+    </details>
+</section>
+{% endif %}

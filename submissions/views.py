@@ -143,6 +143,8 @@ def result(request, job_id):
     from ai_core.diagnostics import staff_grading_state
     job = get_object_or_404(GradingJob.objects.select_related('task__learner','task__assignment__classroom').filter(
         task__in=tasks_for(request.user)), pk=job_id)
+    from ai_core.local_recognition import public_recognition_report
+    local_recognition = public_recognition_report(job.result.get('recognition')) if (request.user.is_superuser or request.user.role in ('admin', 'teacher', 'manager')) and isinstance(job.result, dict) else None
     can_review = (request.user.is_superuser or request.user.role in ('admin','teacher')) and job.status in ('manual','ai_reviewed')
     ai_trial = None
     if (request.user.is_superuser or request.user.role in ('admin','teacher')) and job.kind in ('speaking','vocabulary'):
@@ -161,7 +163,7 @@ def result(request, job_id):
         'exercise_order':questions.get(row.get('question_id'),{}).get('exercise_order')}
         for row in job.result.get('details',[]) if isinstance(row,dict)] if job.kind=='listening' else []
     return render(request, 'submissions/result.html', {'job': job, 'can_review': can_review, 'published':report_job(job),
-        'ai_trial':ai_trial, 'can_confirm_completion':(request.user.is_superuser or request.user.role in ('admin','teacher')) and job.status=='graded' and job.completion_status=='pending',
+        'ai_trial':ai_trial, 'local_recognition':local_recognition, 'can_confirm_completion':(request.user.is_superuser or request.user.role in ('admin','teacher')) and job.status=='graded' and job.completion_status=='pending',
         'staff_grading_state':staff_grading_state(job) if request.user.is_superuser or request.user.role in ('admin','manager','teacher') else None,
         'can_ask_tutor':request.user.role=='student' and not request.user.is_superuser and job.status=='graded',
         'reference_video_url':video_url, 'listening_details':listening_details})

@@ -12,11 +12,26 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument('--once', action='store_true')
+        parser.add_argument('--warm-models', action='store_true', help='Nạp trước mô hình Colab để không phải chờ tải trọng số trong bài đầu tiên')
 
     def handle(self, *args, **options):
         self.stdout.write('Tiến trình chấm AI đã khởi động; Ctrl+C để dừng.')
         if not settings.OPENAI_API_KEY:
             self.stdout.write(self.style.WARNING('Tiến trình chưa nhận OPENAI_API_KEY. Kiểm tra .env và khởi động lại worker; bài xử lý lúc này sẽ chuyển chấm thủ công.'))
+        if options['warm_models']:
+            from ai_core.local_recognition import HINTS, LocalRecognitionError, inspect_model, load_local_model
+            for kind in ('vocabulary', 'speaking'):
+                info = inspect_model(kind)
+                if info['status'] != 'ready':
+                    self.stdout.write(f'{kind}: {HINTS[info["status"]]}')
+                    continue
+                try:
+                    _, _, device = load_local_model(kind)
+                    self.stdout.write(self.style.SUCCESS(f'{kind}: đã nạp mô hình Colab trên {device}.'))
+                except LocalRecognitionError as exc:
+                    self.stdout.write(self.style.WARNING(f'{kind}: {HINTS[exc.code]}'))
+                except Exception:
+                    self.stdout.write(self.style.WARNING(f'{kind}: {HINTS["error"]}'))
         try:
             while True:
                 close_old_connections()

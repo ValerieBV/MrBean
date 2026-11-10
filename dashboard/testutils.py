@@ -11,6 +11,7 @@ from assignments.models import Lesson, VocabWord, ListeningQuestion, SpeakingTas
 from assignments.services import assign_to_class
 
 
+@override_settings(AI_LOCAL_ENABLED=False)
 class IntegratedFixture(TestCase):
     def setUp(self):
         media = tempfile.TemporaryDirectory()

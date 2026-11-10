@@ -18,6 +18,10 @@ def assessment_result(result):
     clean = {key:value for key,value in result.items() if key in allowed}
     if isinstance(clean.get('comparison'), dict):
         clean['comparison'] = {key:value for key,value in clean['comparison'].items() if key != 'score'}
+    from .local_recognition import public_recognition_report
+    recognition = public_recognition_report(result.get('recognition'))
+    if recognition:
+        clean['recognition'] = recognition
     return clean
 
 

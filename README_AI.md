@@ -356,7 +356,8 @@ CSRF, snapshot rubric, nghe đúng/sai/bỏ trống, vocab thiếu lượt, ch�
 so khớp lời mẫu và transcript,
 idempotency, timeout, fallback, phân trang và tích hợp các model nguồn.
 Cần smoke test với key và bài làm thật để hiệu chỉnh rubric và độ chính xác
-OCR/transcription. Không có tuyên bố AI đã được huấn luyện riêng.
+OCR/transcription. Mô hình Colab tùy chọn được tích hợp theo hướng dẫn
+[Dùng mô hình Colab](docs/LOCAL_AI.md); không thay thế bước kiểm chứng độ chính xác.
 
 Production: đặt DJANGO_DEBUG=false, secret riêng, hosts đúng, HTTPS,
 PostgreSQL, storage riêng tư; không public thư mục `media/ai_submissions`.

@@ -152,6 +152,17 @@ OPENAI_API_KEY = os.getenv('OPENAI_API_KEY', '')
 OPENAI_TEXT_MODEL = os.getenv('OPENAI_TEXT_MODEL', 'gpt-6-luna')
 OPENAI_TRANSCRIBE_MODEL = os.getenv('OPENAI_TRANSCRIBE_MODEL', 'gpt-transcribe')
 OPENAI_TUTOR_MODEL = os.getenv('OPENAI_TUTOR_MODEL', OPENAI_TEXT_MODEL)
+# Local Colab checkpoints are optional supplements. OpenAI still receives the
+# original images/audio transcription and makes the completion proposal.
+AI_LOCAL_ENABLED = os.getenv('AI_LOCAL_ENABLED', 'true').lower() in ('true', '1', 'yes')
+AI_LOCAL_VOCAB_MODEL_DIR = os.getenv('AI_LOCAL_VOCAB_MODEL_DIR', 'ai_models/vocabulary/best_model')
+AI_LOCAL_SPEAKING_MODEL_DIR = os.getenv('AI_LOCAL_SPEAKING_MODEL_DIR', 'ai_models/speaking/best_model')
+AI_LOCAL_DEVICE = os.getenv('AI_LOCAL_DEVICE', 'auto').strip().lower()
+AI_LOCAL_TIMEOUT_SECONDS = 30
+AI_LOCAL_MAX_CROPS = 80
+AI_LOCAL_MAX_TOKENS = 128
+AI_LOCAL_MAX_AUDIO_SECONDS = 600
+AI_FFMPEG_BINARY = os.getenv('AI_FFMPEG_BINARY', 'ffmpeg')
 AI_TUTOR_TIMEOUT_SECONDS = 20
 AI_TUTOR_DAILY_LIMIT = 30
 AI_DEADLINE_SECONDS = 300

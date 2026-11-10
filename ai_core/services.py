@@ -153,6 +153,10 @@ def process_job(job_id, provider=None):
         if job.kind == 'vocabulary' and 'details' in raw:
             raw = {**raw, 'counts': [{'word': row['word'], 'count': row['observed']} for row in raw['details']]}
         result = validate_result(raw, job.kind, job.rubric_snapshot)
+        from .local_recognition import public_recognition_report
+        recognition = public_recognition_report(getattr(job, '_local_recognition', None))
+        if recognition:
+            result['recognition'] = recognition
         transcript = raw.get('transcript', '') if job.kind == 'speaking' else ''
         if not isinstance(transcript, str) or len(transcript) > 20000:
             raise ValueError('invalid_transcript')
@@ -163,7 +167,7 @@ def process_job(job_id, provider=None):
             result['transcript_source'] = 'openai_transcription'
         changed = GradingJob.objects.filter(pk=job_id, status='processing').update(
             status='ai_reviewed', result=result, suggested_score=None,
-            transcript=transcript, grading_method='openai', finished_at=finished)
+            transcript=transcript, grading_method=getattr(job, '_grading_method', 'openai'), finished_at=finished)
         if changed:
             from accounts.notifications import notify
             from django.urls import reverse
@@ -174,8 +178,11 @@ def process_job(job_id, provider=None):
     except Exception as exc:
         reason = failure_reason(exc)
         logger.warning('AI fallback job=%s reason=%s error_type=%s', job_id, reason, type(exc).__name__)
+        from .local_recognition import public_recognition_report
+        recognition = public_recognition_report(getattr(job, '_local_recognition', None))
+        preserved = {'recognition': recognition} if recognition else {}
         GradingJob.objects.filter(pk=job_id, status='processing').update(
             status='manual', fallback_reason=reason,
-            transcript=job.transcript if isinstance(job.transcript, str) and len(job.transcript)<=20000 else '', finished_at=timezone.now())
+            result=preserved, transcript=job.transcript if isinstance(job.transcript, str) and len(job.transcript)<=20000 else '', finished_at=timezone.now())
         notify_manual_jobs()
     return True
