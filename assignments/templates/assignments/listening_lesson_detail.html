@@ -59,7 +59,7 @@
 
     <section class="listening-section" aria-labelledby="listening-exercises-title">
         <div class="listening-section-heading"><div><h2 id="listening-exercises-title">Bài tập trong buổi <span class="listening-count">{{ exercises|length }} bài</span></h2>
-            <p class="listening-muted">Kiểm tra tài liệu và đáp án trước khi giao cho lớp. Nhập đáp án hàng loạt bằng cách dán từ Excel hoặc tải CSV/TXT.</p></div></div>
+            <p class="listening-muted">Đáp án và giải thích được nhập hàng loạt từ Word.</p></div></div>
         {% for exercise in exercises %}
         <article class="listening-panel" aria-labelledby="exercise-title-{{ exercise.pk }}">
             <div class="listening-heading"><div><p class="listening-type-number">BÀI {{ exercise.order }} · {{ exercise.get_kind_display }}</p><h3 id="exercise-title-{{ exercise.pk }}">{{ exercise.display_title }}</h3><p class="listening-muted">{{ exercise.question_count }} câu · Lựa chọn {{ exercise.choice_letters }}</p></div>
@@ -67,6 +67,7 @@
             </div>
             {% if exercise.audio_file %}<audio controls preload="metadata" aria-label="File nghe bài {{ exercise.order }}" src="{% url 'assignments:listening_exercise_media' exercise.pk 'audio' %}"></audio>{% else %}<p class="listening-errors">Chưa có file nghe. Cần bổ sung trước khi giao.</p>{% endif %}
             {% if exercise.document_file and exercise.kind != 'part2' %}{% url 'assignments:listening_exercise_media' exercise.pk 'document' as pdf_url %}{% include 'assignments/_pdf_viewer.html' with pdf_title='Đề bài nghe PDF' %}{% endif %}
+            {% if can_edit_solutions and exercise.kind != 'legacy' %}<div class="listening-actions"><a class="listening-button secondary" href="{% url 'assignments:listening_solutions_edit' exercise.pk %}">{% if exercise.solutions %}Xem / sửa lời giải{% else %}Thêm đáp án và giải thích{% endif %}</a></div>{% endif %}
             <details class="listening-key-disclosure"><summary>Kiểm tra {{ exercise.questions.count }} đáp án đúng · chỉ dành cho người giao</summary><div class="listening-key">{% for q in exercise.questions.all %}<span>Câu {{ q.display_number }}: <strong>{{ q.correct_option }}</strong>{% if can_edit %} <a href="{% url 'assignments:item_edit' 'listening' q.pk %}" aria-label="Sửa nội dung câu {{ q.display_number }}">Sửa</a>{% endif %}</span>{% endfor %}</div></details>
         </article>
         {% empty %}

@@ -27,7 +27,14 @@ if (form) {
         const issues=['part3','part4'].includes(kind.value)?rows.filter(row=>!complete(row)).length:0;
         status.textContent='Đã đọc '+importedCount+'/'+spec().count+' câu từ '+importedSource+'. '+(issues?'Có '+issues+' câu cần kiểm tra. Chọn “Kiểm tra nội dung câu hỏi” để sửa.':'Dán đáp án đúng để lưu bài nghe.');
     }
-    function openReview() {if(busy)return;if(!dialog.open)dialog.showModal();draw();}
+    function openReview() {
+        if(busy)return;
+        if(form.elements.solution_data?.value && document.getElementById('solutionsReview')?.hidden === false){
+            document.getElementById('solutionsReview').scrollIntoView({block:'start'});
+            document.querySelector('#solutionsEditor textarea')?.focus({preventScroll:true});return;
+        }
+        if(!dialog.open)dialog.showModal();draw();
+    }
     function drawNav() {
         nav.replaceChildren();
         rows.forEach((row,index)=>{
@@ -75,7 +82,9 @@ if (form) {
     }
     function setBusy(value) { busy=value;form.dataset.pdfBusy=String(value);textButton.disabled=scanButton.disabled=reviewButton.disabled=wordButton.disabled=kind.disabled=fileInput.disabled=wordInput.disabled=value;form.querySelector('[type=submit]').disabled=value;form.dispatchEvent(new Event('listening-questions-changed')); }
     async function readText() {
-        if(busy)return;setBusy(true);status.textContent='Đang đọc PDF…';let loadingTask;
+        if(busy || form.dataset.solutionsBusy==='true')return;
+        if(form.elements.solution_data?.value && document.getElementById('solutionsReview')?.hidden === false){status.textContent='Đã chọn PDF đề bài.';return;}
+        setBusy(true);status.textContent='Đang đọc PDF…';let loadingTask;
         try {
             const file=fileInput.files[0];
             if(!file&&!form.dataset.documentUrl)throw Error('Chọn file PDF hoặc dùng mục Word .docx bên dưới.');
@@ -98,14 +107,14 @@ if (form) {
         finally{try{await loadingTask?.destroy();}finally{setBusy(false);}}
     }
     async function readScan() {
-        if(busy)return;setBusy(true);status.textContent='Đang nhận dạng PDF bằng AI…';
+        if(busy || form.dataset.solutionsBusy==='true')return;setBusy(true);status.textContent='Đang nhận dạng PDF bằng AI…';
         try{wordInput.value='';if(fileInput.files[0])resetQuestions();const body=new FormData();body.set('kind',kind.value);if(fileInput.files[0])body.set('document_file',fileInput.files[0]);else if(form.dataset.exerciseId)body.set('exercise_id',form.dataset.exerciseId);else throw Error('Chọn file PDF trước khi nhận dạng.');
             const data=await request(body);applyImport(data.questions);
         }catch(error){status.textContent=error.message;}finally{setBusy(false);}
     }
     function resetQuestions() {rows=[];active=0;importedCount=null;draw();}
     async function readWord() {
-        if(busy)return;
+        if(busy || form.dataset.solutionsBusy==='true')return;
         const file=wordInput.files[0];if(!file){status.textContent='Chọn file Word .docx trước khi đọc câu hỏi.';return;}
         setBusy(true);resetQuestions();status.textContent='Đang đọc câu hỏi từ Word…';
         try{
@@ -122,6 +131,7 @@ if (form) {
     dialog.querySelectorAll('[data-review-close]').forEach(button=>button.onclick=()=>dialog.close());
     dialog.addEventListener('close',()=>{editor.querySelectorAll('input,textarea').forEach(input=>input.disabled=true);sync();importStatus();});
     form.addEventListener('submit',event=>{sync();if(dialog.open){event.preventDefault();dialog.close();}});
+    form.addEventListener('listening-solutions-imported',event=>{if(['part3','part4'].includes(kind.value))applyImport(event.detail,'Word');});
     draw();
     if(wordInput.files[0])readWord();else if(fileInput.files[0])readText();
 }

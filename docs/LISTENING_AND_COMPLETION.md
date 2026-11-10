@@ -2,6 +2,9 @@
 
 Áp dụng trên nhánh `codex/mrbean-full-integration`.
 
+Nhập Word kèm đáp án, giải thích, đoạn nghe dùng chung và hỏi AI: xem
+[Đáp án và lời giải bài nghe](LISTENING_SOLUTIONS.md).
+
 ## 1. Đánh giá hoàn thành
 
 | Trạng thái | Ý nghĩa | Tính hoàn thành |
@@ -57,7 +60,7 @@ theo dạng; backend từ chối số câu không đúng quy định.
    PDF cần có đủ hình/đề học viên được xem và không chứa bảng đáp án đúng.
 5. Với dạng 3/4, chọn một nguồn nội dung câu hỏi:
    - **PDF có văn bản:** tải PDF; hệ thống tự đọc câu hỏi và lựa chọn.
-   - **Word:** dùng mục **Hoặc đọc câu hỏi từ Word (.docx)**. Chọn file để đọc tự động,
+   - **Word:** dùng mục **File Word chỉ có câu hỏi**. Chọn file để đọc tự động,
      hoặc bấm **Đọc câu hỏi từ Word** để thử lại. Không cần đính kèm thêm PDF.
    - **PDF scan/ảnh:** chọn **Đọc bản scan bằng AI**. Đọc chữ thông thường sẽ báo rõ
      khi PDF không có văn bản đọc được; hệ thống không tự gọi API có phí.

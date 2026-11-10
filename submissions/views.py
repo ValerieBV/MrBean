@@ -170,6 +170,35 @@ def result(request, job_id):
 
 
 @login_required
+def listening_review(request, job_id):
+    from .listening_review import review_groups
+    job = get_object_or_404(GradingJob.objects.select_related('task__learner').filter(
+        task__in=tasks_for(request.user)), pk=job_id, kind='listening', status='graded')
+    groups = review_groups(job)
+    try:
+        index = int(request.GET.get('group', 1))
+        if not 1 <= index <= len(groups):
+            raise ValueError
+    except (TypeError, ValueError):
+        raise Http404
+    current = groups[index-1]
+    exercises = []
+    for item in groups:
+        if not exercises or exercises[-1]['id'] != item['exercise']['id']:
+            exercises.append({'id': item['exercise']['id'], 'order': item['exercise']['order'],
+                'label': item['exercise'].get('label') or item['exercise'].get('title'),
+                'group': item['index'], 'range': item['label'],
+                'selected': item['exercise']['id'] == current['exercise']['id']})
+    response = render(request, 'submissions/listening_review.html', {
+        'job': job, 'groups': [g for g in groups if g['exercise']['id'] == current['exercise']['id']],
+        'exercises': exercises, 'group': current,
+        'previous': index-1 if index > 1 else None, 'next': index+1 if index < len(groups) else None,
+        'can_ask_tutor': request.user.role == 'student' and not request.user.is_superuser})
+    response['Cache-Control'] = 'private, no-store'
+    return response
+
+
+@login_required
 @require_POST
 def autosave(request, task_id=None, pk=None):
     if pk is not None:

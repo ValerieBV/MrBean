@@ -49,6 +49,11 @@ jobs:
         env:
           MRBEAN_PYTHON: python
           MRBEAN_QA_OUTPUT: ${{ github.workspace }}/browser-output/local-recognition
+      - run: node listening_solutions.cjs
+        working-directory: tests/browser
+        env:
+          MRBEAN_PYTHON: python
+          MRBEAN_QA_OUTPUT: ${{ github.workspace }}/browser-output/listening-solutions
       - uses: actions/upload-artifact@v4
         if: always()
         with:

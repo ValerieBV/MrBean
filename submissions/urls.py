@@ -18,4 +18,5 @@ urlpatterns = [
     path('tasks/<int:task_id>/listening/<int:exercise_id>/<str:kind>/', views.listening_material, name='listening_material'),
     path('tasks/<int:task_id>/draft/', views.autosave, name='autosave'),
     path('results/<int:job_id>/', views.result, name='result'),
+    path('results/<int:job_id>/listening/solutions/', views.listening_review, name='listening_review'),
 ]

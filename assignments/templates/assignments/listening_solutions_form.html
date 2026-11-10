@@ -1,0 +1,12 @@
+{% extends 'base_admin.html' %}{% load static %}
+{% block title %}Đáp án và giải thích · {{ exercise.display_title }}{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'assignments/listening.css' %}">{% endblock %}
+{% block content %}<div class="listening-page">
+<div class="listening-heading"><div><h1>{{ exercise.display_title }}</h1><p>{{ exercise.get_kind_display }} · {{ lesson.title }}</p></div><a class="listening-button secondary" href="{% url 'assignments:lesson_detail' lesson.pk %}">Quay lại buổi học</a></div>
+<form method="post" enctype="multipart/form-data" id="listeningSolutionsForm" class="listening-panel" data-solutions-url="{% url 'assignments:listening_solutions_extract' lesson.pk %}">
+{% csrf_token %}<input type="hidden" name="kind" value="{{ exercise.kind }}">
+{% if form.non_field_errors %}<div class="listening-errors" role="alert">{{ form.non_field_errors }}</div>{% endif %}
+{% include 'assignments/_solutions_editor.html' %}
+<div class="listening-actions"><button class="listening-button" type="submit">Lưu lời giải</button></div>
+</form></div>{% endblock %}
+{% block scripts %}<script src="{% static 'assignments/solutions_editor.js' %}" defer></script>{% endblock %}

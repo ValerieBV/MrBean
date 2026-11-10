@@ -162,6 +162,7 @@ for(const [index,kind,count] of [[1,'part1',6],[2,'part2',25],[3,'part3',39],[4,
   }
  }
  if(kind==='part2'){assert(!(await teacher.locator('[data-pdf-field]').isVisible()));assert(!(await teacher.locator('#questionReview').isVisible()));assert.match(await teacher.locator('#selectedKindMeta').innerText(),/7–31/);}
+ await teacher.locator('#manualAnswerKey').evaluate(element=>{element.open=true;});
  if(kind==='part2')await teacher.locator('[name=answer_key_file]').setInputFiles('listening-key-part2.csv');else await fill(teacher,'answer_key',Array.from({length:count},(_,i)=>kind==='part3'?(32+i)+'.B':kind==='part4'?(71+i)+'.B':'B').join(' '));
  if(kind==='part1')await teacher.screenshot({path:'screenshots/listening-bulk-authoring.png',fullPage:true});
  if(kind==='part4'){

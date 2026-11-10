@@ -56,13 +56,22 @@ def staff_can_reply(thread, user):
     return False
 
 
-def start_study(student, job):
+def start_study(student, job, question_id=None):
     if not is_student(student) or job.task.learner_id != student.pk:
         raise PermissionDenied
     if job.status != 'graded':
         raise ValidationError('Bạn có thể hỏi về bài này sau khi kết quả đã được công bố.')
+    subject = 'Giải đáp: ' + job.task.title
+    if question_id is not None:
+        from submissions.listening_review import focused_question
+        try:
+            focus = focused_question(job, question_id)
+        except ValueError as exc:
+            raise ValidationError('Câu hỏi không thuộc bài nghe đã nộp.') from exc
+        subject = f'Giải đáp câu {focus["question"]["number"]}: {job.task.title}'
     thread,_=Conversation.objects.get_or_create(student=student,job=job,kind=Conversation.KNOWLEDGE,
-        defaults={'subject':('Giải đáp: '+job.task.title)[:180], 'classroom':job.task.assignment.classroom if job.task.assignment_id else None})
+        focus_question_id=question_id,
+        defaults={'subject':subject[:180], 'classroom':job.task.assignment.classroom if job.task.assignment_id else None})
     return thread
 
 

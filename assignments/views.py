@@ -109,6 +109,7 @@ def lesson_detail(request, pk):
             })
         return render(request, 'assignments/listening_lesson_detail.html', {
             'lesson': lesson, 'can_edit': can_edit,
+            'can_edit_solutions': is_manager(request.user) or lesson.created_by_id == request.user.pk,
             'exercises': exercises, 'listening_types': type_cards,
             'can_add_exercise': can_edit and len(exercises) < 4,
             'lesson_used': used,
@@ -417,6 +418,61 @@ def listening_exercise_edit(request, lesson_id, pk=None):
         'selected_spec': LISTENING_SPECS.get(form['kind'].value(), LISTENING_SPECS['part1']),
         'title': 'Chỉnh sửa bài nghe' if exercise else 'Thêm bài nghe vào buổi',
     })
+
+
+@require_POST
+@staff_required
+def listening_solutions_extract(request, lesson_id):
+    from django.http import JsonResponse
+    from .listening_solutions import extract_docx_solutions
+    get_object_or_404(editable_lessons(request.user), pk=lesson_id, skill='listening')
+    try:
+        upload = request.FILES.get('solutions_file')
+        if upload is None:
+            raise ValidationError('Chọn file Word đáp án và giải thích.')
+        bundle = extract_docx_solutions(upload, request.POST.get('kind'))
+        response = JsonResponse({'solutions': bundle})
+    except ValidationError as exc:
+        response = JsonResponse({'message': ' '.join(exc.messages)}, status=400)
+    response['Cache-Control'] = 'private, no-store'
+    return response
+
+
+@login_required
+def listening_solutions_template(request, kind):
+    from django.http import HttpResponse, Http404
+    from .listening_solutions import solution_template
+    staff(request.user)
+    if kind not in ('part1', 'part2', 'part3', 'part4'):
+        raise Http404
+    response = HttpResponse(solution_template(kind), content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+    response['Content-Disposition'] = f'attachment; filename="loi-giai-{kind}.docx"'
+    response['Cache-Control'] = 'private, no-store'
+    return response
+
+
+@login_required
+def listening_solutions_edit(request, pk):
+    from .forms import ListeningSolutionsForm
+    from .services import save_listening_solutions
+    staff(request.user)
+    exercise = get_object_or_404(ListeningExercise.objects.select_related('lesson').filter(
+        lesson__in=editable_lessons(request.user)), pk=pk)
+    if exercise.kind == 'legacy':
+        raise PermissionDenied
+    form = ListeningSolutionsForm(request.POST or None, request.FILES or None, exercise=exercise)
+    if request.method == 'POST' and form.is_valid():
+        try:
+            save_listening_solutions(actor=request.user, exercise=exercise, bundle=form.cleaned_data['solution_bundle'])
+        except ValidationError as exc:
+            form.add_error(None, exc)
+        else:
+            messages.success(request, 'Đã lưu đáp án và giải thích.')
+            return redirect('assignments:lesson_detail', pk=exercise.lesson_id)
+    response = render(request, 'assignments/listening_solutions_form.html', {
+        'form': form, 'exercise': exercise, 'lesson': exercise.lesson})
+    response['Cache-Control'] = 'private, no-store'
+    return response
 
 
 @require_POST

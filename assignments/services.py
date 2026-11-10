@@ -79,6 +79,7 @@ def save_listening_exercise(*, actor, form):
         raise ValidationError('Mỗi buổi chỉ có từ 1 đến 4 bài nghe.')
     exercise = form.save(commit=False)
     exercise.lesson = lesson
+    exercise.solutions = form.cleaned_data.get('solution_bundle', {})
     exercise.full_clean()
     exercise.save()
     existing = {q.order: q for q in exercise.questions.all()}
@@ -130,6 +131,12 @@ def lesson_rubric(lesson, repetitions=1):
                     'label': exercise.get_kind_display(), 'title': exercise.display_title,
                     'question_count': len(items), 'audio_name': exercise.audio_file.name,
                     'document_name': exercise.document_file.name if exercise.kind != 'part2' else '', 'question_ids': [q.pk for q in items]}
+                if exercise.solutions:
+                    from .listening_solutions import normalize_solutions, match_solutions_to_questions
+                    bundle = normalize_solutions(exercise.solutions, exercise.kind,
+                        expected_numbers=[q.display_number for q in items])
+                    match_solutions_to_questions(bundle, items, exercise.kind)
+                    group['solutions'] = bundle
                 groups.append(group)
                 for q in items:
                     row = {k: getattr(q, k) for k in ('id', 'question_text', 'option_a', 'option_b', 'option_c', 'option_d', 'correct_option', 'correct_answer')}
@@ -195,6 +202,22 @@ def lesson_rubric(lesson, repetitions=1):
             youtube_url='' if lesson.video_file else lesson.youtube_url)
 
     return data
+
+
+@transaction.atomic
+def save_listening_solutions(*, actor, exercise, bundle):
+    from ai_core.permissions import is_manager
+    from .listening_solutions import normalize_solutions, match_solutions_to_questions
+    lesson = Lesson.objects.select_for_update().get(pk=exercise.lesson_id)
+    if not (is_manager(actor) or actor.role == 'teacher' and lesson.created_by_id == actor.pk):
+        raise PermissionDenied
+    exercise = ListeningExercise.objects.select_for_update().get(pk=exercise.pk, lesson=lesson)
+    questions = list(exercise.questions.order_by('order', 'pk'))
+    bundle = normalize_solutions(bundle, exercise.kind, expected_numbers=[q.display_number for q in questions])
+    match_solutions_to_questions(bundle, questions, exercise.kind)
+    exercise.solutions = bundle
+    exercise.save(update_fields=['solutions'])
+    return exercise
 
 
 @transaction.atomic

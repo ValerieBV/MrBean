@@ -18,6 +18,7 @@ class Conversation(models.Model):
     creation_key = models.UUIDField(null=True, blank=True, unique=True)
     category = models.CharField(max_length=16, choices=CATEGORY_CHOICES, default='knowledge')
     job = models.ForeignKey('ai_core.GradingJob', null=True, blank=True, on_delete=models.PROTECT, related_name='conversations')
+    focus_question_id = models.PositiveBigIntegerField(null=True, blank=True)
     classroom = models.ForeignKey('courses.ClassRoom', null=True, blank=True, on_delete=models.PROTECT, related_name='support_conversations')
     recipient = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.PROTECT,
                                   related_name='support_inbox')
@@ -29,8 +30,12 @@ class Conversation(models.Model):
 
     class Meta:
         ordering = ['-updated_at', '-pk']
-        constraints = [models.UniqueConstraint(fields=['student', 'job'], condition=Q(kind='knowledge'),
-                                                name='one_study_thread_per_result')]
+        constraints = [
+            models.UniqueConstraint(fields=['student', 'job'], condition=Q(kind='knowledge', focus_question_id__isnull=True),
+                                    name='one_general_study_thread_per_result'),
+            models.UniqueConstraint(fields=['student', 'job', 'focus_question_id'], condition=Q(kind='knowledge', focus_question_id__isnull=False),
+                                    name='one_study_thread_per_listening_question'),
+        ]
 
     def get_absolute_url(self):
         return reverse('support:detail', args=[self.pk])

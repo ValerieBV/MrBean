@@ -10,6 +10,11 @@ from .question_import import QUESTION, parse_lines, select_questions
 MAX_UPLOAD = 10 * 1024 * 1024
 
 
+def validate_word_upload(upload):
+    if upload and (Path(upload.name).suffix.lower() != '.docx' or not 0 < upload.size <= MAX_UPLOAD):
+        raise ValidationError('Chọn file Word .docx tối đa 10 MiB. Với .doc, lưu lại thành .docx.')
+
+
 def _name(tag):
     return tag.rsplit('}', 1)[-1]
 
@@ -140,11 +145,8 @@ def _paragraphs(block):
             yield from _paragraphs(child)
 
 
-def extract_docx_questions(upload, kind):
-    if kind not in ('part3', 'part4'):
-        raise ValidationError('Nhập Word chỉ dùng cho dạng 3 và dạng 4.')
-    if Path(upload.name).suffix.lower() != '.docx' or not 0 < upload.size <= MAX_UPLOAD:
-        raise ValidationError('Chọn file Word .docx tối đa 10 MiB. Với .doc, lưu lại thành .docx.')
+def read_docx_records(upload):
+    validate_word_upload(upload)
     upload.seek(0)
     data = upload.read(MAX_UPLOAD + 1)
     if len(data) > MAX_UPLOAD:
@@ -159,21 +161,30 @@ def extract_docx_questions(upload, kind):
             body = document.find('./{*}body')
             if body is None:
                 raise ValidationError('Không tìm thấy nội dung trong file Word.')
-            lines, characters = [], 0
+            records, characters = [], 0
             for paragraph in _paragraphs(body):
                 text = _text(paragraph).strip()
                 prefix = numbering.prefix(paragraph)
                 if prefix and not QUESTION.match(text) and not re.match(r'^\s*[(（]?[A-D][)）.:]', text, re.I):
                     text = prefix+' '+text
                 characters += len(text)
-                if characters > 250000 or len(lines) > 40000:
+                if characters > 250000 or len(records) > 40000:
                     raise ValidationError('Word quá nhiều nội dung. Tách riêng phần đề cần dùng.')
-                lines.extend(text.splitlines())
+                runs = [run for run in paragraph.iterfind('.//{*}r') if _text(run).strip()]
+                bold = bool(runs) and all(run.find('./{*}rPr/{*}b') is not None and
+                    _attr(run.find('./{*}rPr/{*}b'), 'val', '1') not in ('0', 'false', 'off') for run in runs)
+                records.extend({'text': line, 'bold': bold} for line in text.splitlines())
     except (zipfile.BadZipFile, ET.ParseError, RuntimeError, ValueError, KeyError, OverflowError):
         raise ValidationError('Không đọc được file Word. Mở tài liệu và lưu lại dưới dạng .docx.') from None
-    if not any(line.strip() for line in lines):
+    if not any(row['text'].strip() for row in records):
         raise ValidationError('Word không có văn bản đọc được. Nếu chỉ chứa ảnh, xuất PDF rồi dùng “Đọc bản scan bằng AI”.')
-    questions = select_questions(parse_lines(lines), kind)
+    return records
+
+
+def extract_docx_questions(upload, kind):
+    if kind not in ('part3', 'part4'):
+        raise ValidationError('Nhập Word chỉ dùng cho dạng 3 và dạng 4.')
+    questions = select_questions(parse_lines([row['text'] for row in read_docx_records(upload)]), kind)
     if not questions:
         raise ValidationError('Chưa tách được câu hỏi trong Word. Dùng số câu như 32. hoặc 71. và các lựa chọn A., B., C., D.')
     return questions

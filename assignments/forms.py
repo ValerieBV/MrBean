@@ -2,6 +2,7 @@ from django import forms
 import json
 
 from .models import Lesson, VocabWord, ListeningQuestion, SpeakingTask, ListeningExercise
+from .docx_import import validate_word_upload
 
 INPUT = "w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm"
 
@@ -123,6 +124,10 @@ class ListeningQuestionForm(forms.ModelForm):
 
 
 class ListeningExerciseForm(forms.ModelForm):
+    solution_data = forms.CharField(required=False, max_length=2000000, widget=forms.HiddenInput(), label='Lời giải')
+    solutions_previewed = forms.BooleanField(required=False, widget=forms.HiddenInput())
+    solutions_file = forms.FileField(label='File Word đáp án và giải thích', required=False,
+        validators=[validate_word_upload], widget=forms.ClearableFileInput(attrs={'accept': '.docx', 'class': INPUT}))
     question_data = forms.CharField(required=False, max_length=250000, widget=forms.HiddenInput(), label='Nội dung câu hỏi')
     answer_key = forms.CharField(label='Dán đáp án hàng loạt', required=False,
         widget=forms.Textarea(attrs={'rows': 7, 'placeholder': '1.A 2.C 3.B 4.D 5.A 6.C', 'class': INPUT}),
@@ -153,6 +158,7 @@ class ListeningExerciseForm(forms.ModelForm):
         self.fields['audio_file'].help_text = 'Tải file nghe đầy đủ cho bài này, tối đa 50 MiB.'
         self.fields['document_file'].help_text = 'Dạng 1 bắt buộc PDF đề bài; dạng 3/4 có thể thêm PDF. Dạng 2 chỉ dùng file nghe. Không đưa đáp án vào PDF học viên xem.'
         if self.instance.pk:
+            self.initial['solution_data'] = json.dumps(self.instance.solutions or {}, ensure_ascii=False)
             questions = list(self.instance.questions.all())
             self.initial['answer_key'] = '\n'.join(f'{q.display_number}.{q.correct_option}' for q in questions)
             self.initial['question_data'] = json.dumps([{'number':q.display_number,
@@ -175,6 +181,25 @@ class ListeningExerciseForm(forms.ModelForm):
             self.add_error('audio_file', 'Cần tải file nghe cho bài này.')
         if data.get('kind') == 'part1' and not data.get('document_file'):
             self.add_error('document_file', 'Dạng Mô tả tranh cần PDF để học viên xem trên web.')
+        from .listening_solutions import extract_docx_solutions, normalize_solutions, solution_question_content
+        bundle = {}
+        try:
+            if data.get('solutions_file') and not data.get('solutions_previewed'):
+                bundle = extract_docx_solutions(data['solutions_file'], data['kind'])
+            elif data.get('solution_data'):
+                raw = json.loads(data['solution_data'])
+                if raw:
+                    bundle = normalize_solutions(raw, data['kind'])
+            elif data.get('solutions_file'):
+                bundle = extract_docx_solutions(data['solutions_file'], data['kind'])
+        except (ValueError, TypeError, forms.ValidationError) as exc:
+            self.add_error('solution_data', exc if isinstance(exc, forms.ValidationError) else 'Lời giải không hợp lệ.')
+            return data
+        data['solution_bundle'] = bundle
+        if bundle and not data.get('answer_key') and not data.get('answer_key_file'):
+            data['answer_key'] = '\n'.join(f'{row["number"]}.{row["answer"]}' for row in bundle['questions'])
+        if bundle and data['kind'] in ('part3', 'part4'):
+            data['question_data'] = json.dumps(solution_question_content(bundle))
         text = data.get('answer_key', '')
         upload = data.get('answer_key_file')
         if upload:
@@ -229,6 +254,10 @@ class ListeningExerciseForm(forms.ModelForm):
                         problems.append(f'Câu {row["source_number"]}: cần nội dung lựa chọn {" / ".join(missing)}.')
             if problems:
                 self.add_error('question_data', problems)
+            if bundle:
+                official = {row['number']: row['answer'] for row in bundle['questions']}
+                if any(official.get(row['source_number']) != row['answer'] for row in rows):
+                    self.add_error('solution_data', 'Đáp án trong lời giải khác bảng đáp án. Kiểm tra lại trước khi lưu.')
             data['answer_rows'] = rows
         return data
 
@@ -245,6 +274,39 @@ class ListeningExerciseForm(forms.ModelForm):
         value = self.cleaned_data.get('document_file')
         validate_listening_pdf(value)
         return value
+
+
+class ListeningSolutionsForm(forms.Form):
+    solution_data = forms.CharField(required=False, max_length=2000000, widget=forms.HiddenInput(), label='Lời giải')
+    solutions_previewed = forms.BooleanField(required=False, widget=forms.HiddenInput())
+    solutions_file = forms.FileField(label='File Word đáp án và giải thích', required=False,
+        validators=[validate_word_upload], widget=forms.ClearableFileInput(attrs={'accept': '.docx', 'class': INPUT}))
+
+    def __init__(self, *args, exercise, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.exercise = exercise
+        self.initial['solution_data'] = json.dumps(exercise.solutions or {}, ensure_ascii=False)
+
+    def clean(self):
+        from .listening_solutions import extract_docx_solutions, normalize_solutions, match_solutions_to_questions
+        data = super().clean()
+        try:
+            if data.get('solutions_file') and not data.get('solutions_previewed'):
+                raw = extract_docx_solutions(data['solutions_file'], self.exercise.kind)
+            elif data.get('solution_data'):
+                raw = json.loads(data['solution_data'])
+            elif data.get('solutions_file'):
+                raw = extract_docx_solutions(data['solutions_file'], self.exercise.kind)
+            else:
+                raise forms.ValidationError('Chọn file Word đáp án và giải thích.')
+            questions = list(self.exercise.questions.order_by('order', 'pk'))
+            bundle = normalize_solutions(raw, self.exercise.kind,
+                expected_numbers=[q.display_number for q in questions])
+            match_solutions_to_questions(bundle, questions, self.exercise.kind)
+            data['solution_bundle'] = bundle
+        except (ValueError, TypeError, forms.ValidationError) as exc:
+            self.add_error('solution_data', exc if isinstance(exc, forms.ValidationError) else 'Lời giải không hợp lệ.')
+        return data
 
 
 class SpeakingTaskForm(forms.ModelForm):

@@ -15,7 +15,11 @@ def support_schema_ready():
     """
     connection = connections[router.db_for_read(Conversation)]
     required = {model._meta.db_table for model in (Conversation, Message, TutorAttempt)}
-    return required.issubset(connection.introspection.table_names())
+    if not required.issubset(connection.introspection.table_names()):
+        return False
+    with connection.cursor() as cursor:
+        columns = connection.introspection.get_table_description(cursor, Conversation._meta.db_table)
+    return 'focus_question_id' in {column.name for column in columns}
 
 
 def require_support_tables(view):

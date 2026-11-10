@@ -1,0 +1,23 @@
+{% extends 'base.html' %}{% load static %}
+{% block title %}Đáp án và giải thích · {{ job.task.title }}{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'assignments/listening.css' %}">{% endblock %}
+{% block content %}<div class="listening-page listening-solutions-page">
+<div class="listening-heading"><div><h1>Đáp án và giải thích</h1><p>{{ job.task.title }}</p></div><a class="listening-button secondary" href="{% url 'submissions:result' job.pk %}">Kết quả bài tập</a></div>
+<nav class="solutions-exercise-nav" aria-label="Chọn bài nghe">{% for exercise in exercises %}<a href="?group={{ exercise.group }}" class="listening-button{% if not exercise.selected %} secondary{% endif %}"{% if exercise.selected %} aria-current="true"{% endif %} aria-label="Bài {{ exercise.order }} · {{ exercise.range }}">Bài {{ exercise.order }} · {{ exercise.label }}</a>{% endfor %}</nav>
+<nav class="solutions-navigation" aria-label="Chọn nhóm câu">
+{% for item in groups %}<a class="question-number{% if item.index == group.index %} current{% endif %}" href="?group={{ item.index }}"{% if item.index == group.index %} aria-current="page"{% endif %} aria-label="{{ item.label }}">{{ item.start }}{% if item.end != item.start %}–{{ item.end }}{% endif %}</a>{% endfor %}
+</nav>
+<section class="listening-panel"><div class="listening-heading"><div><p class="listening-type-number">BÀI {{ group.exercise.order }} · {{ group.exercise.title }}</p><h2>{{ group.label }}</h2></div>{% if group.exercise.audio_name %}<audio controls preload="metadata" aria-label="Nghe lại bài {{ group.exercise.order }}" src="{% url 'ai_core:listening_material' job.pk group.exercise.id 'audio' %}"></audio>{% endif %}</div>
+<div class="solutions-layout{% if not group.passage %} without-passage{% endif %}">
+{% if group.passage %}<aside class="solution-shared-passage"><h3>{% if group.exercise.kind == 'part3' %}Hội thoại{% else %}Đoạn nói{% endif %}</h3><div class="solution-prose">{{ group.passage|linebreaksbr }}</div>{% if group.translation %}<details><summary>Bản dịch đoạn nghe</summary><div class="solution-prose">{{ group.translation|linebreaksbr }}</div></details>{% endif %}</aside>{% endif %}
+<div class="solution-questions">{% for question in group.questions %}<article id="question-{{ question.id }}" class="solution-review-question" aria-labelledby="solution-title-{{ question.id }}">
+<div class="listening-heading"><h3 id="solution-title-{{ question.id }}">Câu {{ question.number }}</h3><span class="solution-result{% if question.correct %} correct{% endif %}">{% if question.correct %}Đúng{% elif question.chosen %}Chưa đúng{% else %}Chưa chọn{% endif %}</span></div>
+{% if question.question_text %}<p class="listening-question-text">{{ question.question_text|linebreaksbr }}</p>{% endif %}
+<ol class="solution-options">{% for option in question.options %}<li{% if option.correct %} class="correct"{% endif %}><span class="solution-option-letter">{{ option.letter }}</span><span>{{ option.text|default:option.letter }}</span>{% if option.correct %}<span class="solution-option-label">Đáp án đúng</span>{% elif option.chosen %}<span class="solution-option-label">Bạn chọn</span>{% endif %}</li>{% endfor %}</ol>
+<p class="solution-submitted">Bạn chọn: <strong>{{ question.chosen|default:'Chưa chọn' }}</strong>{% if question.short_answer %} · {{ question.short_answer }}{% endif %}</p>
+<div class="solution-explanation"><h4>Giải thích đáp án {{ question.correct_option }}</h4>{% if question.explanation %}<div class="solution-prose">{{ question.explanation|linebreaksbr }}</div>{% else %}<p>Giáo viên chưa bổ sung lời giải cho câu này.</p>{% endif %}</div>
+{% if question.translation %}<details><summary>Bản dịch câu hỏi và lựa chọn</summary><div class="solution-prose">{{ question.translation|linebreaksbr }}</div></details>{% endif %}
+{% if can_ask_tutor %}<a class="listening-button secondary" href="{% url 'support:start_question' job.pk question.id %}" aria-label="Hỏi AI về câu {{ question.number }}">Hỏi AI</a>{% endif %}
+</article>{% endfor %}</div></div></section>
+<nav class="listening-actions solutions-paging" aria-label="Chuyển nhóm lời giải">{% if previous %}<a class="listening-button secondary" href="?group={{ previous }}">← Nhóm trước</a>{% endif %}{% if next %}<a class="listening-button" href="?group={{ next }}">Nhóm tiếp →</a>{% endif %}</nav>
+</div>{% endblock %}

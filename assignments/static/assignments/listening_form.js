@@ -7,22 +7,20 @@
  function update(){
   const spec=specs[kind.value];if(!spec)return;
   const audioOnly=kind.value==='part2',pdfField=form.querySelector('[data-pdf-field]');
-  pdfField.hidden=audioOnly;pdfField.querySelectorAll('input,button').forEach(control=>control.disabled=audioOnly||form.dataset.pdfBusy==='true');
-  const wordField=form.querySelector('[data-docx-field]');wordField.hidden=!['part3','part4'].includes(kind.value);
+  const hasSolutions=form.dataset.hasSolutions==='true';
+  pdfField.hidden=audioOnly;pdfField.querySelectorAll('input,button').forEach(control=>control.disabled=audioOnly||form.dataset.pdfBusy==='true'||hasSolutions&&control.tagName==='BUTTON');
+  const wordField=form.querySelector('[data-docx-field]');wordField.hidden=hasSolutions||!['part3','part4'].includes(kind.value);
   wordField.querySelectorAll('input,button').forEach(control=>control.disabled=wordField.hidden||form.dataset.pdfBusy==='true');
-  document.getElementById('openQuestionReview').hidden=['part1','part2'].includes(kind.value);
+  document.getElementById('openQuestionReview').hidden=hasSolutions||['part1','part2'].includes(kind.value);
   if(['part1','part2'].includes(kind.value)&&document.getElementById('questionReview').open)document.getElementById('questionReview').close();
   count.readOnly=spec.count!==null;if(spec.count!==null)count.value=spec.count;
   pdf.required=kind.value==='part1'&&form.dataset.hasDocument!=='true';
-  document.getElementById('kindHelp').textContent=(spec.count?spec.count+' câu · ': 'Nhập số câu · ')+spec.letters.split('').join(' / ')+(kind.value==='part1'?' · cần PDF đề bài':'');
   document.getElementById('selectedKindTitle').textContent=kind.options[kind.selectedIndex].textContent;
   document.getElementById('selectedKindMeta').textContent=(count.value?count.value+' câu · ':'')+spec.letters.length+' đáp án mỗi câu'+(kind.value==='part1'?' · cần file nghe và PDF':' · cần file nghe');
-  const total=Number(count.value)||6,numbers=questionNumbers(total),example=numbers.slice(0,6).map((number,i)=>number+'.'+spec.letters[i%spec.letters.length]);
+  const total=Number(count.value)||6,numbers=questionNumbers(total);
   if(kind.value==='part2'||kind.value==='part4')document.getElementById('selectedKindMeta').textContent='Câu '+numbers[0]+'–'+numbers[total-1]+' · '+total+' câu · '+(audioOnly?'chỉ file nghe, chọn A/B/C':'4 lựa chọn mỗi câu');
-  document.getElementById('keyExample').textContent=example.join(' ')+(total>6?' … '+numbers[total-1]+'.'+spec.letters[(total-1)%spec.letters.length]:'');
-  document.getElementById('keyExampleHelp').textContent='Cần đủ '+total+' đáp án. Có thể dán cả cột từ Excel hoặc tải CSV/TXT.';
   const entries=(key.value.toUpperCase().match(/[A-D](?=$|[\s,;|])/g)||[]).length;
-  summary.textContent=key.value.trim()?'Đang có khoảng '+entries+' đáp án. Hệ thống sẽ kiểm tra đủ số câu và đáp án trước khi lưu.':'Dán đủ đáp án hoặc tải bảng CSV/TXT.';
+  summary.textContent=key.value.trim()?entries+'/'+total+' đáp án':'';
  }
  kind.addEventListener('change',update);key.addEventListener('input',update);form.addEventListener('listening-questions-changed',update);update();
  document.getElementById('downloadKeyTemplate').onclick=()=>{

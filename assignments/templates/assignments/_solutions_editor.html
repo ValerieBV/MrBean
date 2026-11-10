@@ -1,0 +1,9 @@
+<section class="solutions-authoring" aria-labelledby="solutions-title">
+<div class="listening-heading"><h2 id="solutions-title">Đáp án và giải thích</h2><a id="downloadSolutionsTemplate" class="listening-button secondary" href="{% url 'assignments:listening_solutions_template' 'part1' %}" data-template-url="{% url 'assignments:listening_solutions_template' 'part1' %}">Tải mẫu Word</a></div>
+{{ form.solution_data }}{{ form.solutions_previewed }}
+<div class="listening-field"><label for="{{ form.solutions_file.id_for_label }}">{{ form.solutions_file.label }}</label>{{ form.solutions_file }}{{ form.solutions_file.errors }}</div>
+<button type="button" id="readSolutionsWord" class="listening-button secondary">Đọc đáp án và giải thích từ Word</button>
+<p id="solutionsStatus" role="status" aria-live="polite"></p>
+{% if form.solution_data.errors %}<div class="listening-errors" role="alert">{{ form.solution_data.errors }}</div>{% endif %}
+{% if not controls_only %}<div id="solutionsReview" hidden><nav id="solutionsNav" class="question-review-nav" aria-label="Chọn nhóm lời giải"></nav><div id="solutionsEditor"></div></div>{% endif %}
+</section>

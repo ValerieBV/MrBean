@@ -97,6 +97,7 @@ class ListeningExercise(models.Model):
     audio_file = models.FileField('File nghe', upload_to='assignments/listening/audio/', blank=True, validators=[validate_listening_audio])
     document_file = models.FileField('Đề bài PDF xem trên web', upload_to='assignments/listening/documents/', blank=True, validators=[validate_listening_pdf])
     question_count = models.PositiveSmallIntegerField('Số câu', validators=[MinValueValidator(1), MaxValueValidator(200)])
+    solutions = models.JSONField('Đáp án và giải thích', default=dict, blank=True)
 
     class Meta:
         ordering = ['order', 'pk']

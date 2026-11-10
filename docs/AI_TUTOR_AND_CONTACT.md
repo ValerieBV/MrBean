@@ -6,7 +6,9 @@ Sau khi bài đã có kết quả, mở trang kết quả và chọn **Hỏi AI 
 Hỏi đáp không có mục riêng trên thanh bên. Muốn mở lại cuộc trao đổi, quay lại
 kết quả của đúng bài tập và chọn nút hỏi AI; lịch sử đã có được giữ nguyên.
 AI giải thích từ vựng, ngữ pháp, cách hiểu nội dung đọc/nghe dựa trên bài đã chấm
-và nhận xét giáo viên. Mỗi lần nộp có một cuộc hỏi đáp riêng; vào lại sẽ giữ lịch sử.
+và nhận xét giáo viên. Mỗi lần nộp có một cuộc hỏi đáp chung; bài nghe còn có
+cuộc hỏi đáp riêng tại từng câu trong **Đáp án và giải thích → Hỏi AI**.
+Mở lại cùng câu sẽ giữ lịch sử. Dạng 3/4 gửi đúng đoạn chung và ba câu liên quan.
 Điểm công bố không thay đổi vì cuộc hỏi đáp.
 
 Nếu chưa hiểu hoặc cần kiểm tra cụ thể bản ghi/ảnh, chọn **Hỏi giáo viên**. Có thể
@@ -75,8 +77,8 @@ python manage.py collectstatic --noinput
 ```
 
 Khởi động lại web server. Các worker chấm bài/watchdog hiện tại tiếp tục dùng như
-cũ. Không cần thêm thư viện ngoài requirements hiện có. Migration `support.0001`
-chỉ thêm ba bảng cuộc trao đổi, tin nhắn và lượt hỏi AI; không sửa dữ liệu điểm cũ.
+cũ. Không cần thêm thư viện ngoài requirements hiện có. Migration `support.0001` thêm ba bảng hỗ trợ; `support.0002` bổ sung ngữ cảnh
+từng câu nghe và giữ nguyên các cuộc trao đổi trước đó.
 `.env` được bỏ qua trong Git; không đưa key vào mã nguồn hoặc nội dung hỏi đáp.
 
 Nếu database của phiên bản cũ chưa có `support_conversation` (hoặc các bảng hỗ trợ

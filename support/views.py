@@ -62,21 +62,30 @@ def thread_list(request, kind):
 
 @login_required
 @require_support_tables
-def start(request, job_id):
+def start(request, job_id, question_id=None):
     learner_required(request)
     job=own_job(request,job_id)
-    existing=Conversation.objects.filter(student=request.user,job=job,kind=Conversation.KNOWLEDGE).first()
+    focus = None
+    if question_id is not None:
+        from submissions.listening_review import focused_question
+        try:
+            focus = focused_question(job, question_id)
+        except ValueError:
+            raise Http404
+    existing=Conversation.objects.filter(student=request.user,job=job,kind=Conversation.KNOWLEDGE,
+        focus_question_id=question_id).first()
     if existing and request.method!='POST':return redirect(existing)
-    form=MessageForm(request.POST or None)
+    initial = {'body': f'Vì sao câu {focus["question"]["number"]} chọn {focus["question"]["correct_option"]}?'} if focus else {}
+    form=MessageForm(request.POST or None, initial=initial)
     form.fields['body'].label='Bạn muốn được giải thích thêm điều gì?'
     if request.method=='POST' and form.is_valid():
         try:
-            thread=services.start_study(request.user,job)
+            thread=services.start_study(request.user,job,question_id=question_id)
             services.learner_message(thread,request.user,form.cleaned_data['body'],form.cleaned_data['client_key'])
             return redirect(thread)
         except (ValidationError,IntegrityError) as exc:
             form.add_error(None,exc if isinstance(exc,ValidationError) else 'Có yêu cầu đang được gửi. Vui lòng tải lại cuộc trao đổi.')
-    return private_render(request,'support/start.html',{'form':form,'job':job})
+    return private_render(request,'support/start.html',{'form':form,'job':job,'focus':focus})
 
 
 @login_required
@@ -109,7 +118,14 @@ def detail_context(request,thread,form=None):
     busy=bool(last and last.status=='processing' and not expired and thread.status==Conversation.AI)
     retry=bool(last and (last.status=='failed' or expired) and last.error_code!='daily_limit'
                and last.question.ai_attempts.count()<3 and thread.status==Conversation.AI)
-    return {'thread':thread,'chat_messages':page,'form':form or MessageForm(),'is_learner':is_student(request.user),
+    focus = None
+    if thread.focus_question_id is not None and thread.job_id:
+        from submissions.listening_review import focused_question
+        try:
+            focus = focused_question(thread.job, thread.focus_question_id)
+        except ValueError:
+            pass
+    return {'thread':thread,'focus':focus,'chat_messages':page,'form':form or MessageForm(),'is_learner':is_student(request.user),
             'support_is_contact':thread.kind==Conversation.CONTACT,
             'can_reply':thread.status!=Conversation.CLOSED and not busy and (is_student(request.user) or services.staff_can_reply(thread,request.user)),
             'can_escalate':is_student(request.user) and thread.kind==Conversation.KNOWLEDGE and not thread.escalated_at
