@@ -150,6 +150,9 @@
 .vocabulary-upload p{margin:0;line-height:1.6}
 .vocabulary-upload-help{font-size:.8rem;line-height:1.6;color:#665444}
 .vocabulary-upload-copy .vocabulary-upload-help{margin-top:.35rem}
+#imagePickerFallback{flex-basis:100%;min-width:0}
+#imagePickerFallback label{display:block;margin-bottom:.5rem}
+#imagePickerFallback input{max-width:100%;font:inherit;font-size:.875rem}
 .vocabulary-image-status{margin:1rem 0 .65rem;font-size:.875rem}
 .mrbean-theme .vocabulary-choose-images{padding:.65rem 1rem;border:0;border-radius:8px;background:var(--mb-brown);color:var(--mb-cream);font:inherit;cursor:pointer}
 .vocabulary-image-previews{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),220px));gap:1rem;margin-bottom:1rem}

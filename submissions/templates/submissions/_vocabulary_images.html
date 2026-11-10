@@ -4,8 +4,11 @@
         <p>Chụp rõ các trang bài viết, chọn ảnh rồi bấm <strong>Nộp bài</strong>.</p>
         <p id="imageHelp" class="vocabulary-upload-help">Chọn từ 1 đến 5 ảnh PNG, JPG hoặc WebP; mỗi ảnh tối đa 8 MiB. Có thể chọn thêm ảnh nhiều lần.</p>
     </div>
-    <button id="chooseImages" class="vocabulary-choose-images" type="button" aria-describedby="imageHelp imageSelectionStatus">Chọn ảnh bài làm</button>
-    <input id="images" type="file" name="images" multiple accept="image/png,image/jpeg,image/webp" hidden>
+    <div id="imagePickerFallback">
+        <label for="images">Ảnh bài làm</label>
+        <input id="images" type="file" name="images" multiple accept="image/png,image/jpeg,image/webp" aria-describedby="imageHelp imageSelectionStatus">
+    </div>
+    <button id="chooseImages" class="vocabulary-choose-images" type="button" aria-describedby="imageHelp imageSelectionStatus" hidden>Chọn ảnh bài làm</button>
 </div>
 <p id="imageSelectionStatus" class="vocabulary-image-status" role="status">Chưa chọn ảnh.</p>
 <div id="imagePreviews" class="vocabulary-image-previews"></div>

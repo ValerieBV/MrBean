@@ -45,6 +45,10 @@ if(vocabulary&&chooseImages){
   if(files.some(file=>file.type&&!['image/png','image/jpeg','image/webp'].includes(file.type))){statusBox.textContent='Chỉ nhận ảnh PNG, JPG hoặc WebP.';return;}
   selectedImages.push(...files.map(file=>({file,url:URL.createObjectURL(file)})));statusBox.textContent='';renderImages();
  };
+ // Keep the native picker available until its enhanced replacement is ready.
+ const fallback=document.getElementById('imagePickerFallback');
+ if(fallback)fallback.hidden=true;
+ chooseImages.hidden=false;
 }
 function saveDraft(){
  if(speaking||uploading||!form.dataset.draftUrl||!draftDirty)return draftRequest;

@@ -26,4 +26,4 @@
 {% include 'submissions/_submission_history.html' %}
 </div>
 {% endblock %}
-{% block scripts %}<script type="module" src="{% static 'assignments/pdf_viewer.mjs' %}"></script>{% if not blocked_reason %}<script src="{% static 'submissions/submit.js' %}" defer></script><script src="{% static 'submissions/listening.js' %}" defer></script>{% endif %}{% endblock %}
+{% block scripts %}<script type="module" src="{% static 'assignments/pdf_viewer.mjs' %}"></script>{% if not blocked_reason %}<script src="{% static 'submissions/submit.js' %}?v=20261110-upload2" defer></script><script src="{% static 'submissions/listening.js' %}" defer></script>{% endif %}{% endblock %}
