@@ -2,8 +2,8 @@
 <section class="panel" aria-labelledby="ai-trial-title" data-ai-trial data-ai-trial-state="{{ ai_trial.status }}">
     <div class="panel-head">
         <div>
-            <h2 id="ai-trial-title">Đánh giá mức hoàn thành của AI</h2>
-            <p class="report-subtle">Dùng để tham khảo. Giáo viên kiểm tra bài làm và xác nhận kết quả cuối cùng.</p>
+            <h2 id="ai-trial-title">Đánh giá mức hoàn thành</h2>
+            <p class="report-subtle">Dùng để tham khảo.</p>
         </div>
         <span class="badge yellow">Đề xuất tham khảo</span>
     </div>
@@ -11,16 +11,16 @@
     <div class="row g-4">
         <div class="col-md-4">
             <div class="report-card h-100" data-ai-trial-completion>
-                <div><span>Mức hoàn thành AI đề xuất</span><strong>{{ ai_trial.label }}</strong></div>
+                <div><span>Mức hoàn thành</span><strong>{{ ai_trial.label }}</strong></div>
             </div>
         </div>
         <div class="col-md-8">
-            <h3>Nhận xét AI</h3>
-            <p class="report-feedback" data-ai-trial-feedback>{{ ai_trial.feedback|default:'AI chưa có nhận xét bằng văn bản. Giáo viên kiểm tra bài làm trước khi xác nhận.' }}</p>
+            <h3>Nhận xét</h3>
+            <p class="report-feedback" data-ai-trial-feedback>{{ ai_trial.feedback|default:'Chưa có nhận xét' }}</p>
         </div>
     </div>
     {% else %}
-    <p class="report-subtle" data-ai-trial-empty>{% if ai_trial.pending %}AI chưa hoàn tất xử lý. Kết luận và nhận xét sẽ hiển thị khi có kết quả.{% else %}Bài này chưa có kết quả AI chấm thử hợp lệ. Giáo viên chấm theo bài làm gốc.{% endif %}</p>
+    <p class="report-subtle" data-ai-trial-empty>{% if ai_trial.pending %}Chưa hoàn tất xử lý. Kết luận và nhận xét sẽ hiển thị khi có kết quả.{% else %}Bài này chưa có kết quả chấm hợp lệ.{% endif %}</p>
     {% endif %}
 </section>
 {% endif %}

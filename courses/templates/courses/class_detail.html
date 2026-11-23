@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load ui %}
 
-{% block title %}Chi tiết Lớp: {{ classroom.class_code }} - MR BEAN ENGLISH{% endblock %}
+{% block title %}Chi tiết Lớp: {{ classroom.class_code }} - MRBEAN ENGLISH{% endblock %}
 
 {% block content %}
 <!-- Header Lớp -->
@@ -55,7 +55,7 @@
         <!-- Thông tin giáo viên và định mức -->
         <div class="row g-3 small">
             <div class="col-md-4">
-                <span class="d-block" style="color: #846d5c;">Giáo viên phụ trách chấm bài:</span>
+                <span class="d-block" style="color: #846d5c;">Giáo viên phụ trách:</span>
                 {% if classroom.teacher %}
                     <strong class="fs-6" style="color: var(--color-burn-orange);"><i aria-hidden="true" class="bi bi-person-check-fill me-1"></i>{{ classroom.teacher.get_full_name|default:classroom.teacher.username }}</strong>
                 {% else %}

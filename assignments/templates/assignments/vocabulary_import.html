@@ -7,7 +7,7 @@
     <div>
         <div class="eyebrow"><a href="{% url 'assignments:skill_lessons' 'vocabulary' %}">VOCABULARY</a> / BUỔI {{ lesson.order }}</div>
         <h1>Nhập từ hàng loạt</h1>
-        <p>{{ lesson.title }} · Dán danh sách hoặc tải tệp để thêm nhiều từ vào buổi học.</p>
+        <p>{{ lesson.title }} · Dán danh sách hoặc tải tệp</p>
     </div>
     <a class="btn secondary" href="{% url 'assignments:lesson_detail' lesson.pk %}">Quay lại buổi học</a>
 </div>
@@ -23,8 +23,7 @@
         <p>Dán 2 cột Excel theo thứ tự <strong>Từ · Nghĩa</strong>, hoặc 4 cột <strong>Từ · Loại từ · Nghĩa · Ví dụ</strong>. Có thể dùng dấu | để ngăn cột:</p>
         <pre class="text-wrap vocabulary-copy">department | bộ phận
 sign up | đăng ký</pre>
-        <p>CSV có thể dùng tiêu đề word, word_type, meaning, example hoặc Từ, Loại từ, Nghĩa, Ví dụ. Mỗi lần tối đa 500 từ; tệp CSV/TXT UTF-8 tối đa 1 MiB.</p>
-        <p>Mỗi từ hoặc cụm từ dùng một dòng dữ liệu. Ví dụ purchase có thể để loại từ là v / n và ghi cả hai nghĩa trong ô meaning. Nội dung xuống dòng hoặc có dấu phẩy cần nằm trong dấu nháy kép khi lưu CSV.</p>
+        <p>CSV có thể dùng tiêu đề word, word_type, meaning, example hoặc Từ, Loại từ, Nghĩa, Ví dụ.</p>
     </details>
     <form method="post" enctype="multipart/form-data" action="#vocabulary-preview">
         {% csrf_token %}
@@ -66,7 +65,7 @@ sign up | đăng ký</pre>
                 <a class="btn secondary" href="{% url 'assignments:lesson_detail' lesson.pk %}">Hủy</a>
             </div>
         </form>
-    {% else %}<p class="feedback">Tất cả từ trong danh sách đã có trong buổi học. Có thể giao buổi này cho lớp hoặc nhập danh sách khác.</p>{% endif %}
+    {% else %}<p class="feedback">Từ vựng đã có trong danh sách. Có thể giao cho lớp hoặc nhập danh sách khác.</p>{% endif %}
 </section>
 {% endif %}
 {% endblock %}

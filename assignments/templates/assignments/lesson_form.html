@@ -19,14 +19,14 @@
     <div><label class="block text-sm font-medium text-gray-700 mb-1" for="id_description">Mô tả</label>{{ form.description }}</div>
 
     <div class="skill-block" data-for="listening">
-        <p class="bg-amber-50 border rounded-lg p-4 text-sm">Lưu thông tin buổi trước, sau đó tự thêm từ 1 đến 4 bài nghe. Chọn dạng, tải audio/PDF và nhập bảng đáp án cho từng bài. Không tạo sẵn bài mặc định.</p>
+        <p class="bg-amber-50 border rounded-lg p-4 text-sm">Lưu thông tin</p>
         {% if form.instance.audio_file %}<details class="mt-3"><summary>File nghe cũ của buổi</summary>{{ form.listening_type }}{{ form.audio_file }}</details>{% endif %}
     </div>
     
     <div class="skill-block" data-for="speaking">
         <label class="block text-sm font-medium text-gray-700 mb-1" for="id_youtube_url">Link YouTube</label>{{ form.youtube_url }}
-        <div class="mt-3"><label for="id_video_file" class="block text-sm font-medium text-gray-700 mb-1">Hoặc tải video mẫu</label>{{ form.video_file }}</div>
-        <div class="mt-3"><label for="id_reference_transcript" class="block text-sm font-medium text-gray-700 mb-1">Lời mẫu chính xác của video</label>{{ form.reference_transcript }}</div>
+        <div class="mt-3"><label for="id_video_file" class="block text-sm font-medium text-gray-700 mb-1">Hoặc tải video</label>{{ form.video_file }}</div>
+        <div class="mt-3"><label for="id_reference_transcript" class="block text-sm font-medium text-gray-700 mb-1">Lời của video</label>{{ form.reference_transcript }}</div>
     </div>
 
     <label class="flex items-center space-x-2 text-sm">{{ form.is_active }} <span>Đang mở cho học viên</span></label>
@@ -36,7 +36,7 @@
 
     <div class="flex justify-end space-x-3 pt-4 border-t">
         <a href="{{ back_url }}" class="px-4 py-2 border rounded-lg text-gray-600 hover:bg-gray-50 text-sm">Hủy</a>
-        <button type="submit" class="btn-brand text-white px-5 py-2 rounded-lg text-sm font-medium">Lưu buổi</button>
+        <button type="submit" class="btn-brand text-white px-5 py-2 rounded-lg text-sm font-medium">Lưu</button>
     </div>
 </form>
 

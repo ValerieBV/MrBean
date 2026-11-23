@@ -22,8 +22,8 @@
         <p class="feedback" role="status">{{ block_reason }}</p>
         <a class="btn secondary" href="{% url 'accounts:user_list' %}">Quay lại danh sách</a>
     {% else %}
-        <p class="feedback">Thao tác này xóa tài khoản cùng bài nộp, kết quả, ghi danh và hội thoại do tài khoản tạo. Không thể hoàn tác. Lớp học, ngân hàng bài tập và bài làm của người khác được giữ lại.</p>
-        <p>Liên hệ đang giao cho tài khoản này sẽ chuyển cho admin đang thao tác. Tin nhắn đã gửi trong hội thoại của người khác được giữ nội dung và bỏ liên kết tác giả.</p>
+        <p class="feedback">Thao tác này xóa tài khoản không thể hoàn tác.</p>
+        <p>Liên hệ đang giao cho tài khoản này sẽ chuyển cho admin đang thao tác.</p>
         <form method="post">
             {% csrf_token %}
             {{ form.non_field_errors }}

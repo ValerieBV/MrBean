@@ -14,7 +14,7 @@
 <div class="mb-4">
     <h1 class="page-title-h1">KHÓA HỌC CỦA TÔI</h1>
     <div class="text-muted small" style="color: #6d5b4e !important;">
-        Chào mừng <strong>{{ user.get_full_name|default:user.username }}</strong>! Dưới đây là các khóa học bạn đang theo học, các bài tập cần làm và hạn mức số buổi miễn làm BTVN (Speaking/Vocab).
+        Chào mừng <strong>{{ user.get_full_name|default:user.username }}</strong>! Dưới đây là khóa học bạn đang theo học.
     </div>
 </div>
 
@@ -92,7 +92,7 @@
 <div class="data-card-wrapper mb-4">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h2 class="section-title-h2 mb-0" style="color: var(--color-burn-orange);">
-            <i aria-hidden="true" class="bi bi-list-task me-2"></i>CÁC BÀI TẬP VỀ NHÀ CẦN HOÀN THÀNH
+            <i aria-hidden="true" class="bi bi-list-task me-2"></i>BÀI TẬP VỀ NHÀ CẦN HOÀN THÀNH
         </h2><a class="btn-cta-orange" href="{% url 'submissions:student_home' %}">Vào làm bài <i aria-hidden="true" class="bi bi-arrow-right"></i></a>
     </div>
 
@@ -105,16 +105,16 @@
                         <i aria-hidden="true" class="bi bi-headphones"></i>
                     </div>
                     <div>
-                        <h6 class="fw-bold mb-0 text-dark">1. Bài tập Nghe (Listening)</h6>
-                        <span class="badge" style="background-color: #fee2e2; color: #b91c1c; font-weight: 700;">BẮT BUỘC - KHÔNG MIỄN</span>
+                        <h6 class="fw-bold mb-0 text-dark">1. Bài tập Nghe</h6>
+                        <span class="badge" style="background-color: #fee2e2; color: #b91c1c; font-weight: 700;">BẮT BUỘC</span>
                     </div>
                 </div>
                 <p class="small text-secondary mb-3">
-                    Luyện nghe theo format đề thi.
-                    <strong>Bắt buộc hoàn thành 100%, hệ thống không cho phép miễn.</strong>
+                    Luyện nghe.
+                    <strong>Bắt buộc hoàn thành 100%.</strong>
                 </p>
                 <div class="alert alert-danger py-1 px-2 small mb-0" style="font-size: 0.75rem;">
-                    <i aria-hidden="true" class="bi bi-exclamation-octagon-fill me-1"></i>Bắt buộc làm Listening cho mọi học viên
+                    <i aria-hidden="true" class="bi bi-exclamation-octagon-fill me-1"></i>Bắt buộc làm bài tập nghe
                 </div>
             </div>
         </div>
@@ -127,12 +127,12 @@
                         <i aria-hidden="true" class="bi bi-mic-fill"></i>
                     </div>
                     <div>
-                        <h6 class="fw-bold mb-0 text-dark">2. Bài tập Nói (Speaking)</h6>
+                        <h6 class="fw-bold mb-0 text-dark">2. Bài tập Nói</h6>
                         <span class="badge" style="background-color: #e6f6ec; color: #15803d; font-weight: 700;">ĐƯỢC ÁP DỤNG MIỄN</span>
                     </div>
                 </div>
                 <p class="small text-secondary mb-3">
-                    Xem video mẫu và ghi âm trực tiếp khi đọc lại. <strong>Có nút xin miễn</strong> trong hạn mức quy định.
+                    Xem video và ghi âm trực tiếp. <strong>Có nút xin miễn</strong> trong hạn mức quy định.
                 </p>
                 <div class="alert alert-warning py-1 px-2 small mb-0" style="font-size: 0.75rem;">
                     <i aria-hidden="true" class="bi bi-info-circle me-1"></i>Hạn mức theo Mã: 8 buổi (T/V) &bull; 5 buổi (B)
@@ -148,7 +148,7 @@
                         <i aria-hidden="true" class="bi bi-book-half"></i>
                     </div>
                     <div>
-                        <h6 class="fw-bold mb-0 text-dark">3. Bài tập Từ vựng (Vocabulary)</h6>
+                        <h6 class="fw-bold mb-0 text-dark">3. Bài tập Từ vựng</h6>
                         <span class="badge" style="background-color: #e6f6ec; color: #15803d; font-weight: 700;">ĐƯỢC ÁP DỤNG MIỄN</span>
                     </div>
                 </div>
@@ -252,9 +252,9 @@
         </h1>
         <div class="text-muted small" style="color: #6d5b4e !important;">
             {% if user.role == 'teacher' %}
-                Danh sách các lớp bạn được phân công giảng dạy, chấm bài và duyệt miễn BTVN Speaking/Vocabulary
+                Danh sách các lớp bạn được phân công
             {% else %}
-                Quản trị danh sách lớp, phân công giáo viên chấm bài và ghi danh học viên
+                Quản lý danh sách lớp
             {% endif %}
         </div>
     </div>
@@ -298,7 +298,7 @@
                         <strong>{{ c.course.name }}</strong>
                     </div>
                     <div class="mb-2">
-                        <i aria-hidden="true" class="bi bi-person-check-fill me-2" style="color: var(--color-dark-brown);"></i>Giáo viên chấm bài:
+                        <i aria-hidden="true" class="bi bi-person-check-fill me-2" style="color: var(--color-dark-brown);"></i>Giáo viên phụ trách:
                         {% if c.teacher %}
                             <strong style="color: var(--color-burn-orange);">{{ c.teacher.get_full_name|default:c.teacher.username }}</strong>
                         {% else %}
