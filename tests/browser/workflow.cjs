@@ -11,7 +11,7 @@ execFileSync(python,['manage.py','migrate','--noinput'],{cwd:root,env,stdio:'pip
 execFileSync(python,['manage.py','seed_demo','--password','DemoLocal123!'],{cwd:root,env,stdio:'pipe'});
 execFileSync('ffmpeg',['-loglevel','error','-f','lavfi','-i','color=c=0x334536:s=640x360:d=3','-f','lavfi','-i','sine=frequency=440:duration=3','-c:v','libx264','-pix_fmt','yuv420p','-c:a','aac','-shortest','-y','sample-reference.mp4'],{stdio:'pipe'});
 fs.mkdirSync('screenshots',{recursive:true});
-const stamp=Date.now().toString().slice(-7),errors=[],routes=[],results={stamp};
+const stamp=Date.now().toString().slice(-7),errors=[],routes=[],results={stamp},debugPages=[];
 const now=new Date(),start=new Date(now.getTime()-24*3600000).toISOString().slice(0,16),due=new Date(now.getTime()+7*24*3600000).toISOString().slice(0,16);
 let server;
 process.on('exit',()=>server?.kill());
@@ -22,7 +22,7 @@ for(let i=0;i<100;i++){try{const r=await fetch(base+'/accounts/login/');if(r.ok)
 const browser=await chromium.launch({headless:true,executablePath:process.env.MRBEAN_CHROMIUM_PATH||undefined,
  args:['--no-sandbox','--disable-dev-shm-usage','--disable-gpu','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader','--use-fake-device-for-media-stream','--use-fake-ui-for-media-stream'],
 });
-async function session(username){const ctx=await browser.newContext({viewport:{width:1440,height:1000},permissions:['microphone']});const p=await ctx.newPage();p.on('pageerror',e=>errors.push(username+': '+p.url()+': '+e.message));p.on('response',r=>{if(r.url().startsWith(base)&&r.status()>=400)errors.push(username+': HTTP '+r.status()+' '+r.url());});await p.goto(base+'/accounts/login/');await p.locator('[name=username]').fill(username);await p.locator('[name=password]').fill(username.startsWith('ui_student')?'Learning!8429':'DemoLocal123!');await Promise.all([p.waitForURL(username.startsWith('ui_student')||username==='demo_student'?'**/hoc-tap/':'**/dashboard/'),p.getByRole('button',{name:'Đăng nhập hệ thống',exact:true}).click()]);await p.goto(base+'/dashboard/');await p.waitForFunction(()=>document.getElementById('rate')?.textContent!=='—');return p;}
+async function session(username){const ctx=await browser.newContext({viewport:{width:1440,height:1000},permissions:['microphone']});const p=await ctx.newPage();debugPages.push(p);p.on('pageerror',e=>errors.push(username+': '+p.url()+': '+e.message));p.on('response',r=>{if(r.url().startsWith(base)&&r.status()>=400)errors.push(username+': HTTP '+r.status()+' '+r.url());});await p.goto(base+'/accounts/login/');await p.locator('[name=username]').fill(username);await p.locator('[name=password]').fill(username.startsWith('ui_student')?'Learning!8429':'DemoLocal123!');await Promise.all([p.waitForURL(username.startsWith('ui_student')||username==='demo_student'?'**/hoc-tap/':'**/dashboard/'),p.getByRole('button',{name:'Đăng nhập hệ thống',exact:true}).click()]);await p.goto(base+'/dashboard/');await p.waitForFunction(()=>document.getElementById('rate')?.textContent!=='—');return p;}
 async function fill(p,name,value){await p.locator(`[name="${name}"]`).fill(value);}
 async function save(p,name='Lưu thay đổi'){await Promise.all([p.waitForURL(url=>!url.pathname.endsWith('/new/')&&!url.pathname.endsWith('/create/')&&!url.pathname.endsWith('/edit/')),p.getByRole('button',{name,exact:true}).click()]);}
 const admin=await session('demo_admin');await admin.screenshot({path:'screenshots/admin-desktop.png',fullPage:true});
@@ -183,7 +183,9 @@ await teacher.getByRole('link',{name:/Mở lượt giao hiện có/}).click();as
 results.assignment='Empty listening blocked with a content-repair link; live preview of four exercises/100 questions; vocabulary repetitions hidden for listening; valid assignment saved; duplicate links to existing assignment';
 await teacher.getByRole('link',{name:'Quản lý bài tập của buổi',exact:true}).click();
 assert.equal(await teacher.locator('[data-add-listening-kind]').count(),0);
-assert.equal(await teacher.getByRole('link',{name:'Tạo bản sao để thêm bài tập',exact:true}).count(),1);
+const cloneNotice=teacher.locator('.listening-note a').filter({hasText:'Tạo bản sao để thêm bài tập'});
+await cloneNotice.waitFor({state:'visible'});
+assert.equal(await cloneNotice.getAttribute('href'),`/quan-ly/bai-tap/lesson/${listening}/clone/`);
 const student=await session('ui_student'+stamp);await student.goto(base+'/hoc-tap/skill/listening/');await student.locator('.space-y-3 > div').filter({hasText:'Bài nghe UI '+stamp}).getByRole('link',{name:'Làm bài',exact:true}).click();
 const listeningTaskURL=student.url();
 const firstAudio=student.locator('#listening-1 audio');
@@ -245,9 +247,8 @@ await student.screenshot({path:'screenshots/listening-incomplete-result.png',ful
 await student.goto(listeningTaskURL);
 await answerListening({wrongFirst:true});
 await student.setViewportSize({width:390,height:920});assert(await student.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));await student.screenshot({path:'screenshots/listening-mobile.png',fullPage:false});await student.setViewportSize({width:1440,height:1000});
-await new Promise(resolve=>setTimeout(resolve,1000));
 for(const order of [4,2,3,1]){
- await student.goto(listeningTaskURL+'#listening-'+order);
+ if(order!==4)await student.goto(listeningTaskURL+'#listening-'+order);
  await Promise.all([student.waitForURL('**/results/*/'),student.locator('#listening-'+order+' [data-submit-exercise]').click()]);
 }
 assert.match(await student.locator('body').innerText(),/Đúng 99\/100/);assert.equal(await student.locator('[data-completion-status]').getAttribute('data-completion-status'),'complete');
@@ -558,4 +559,4 @@ for(const[role,p,urls]of [['admin',admin,['/accounts/users/','/courses/','/dashb
  for(const url of urls){await p.goto(base+url);if(url==='/dashboard/')await p.waitForFunction(()=>document.getElementById('rate').textContent!=='—');const report=await new AxeBuilder({page:p}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze();results.accessibility.push({role,url,contrast:'default',violations:report.violations.map(v=>({id:v.id,impact:v.impact,targets:v.nodes.map(n=>n.target)}))});}
 }
 results.routes=routes;results.errors=errors;fs.writeFileSync('browser-qa-results.json',JSON.stringify(results,null,2));console.log(JSON.stringify(results,null,2));console.log('QA output: '+output);await browser.close();server.kill();assert.equal(errors.length,0,'Browser console/HTTP errors');assert.equal(results.accessibility.flatMap(r=>r.violations).length,0,'Accessibility violations');
-})().catch(e=>{console.error(e.stack);console.error(JSON.stringify({errors}));process.exit(1)});
+})().catch(async e=>{console.error(e.stack);console.error(JSON.stringify({errors}));await Promise.allSettled(debugPages.filter(p=>!p.isClosed()).map(async(p,i)=>{fs.writeFileSync('failure-'+i+'.html',await p.content());await p.screenshot({path:'screenshots/failure-'+i+'.png',fullPage:true});}));fs.writeFileSync('browser-qa-results.json',JSON.stringify(results,null,2));process.exit(1)});
