@@ -32,7 +32,7 @@ def prepare_image(upload):
         raise ValidationError('Không đọc được ảnh bài làm.') from exc
 
 
-def enqueue_submission(*, task, submission_key, kind=None, text='', audio=None, reference_text='', answers=None, images=None, reference_version=None):
+def enqueue_submission(*, task, submission_key, kind=None, text='', audio=None, reference_text='', answers=None, images=None, reference_version=None, exercise_id=None):
     if not isinstance(submission_key, str) or not submission_key.strip() or len(submission_key) > 128:
         raise ValidationError('Mã lần nộp không hợp lệ.')
     if not isinstance(text, str) or len(text) > 20000:
@@ -46,6 +46,8 @@ def enqueue_submission(*, task, submission_key, kind=None, text='', audio=None, 
         if existing:
             if existing.task_id != task.pk:
                 raise ValidationError('Mã lần nộp đã thuộc bài khác.')
+            if exercise_id not in (None, '', 'legacy') and str(existing.rubric_snapshot.get('submission_exercise_id')) != str(exercise_id):
+                raise ValidationError('Mã lần nộp đã thuộc bài nghe khác. Tải lại trang trước khi nộp.')
             return existing, False
         from submissions.access import assert_can_submit
         assert_can_submit(task)
@@ -81,8 +83,9 @@ def enqueue_submission(*, task, submission_key, kind=None, text='', audio=None, 
         if audio:
             job.audio = audio
         if kind == 'listening':
-            from submissions.grading import grade_listening
-            result = grade_listening(rubric.get('questions', []), {} if answers is None else answers)
+            from submissions.listening_submissions import grade_exercise_submission
+            job.rubric_snapshot, result = grade_exercise_submission(
+                task, rubric, {} if answers is None else answers, exercise_id)
             job.answers = {str(row['question_id']): {'chosen': row['chosen'], 'short_answer': row['short_answer']} for row in result['details']}
             job.result = result
             job.status, job.grading_method, job.finished_at = 'graded', 'answer_key', timezone.now()
@@ -102,7 +105,11 @@ def enqueue_submission(*, task, submission_key, kind=None, text='', audio=None, 
             job.progress = progress
             job.save(update_fields=['progress'])
             from submissions.progress import sync_progress
-            sync_progress(job, clear_draft=True)
+            if kind == 'listening' and rubric.get('exercises'):
+                from submissions.listening_submissions import retain_other_drafts
+                retain_other_drafts(task, [q for q in rubric['questions']
+                    if q.get('exercise_id') == result['exercise_id']])
+            sync_progress(job, clear_draft=kind != 'listening' or not rubric.get('exercises'))
         from accounts.notifications import notify
         from django.urls import reverse
         notify(recipient=task.assignment.classroom.teacher, sender=task.learner,

@@ -62,7 +62,8 @@ def submit(request, task_id=None):
             answers = json.loads(answers)
         job, created = enqueue_submission(task=task, submission_key=data.get('submission_key'),
             text=data.get('text', ''), audio=request.FILES.get('audio'),
-            answers=answers, images=request.FILES.getlist('images'), reference_version=data.get('reference_version'))
+            answers=answers, images=request.FILES.getlist('images'), reference_version=data.get('reference_version'),
+            exercise_id=data.get('exercise_id'))
     except (ValueError, TypeError, ValidationError) as exc:
         return JsonResponse({'error': 'invalid_submission', 'message': '; '.join(exc.messages) if isinstance(exc, ValidationError) else 'Dữ liệu không hợp lệ.'}, status=400)
     return JsonResponse(serialize(job, include_ai=False), status=201 if created else 200)

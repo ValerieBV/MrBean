@@ -62,6 +62,7 @@ def student_home(request, skill=None):
                  'incomplete':task.confirmed_completion=='incomplete',
                  'has_submission':bool(task.latest_job_id), 'completion_pending':task.confirmed_completion=='pending',
                  'pending':task.latest_status in ('queued','processing','ai_reviewed','manual'),
+                 'can_review_listening':skill == 'listening' and (task.due_at <= timezone.now() or bool(task.confirmed_job_id)),
                  'unlocked':not task.blocked_reason,'reason':task.blocked_reason,'result_id':task.latest_job_id} for task in page]})
 
 
@@ -101,8 +102,13 @@ def do_task(request, task_id):
     except (ValidationError, ValueError): video_embed_url = ''
     reading_ready = bool(rubric.get('mode') == 'repeat_video' and rubric.get('reference_transcript') and
         (video_embed_url or rubric.get('video_name')))
+    from .listening_submissions import latest_listening_submission, submitted_exercise_ids
+    listening_job = latest_listening_submission(task) if rubric['skill'] == 'listening' else None
+    submitted_ids = submitted_exercise_ids(listening_job)
+    answers_released = rubric['skill'] == 'listening' and task.due_at <= timezone.now()
     draft = task.draft if task.draft_valid and isinstance(task.draft, dict) else {}
-    answers = draft.get('answers', {})
+    answers = {**(listening_job.answers if listening_job else {}), **draft.get('answers', {})}
+    graded_answers = {row['question_id']:row['correct'] for row in listening_job.result.get('details', [])} if listening_job else {}
     questions = []
     exercise_kinds = {item['id']:item.get('kind') for item in rubric.get('exercises', [])}
     for q in rubric.get('questions', []):
@@ -121,15 +127,20 @@ def do_task(request, task_id):
         questions.append(row)
     listening_exercises = [{**{k:e.get(k) for k in ('id','order','kind','label','title','question_count')},
         'has_audio':bool(e.get('audio_name')), 'has_document':bool(e.get('document_name')) and e.get('kind') != 'part2',
+        'submitted':e['id'] in submitted_ids, 'can_review':answers_released or e['id'] in submitted_ids,
+        'correct_count':sum(bool(graded_answers.get(q['id'])) for q in questions if q['exercise_id'] == e['id']),
         'questions':[q for q in questions if q['exercise_id']==e['id']]} for e in rubric.get('exercises',[])]
     if not listening_exercises and questions:
         listening_exercises = [{'id':None, 'order':1, 'title':'Bài nghe', 'label':'Nội dung đã giao',
+            'submitted':bool(listening_job), 'can_review':answers_released or bool(listening_job),
+            'correct_count':sum(bool(value) for value in graded_answers.values()),
             'has_audio':bool(rubric.get('audio_name')), 'has_document':False, 'questions':questions}]
     from ai_core.reporting import report_job
     jobs=list(task.jobs.order_by('-submitted_at','-pk')[:10])
     for job in jobs:job.public_status=report_job(job)['status_label']
     return render(request, 'submissions/do_'+{'listening':'listening','speaking':'speaking','vocabulary':'vocab'}[rubric['skill']]+'.html', {'task': task, 'lesson':task.assignment.lesson, 'rubric': rubric, 'questions': questions,
         'video_embed_url': video_embed_url, 'reading_ready': reading_ready, 'listening_exercises':listening_exercises,
+        'listening_can_review':bool(listening_job) or answers_released,
         'blocked_reason': submission_problem(task), 'is_late': task.due_at < timezone.now(),
         'pending_exemption': task.assignment.exemption_requests.filter(enrollment__student=request.user, status='pending').first(),
         'jobs':jobs,'word_details':rubric.get('word_details') or [{'word':word} for word in rubric.get('words',[])],
@@ -175,13 +186,44 @@ def listening_review(request, job_id):
     job = get_object_or_404(GradingJob.objects.select_related('task__learner').filter(
         task__in=tasks_for(request.user)), pk=job_id, kind='listening', status='graded')
     groups = review_groups(job)
+    return render_listening_review(request, groups, task=job.task, job=job)
+
+
+@login_required
+def task_listening_review(request, task_id):
+    from .listening_review import groups_for_rubric, review_groups
+    from .listening_submissions import latest_listening_submission
+    task = own_task(request, task_id)
+    if task.assignment.rubric.get('skill') != 'listening' or task.assigned_at > timezone.now():
+        raise Http404
+    job = latest_listening_submission(task)
+    released = task.due_at <= timezone.now()
+    if not released and job is None:
+        raise Http404
+    groups = groups_for_rubric(task.assignment.rubric, job.answers if job else {}, task.title) if released else review_groups(job)
+    return render_listening_review(request, groups, task=task, job=job, task_review=True)
+
+
+def render_listening_review(request, groups, *, task, job=None, task_review=False):
+    if not groups:
+        raise Http404
+    default = 1
+    if request.GET.get('exercise'):
+        selected = next((g for g in groups if str(g['exercise']['id']) == request.GET['exercise']), None)
+        if selected is None:
+            raise Http404
+        default = selected['index']
     try:
-        index = int(request.GET.get('group', 1))
+        index = int(request.GET.get('group', default))
         if not 1 <= index <= len(groups):
             raise ValueError
     except (TypeError, ValueError):
         raise Http404
     current = groups[index-1]
+    submitted_questions = {q['id'] for q in job.rubric_snapshot.get('questions', [])} if job else set()
+    for group in groups:
+        for question in group['questions']:
+            question['can_ask_tutor'] = question['id'] in submitted_questions
     exercises = []
     for item in groups:
         if not exercises or exercises[-1]['id'] != item['exercise']['id']:
@@ -190,7 +232,8 @@ def listening_review(request, job_id):
                 'group': item['index'], 'range': item['label'],
                 'selected': item['exercise']['id'] == current['exercise']['id']})
     response = render(request, 'submissions/listening_review.html', {
-        'job': job, 'groups': [g for g in groups if g['exercise']['id'] == current['exercise']['id']],
+        'job': job, 'task': task, 'task_review':task_review,
+        'groups': [g for g in groups if g['exercise']['id'] == current['exercise']['id']],
         'exercises': exercises, 'group': current,
         'previous': index-1 if index > 1 else None, 'next': index+1 if index < len(groups) else None,
         'can_ask_tutor': request.user.role == 'student' and not request.user.is_superuser})
@@ -250,7 +293,8 @@ def media_task(request, task_id):
     task = get_object_or_404(tasks_for(request.user).select_related('learner', 'assignment__lesson', 'assignment__classroom'),
         pk=task_id, assignment__isnull=False, assigned_at__lte=timezone.now())
     if request.user.role == 'student':
-        if not is_unlocked(task) or not task.assignment.classroom.enrollments.filter(student=request.user, status='active').exists():
+        released_listening = task.assignment.rubric.get('skill') == 'listening' and task.due_at <= timezone.now()
+        if (not released_listening and not is_unlocked(task)) or not task.assignment.classroom.enrollments.filter(student=request.user, status='active').exists():
             raise Http404
     return task
 

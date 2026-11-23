@@ -12,6 +12,7 @@ urlpatterns = [
     path('lesson/<int:pk>/autosave/', views.autosave, name='autosave'),
     path('lesson/<int:pk>/submit/', views.submit_lesson, name='submit_lesson'),
     path('tasks/<int:task_id>/', views.do_task, name='do_task'),
+    path('tasks/<int:task_id>/listening/solutions/', views.task_listening_review, name='task_listening_review'),
     path('tasks/<int:task_id>/audio/', views.lesson_audio, name='lesson_audio'),
     path('tasks/<int:task_id>/video/', views.lesson_video, name='lesson_video'),
     path('tasks/<int:task_id>/questions/<int:question_id>/image/', views.lesson_image, name='lesson_image'),

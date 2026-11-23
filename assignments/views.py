@@ -125,7 +125,8 @@ def lesson_detail(request, pk):
             return redirect('assignments:lesson_detail', pk=pk)
     return render(request, 'assignments/lesson_detail.html', {'lesson': lesson, 'items': getattr(lesson, relation).all(),
         'form': form, 'can_edit': can_edit,
-        'reading_assignments': lesson.class_assignments.filter(classroom__in=classes_for(request.user)).select_related('classroom')})
+        'reading_assignments': lesson.class_assignments.filter(classroom__in=classes_for(request.user),
+            lesson__skill='speaking').select_related('classroom')})
 
 
 @login_required

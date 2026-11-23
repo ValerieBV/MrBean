@@ -37,6 +37,8 @@ jobs:
       - run: sudo apt-get update && sudo apt-get install -y ffmpeg
       - run: npm ci
         working-directory: tests/browser
+      - run: npm run test:controls
+        working-directory: tests/browser
       - run: npx playwright install --with-deps chromium
         working-directory: tests/browser
       - run: npm test

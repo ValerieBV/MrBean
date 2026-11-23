@@ -35,6 +35,7 @@
             {% else %}
                 <span class="text-gray-500 text-sm"><i class="fa-solid fa-lock" aria-hidden="true"></i> {{ row.reason }}</span>
             {% endif %}
+            {% if row.can_review_listening %}<a href="{% url 'submissions:task_listening_review' row.task.pk %}" class="text-sm underline ml-2">Đáp án và giải thích</a>{% endif %}
         </div>
     </div>
     {% empty %}

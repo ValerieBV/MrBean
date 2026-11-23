@@ -8,10 +8,10 @@
         <ul class="sidebar-menu">
         {% if user.is_authenticated %}
             {% if is_reporting_manager %}
-            <li class="sidebar-menu-item {% if route.app_name == 'accounts' and 'user_' in route.url_name %}active{% endif %}"><a href="{% url 'accounts:user_list' %}"><i class="bi bi-people-fill" aria-hidden="true"></i><span>QUẢN LÝ TÀI KHOẢN</span></a></li>
-            <li class="sidebar-menu-item {% if route.url_name == 'course_list' %}active{% endif %}"><a href="{% url 'courses:course_list' %}"><i class="bi bi-journals" aria-hidden="true"></i><span>DANH MỤC KHÓA HỌC</span></a></li>
+            <li class="sidebar-menu-item {% if sidebar_section == 'accounts' %}active{% endif %}"><a href="{% url 'accounts:user_list' %}"><i class="bi bi-people-fill" aria-hidden="true"></i><span>QUẢN LÝ TÀI KHOẢN</span></a></li>
+            <li class="sidebar-menu-item {% if sidebar_section == 'catalog' %}active{% endif %}"><a href="{% url 'courses:course_list' %}"><i class="bi bi-journals" aria-hidden="true"></i><span>DANH MỤC KHÓA HỌC</span></a></li>
             {% endif %}
-            <li class="sidebar-menu-item {% if route.app_name == 'courses' and 'class' in route.url_name %}active{% endif %}"><a href="{% url 'courses:class_list' %}"><i class="bi bi-collection-fill" aria-hidden="true"></i><span>{% if is_reporting_manager %}QUẢN LÝ LỚP HỌC{% elif user.role == 'teacher' %}LỚP HỌC ĐANG DẠY{% else %}KHÓA HỌC CỦA TÔI{% endif %}</span></a></li>
+            <li class="sidebar-menu-item {% if sidebar_section == 'classes' %}active{% endif %}"><a href="{% url 'courses:class_list' %}"><i class="bi bi-collection-fill" aria-hidden="true"></i><span>{% if is_reporting_manager %}QUẢN LÝ LỚP HỌC{% elif user.role == 'teacher' %}LỚP HỌC ĐANG DẠY{% else %}KHÓA HỌC CỦA TÔI{% endif %}</span></a></li>
             <li class="sidebar-menu-item {% if 'exemption' in route.url_name %}active{% endif %}"><a href="{% url 'courses:exemption_list' %}"><i class="bi bi-shield-check" aria-hidden="true"></i><span>{% if is_reporting_manager %}KIỂM SOÁT BTVN{% elif user.role == 'teacher' %}DUYỆT MIỄN BTVN{% else %}ĐƠN XIN MIỄN CỦA TÔI{% endif %}</span></a></li>
             {% if user.role == 'student' and not user.is_superuser %}
             <li class="sidebar-menu-item {% if route.app_name == 'submissions' %}active{% elif route.app_name == 'support' and not support_is_contact %}active{% endif %}"><a href="{% url 'submissions:student_dashboard' %}"><i class="bi bi-pencil-square" aria-hidden="true"></i><span>HỌC TẬP & BÀI TẬP</span></a></li>

@@ -96,10 +96,22 @@ print(assignment.tasks.get(learner__username='demo_student').pk)
  assert(!(await student.content()).includes('What is announced in question 7?'));
  assert.equal(await student.getByRole('link',{name:'Hỏi AI',exact:true}).count(),0);
  const csrf=await student.locator('[name=csrfmiddlewaretoken]').first().inputValue();
- const questionIDs=await student.locator('[data-question]').evaluateAll(nodes=>nodes.map(n=>Number(n.querySelector('input[type=radio]').name.slice(2))));
- const answers=Object.fromEntries(questionIDs.map(id=>[String(id),{chosen:'B',short_answer:'The guide confirms the workshop time.'}]));
- const submission=await student.request.post(base+await student.locator('#submissionForm').getAttribute('action'),{headers:{'X-CSRFToken':csrf},multipart:{task_id:String(task),submission_key:'solutions-browser-attempt',reference_version:await student.locator('[name=reference_version]').inputValue(),answers:JSON.stringify(answers)}});
- assert.equal(submission.status(),201,await submission.text());const submitted=await submission.json();
+ const exercises=await student.locator('[data-listening-exercise]').evaluateAll(panels=>panels.map(panel=>({
+  id:panel.querySelector('[data-submit-exercise]').dataset.submitExercise,
+  questions:[...panel.querySelectorAll('[data-question]')].map(q=>q.querySelector('input[type=radio]').name.slice(2))
+ })));
+ const version=await student.locator('[name=reference_version]').inputValue();
+ const submitURL=await student.locator('#submissionForm').getAttribute('action');
+ async function submitExercise(exercise){
+  const answers=Object.fromEntries(exercise.questions.map(id=>[id,{chosen:'B',short_answer:'The guide confirms the workshop time.'}]));
+  const response=await student.request.post(base+submitURL,{headers:{'X-CSRFToken':csrf},multipart:{task_id:String(task),submission_key:'solutions-browser-'+exercise.id,exercise_id:exercise.id,reference_version:version,answers:JSON.stringify(answers)}});
+  assert.equal(response.status(),201,await response.text());return response.json();
+ }
+ let submitted=await submitExercise(exercises[1]);
+ await student.goto(base+`/hoc-tap/tasks/${task}/listening/solutions/`);
+ assert.equal(await student.locator('.solutions-exercise-nav a').count(),1);
+ assert.equal((await student.request.get(base+`/hoc-tap/tasks/${task}/listening/solutions/?exercise=${exercises[2].id}`)).status(),404);
+ for(const index of [0,2,3])submitted=await submitExercise(exercises[index]);
  await student.goto(base+`/hoc-tap/results/${submitted.id}/`);
  await student.getByRole('link',{name:'Đáp án và giải thích',exact:true}).click();
  assert.match(await student.locator('.solution-explanation').innerText(),/PRIVATE_EXPLANATION_1/);

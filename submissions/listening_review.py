@@ -40,8 +40,11 @@ def _number(question, exercise):
 def review_groups(job):
     if job.kind != 'listening' or job.status != 'graded':
         raise ValueError('published_listening_required')
-    rubric = job.rubric_snapshot or {}
-    exercises = rubric.get('exercises') or [{'id': None, 'order': 1, 'kind': 'legacy', 'title': job.task.title}]
+    return groups_for_rubric(job.rubric_snapshot or {}, job.answers, job.task.title)
+
+
+def groups_for_rubric(rubric, answers, title):
+    exercises = rubric.get('exercises') or [{'id': None, 'order': 1, 'kind': 'legacy', 'title': title}]
     missing = [e['id'] for e in exercises if e.get('id') and not e.get('solutions')]
     live = {e.pk: e for e in ListeningExercise.objects.filter(pk__in=missing).prefetch_related('questions')}
     groups = []
@@ -62,7 +65,7 @@ def review_groups(job):
             for question in section:
                 number = _number(question, exercise)
                 solution = solutions.get(number, {})
-                answer = job.answers.get(str(question['id']), {})
+                answer = answers.get(str(question['id']), {})
                 if not isinstance(answer, dict):
                     answer = {'chosen': answer, 'short_answer': ''}
                 chosen = str(answer.get('chosen', '')).upper()

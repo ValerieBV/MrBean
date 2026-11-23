@@ -3,12 +3,14 @@
 const form=document.getElementById('submissionForm');
 if(!form)return;
 const statusBox=document.getElementById('submissionStatus'),submitButton=document.getElementById('submitButton');
+const submitButtons=[...form.querySelectorAll('button[type=submit]')];
+const setSubmitting=value=>submitButtons.forEach(button=>{button.disabled=value;});
 const speaking=form.dataset.kind==='speaking';
 const vocabulary=form.dataset.kind==='vocabulary';
 const imageInput=document.getElementById('images'),chooseImages=document.getElementById('chooseImages'),imagePreviews=document.getElementById('imagePreviews'),imageSelectionStatus=document.getElementById('imageSelectionStatus');
 let selectedImages=[];
 let recording=null,stream=null,blob=null,previewURL=null,requesting=false,disposed=false,uploading=false;
-const start=document.getElementById('recordStart'),stop=document.getElementById('recordStop'),preview=document.getElementById('recordPreview'),recordStatus=document.getElementById('recordStatus');
+const start=document.getElementById('recordStart'),stop=document.getElementById('recordStop'),pause=document.getElementById('recordPause'),preview=document.getElementById('recordPreview'),recordStatus=document.getElementById('recordStatus');
 const maxBytes=20*1024*1024;
 let draftTimer=null,draftRequest=Promise.resolve(),draftDirty=false;
 function collectAnswers(data){const answers={};for(const[key,value]of data){if(key.startsWith('q_')||key.startsWith('s_')){const id=key.slice(2);answers[id]??={chosen:'',short_answer:''};answers[id][key.startsWith('q_')?'chosen':'short_answer']=value;}}return answers;}
@@ -57,9 +59,9 @@ function saveDraft(){
  return draftRequest;
 }
 form.addEventListener('input',event=>{listeningProgress();if(!form.dataset.draftUrl||speaking||uploading||!(event.target.name==='text'||event.target.name.startsWith('q_')||event.target.name.startsWith('s_')))return;draftDirty=true;clearTimeout(draftTimer);draftTimer=setTimeout(saveDraft,800);});
-window.addEventListener('beforeunload',event=>{if(!uploading&&(draftDirty||selectedImages.length||(speaking&&(blob||recording?.state==='recording')))){event.preventDefault();event.returnValue='';}});
+window.addEventListener('beforeunload',event=>{if(!uploading&&(draftDirty||selectedImages.length||(speaking&&(blob||(recording&&recording.state!=='inactive'))))){event.preventDefault();event.returnValue='';}});
 function releaseStream(){if(stream){stream.getTracks().forEach(track=>track.stop());stream=null;}}
-function updateButtons(){if(!start)return;start.disabled=requesting||uploading||!!(recording&&recording.state!=='inactive');stop.disabled=!recording||recording.state!=='recording';submitButton.disabled=uploading||requesting||!blob||!!(recording&&recording.state!=='inactive');}
+function updateButtons(){if(!start)return;const active=!!(recording&&recording.state!=='inactive');start.disabled=requesting||uploading||active;stop.disabled=!active||uploading;if(pause){pause.disabled=!active||uploading;pause.textContent=recording?.state==='paused'?'Tiếp tục ghi âm':'Tạm dừng';pause.setAttribute('aria-pressed',String(recording?.state==='paused'));}submitButton.disabled=uploading||requesting||!blob||active;}
 if(start)start.onclick=async()=>{
  if(requesting||uploading||(recording&&recording.state!=='inactive'))return;
  requesting=true;updateButtons();recordStatus.textContent='Đang xin quyền micro…';
@@ -70,6 +72,8 @@ if(start)start.onclick=async()=>{
   const type=['audio/webm;codecs=opus','audio/ogg;codecs=opus','audio/mp4'].find(value=>MediaRecorder.isTypeSupported(value));
   if(!type)throw Error('Trình duyệt không có định dạng ghi âm được hỗ trợ. Hãy dùng trình duyệt khác.');
   recording=new MediaRecorder(stream,{mimeType:type});
+  recording.onpause=()=>{recordStatus.textContent='Đã tạm dừng ghi âm.';updateButtons();};
+  recording.onresume=()=>{recordStatus.textContent='Đang tiếp tục ghi âm.';updateButtons();};
   let chunks=[],size=0,failed=false;
   blob=null;if(previewURL){URL.revokeObjectURL(previewURL);previewURL=null;}preview.pause();preview.removeAttribute('src');preview.hidden=true;
   recording.ondataavailable=event=>{if(event.data.size){size+=event.data.size;chunks.push(event.data);if(size>maxBytes){failed=true;recordStatus.textContent='Bản ghi vượt 20 MiB. Hãy ghi lại ngắn hơn.';if(recording.state!=='inactive')recording.stop();}}};
@@ -79,23 +83,28 @@ if(start)start.onclick=async()=>{
  }catch(error){releaseStream();recordStatus.textContent=error.name==='NotAllowedError'?'Bạn chưa cho phép dùng micro. Hãy cấp quyền rồi thử lại.':error.message;}
  finally{requesting=false;updateButtons();}
 };
-if(stop)stop.onclick=()=>{if(recording?.state==='recording'){recordStatus.textContent='Đang hoàn tất bản ghi…';recording.stop();updateButtons();}};
+if(pause)pause.onclick=()=>{if(uploading||!recording)return;try{if(recording.state==='recording')recording.pause();else if(recording.state==='paused')recording.resume();updateButtons();}catch(error){recordStatus.textContent='Chưa thể tạm dừng hoặc tiếp tục. Hãy thử lại hoặc dừng để lưu bản ghi.';}};
+if(stop)stop.onclick=()=>{if(recording&&recording.state!=='inactive'){recordStatus.textContent='Đang hoàn tất bản ghi…';recording.stop();updateButtons();}};
 window.addEventListener('pagehide',event=>{disposed=true;if(recording&&recording.state!=='inactive')recording.stop();releaseStream();if(!event.persisted){if(previewURL)URL.revokeObjectURL(previewURL);selectedImages.forEach(item=>URL.revokeObjectURL(item.url));}});
 form.onsubmit=async event=>{
  event.preventDefault();if(uploading)return;
+ const clickedExercise=event.submitter?.matches('[data-submit-exercise]')&&!event.submitter.closest('[data-listening-exercise]').hidden?event.submitter:null;
+ const exerciseButton=form.dataset.kind==='listening'?(clickedExercise||form.querySelector('[data-listening-exercise]:not([hidden]) [data-submit-exercise]')):null;
+ if(form.dataset.kind==='listening'&&!exerciseButton){statusBox.textContent='Chọn bài nghe cần nộp.';return;}
  if(speaking&&(!blob||requesting||(recording&&recording.state!=='inactive'))){statusBox.textContent='Bạn phải hoàn tất ghi âm trước khi nộp.';return;}
  if(vocabulary&&!selectedImages.length){statusBox.textContent='Cần chọn ít nhất 1 ảnh bài từ vựng trước khi nộp.';chooseImages?.focus();return;}
- clearTimeout(draftTimer);const pendingDraft=saveDraft();uploading=true;submitButton.disabled=true;updateButtons();updateImageControls();statusBox.textContent='Đang gửi bài…';await pendingDraft;
+ clearTimeout(draftTimer);const pendingDraft=saveDraft();uploading=true;setSubmitting(true);updateButtons();updateImageControls();statusBox.textContent='Đang gửi bài…';await pendingDraft;
  try{
-  const data=new FormData(form),answers=collectAnswers(data);
+  const data=new FormData(form);let answers=collectAnswers(data);
+  if(exerciseButton){const panel=exerciseButton.closest('[data-listening-exercise]');const ids=new Set([...panel.querySelectorAll('[name^="q_"], [name^="s_"]')].map(input=>input.name.slice(2)));answers=Object.fromEntries(Object.entries(answers).filter(([id])=>ids.has(id)));data.set('exercise_id',exerciseButton.dataset.submitExercise);}
   if(vocabulary){data.delete('text');data.delete('images');selectedImages.forEach(item=>data.append('images',item.file));}
   const images=data.getAll('images').filter(file=>file.size);if(images.length>5||images.some(file=>file.size>8*1024*1024))throw Error('Tối đa 5 ảnh, mỗi ảnh không quá 8 MiB.');
   data.set('answers',JSON.stringify(answers));
   if(speaking){data.delete('text');const type=blob.type.split(';')[0];const extension=type==='audio/mp4'?'mp4':type==='audio/ogg'?'ogg':'webm';data.set('audio',blob,'recording.'+extension);}
   const response=await fetch(form.dataset.submitUrl,{method:'POST',body:data,headers:{'X-CSRFToken':form.querySelector('[name=csrfmiddlewaretoken]').value}});
   const job=await response.json();if(!response.ok)throw Error(job.message||'Không gửi được bài. Kiểm tra đăng nhập và dữ liệu.');location.href=job.detail_url;
- }catch(error){statusBox.textContent=error.message;uploading=false;submitButton.disabled=false;updateButtons();updateImageControls();}
+ }catch(error){statusBox.textContent=error.message;uploading=false;setSubmitting(false);updateButtons();updateImageControls();}
 };
-if(!speaking)submitButton.disabled=false;
+if(!speaking)setSubmitting(false);
 listeningProgress();
 })();

@@ -22,6 +22,16 @@ hoàn thành nếu đã làm đủ; chọn đúng toàn bộ nhưng bỏ câu tr
 Nội dung câu trả lời ngắn được
 lưu cho giáo viên xem; hệ thống không tự chấm đúng/sai nội dung đó bằng AI.
 
+Mỗi bài trong buổi có nút **Nộp bài** riêng. Học viên có thể nộp bất kỳ bài nào
+trước, nhận số câu đúng của bài đó, rồi tiếp tục các bài còn lại. Nháp của các bài
+khác không bị xóa. Khi nộp lại, chỉ câu trả lời của bài được chọn được cập nhật;
+buổi chỉ hoàn thành khi tất cả bài đã nộp đủ yêu cầu.
+
+Trước hạn nộp, lời giải và ngữ cảnh hỏi AI chỉ chứa các bài đã nộp. Sau hạn,
+**Đáp án và giải thích** trong danh sách buổi học mở cả buổi, kể cả khi học viên
+chưa nộp. Xem lời giải sau hạn không tạo bài nộp hoặc tự hoàn thành buổi học.
+Lịch sử nộp cả buổi trước đây vẫn giữ nguyên.
+
 Với bài đọc theo video và từ vựng, AI đưa đề xuất; giáo viên/admin xác nhận mức hoàn
 thành và nhận xét cuối cùng. Không suy ra thiếu bài chỉ vì nhận dạng giọng nói hoặc
 chữ viết không chính xác. Không chấm phát âm hay độ đẹp của chữ.

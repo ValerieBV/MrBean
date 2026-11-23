@@ -6,7 +6,7 @@ class RecordingFormTests(IntegratedFixture):
     def test_readalong_page_has_mic_without_reference_or_typed_or_file_fallback(self):
         self.client.force_login(self.student)
         response=self.client.get(reverse('submissions:do_task',args=[self.task.pk]))
-        for text in ['id="recordStart"','id="recordStop"','id="recordPreview"',
+        for text in ['id="recordStart"','id="recordPause"','id="recordStop"','id="recordPreview"',
                      'https://www.youtube-nocookie.com/embed/abcdefghijk',
                      'submissions/submit.js']:
             self.assertContains(response,text)

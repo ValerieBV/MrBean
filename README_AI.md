@@ -200,6 +200,13 @@ tra đủ số câu, không trùng, lựa chọn hợp lệ rồi tạo toàn b�
 
 Học viên chọn đáp án kèm câu trả lời ngắn cho từng câu. Backend kiểm tra ngay,
 không gọi OpenAI: chỉ đủ lựa chọn và câu trả lời ngắn cho tất cả câu mới hoàn thành.
+Mỗi bài nghe có nút nộp riêng và kết quả số câu đúng riêng. Không cần làm xong cả
+bốn bài để nộp; nháp của những bài khác được giữ lại. Buổi học chỉ được tính hoàn
+thành khi tất cả bài trong buổi đã nộp đủ yêu cầu. Nộp lại chỉ thay kết quả của bài
+được chọn, các lần nộp trước vẫn được lưu.
+Trước hạn, học viên chỉ xem được đáp án và hỏi AI về các bài đã nộp. Sau hạn,
+đáp án cả buổi được mở từ danh sách bài học, kể cả khi chưa nộp hoặc không được
+nộp muộn. Việc mở đáp án không tự tính hoàn thành.
 Số câu đúng/sai giữ làm thông tin tham khảo, không đổi sang điểm 0–10 và không
 quyết định mức hoàn thành. Không chấm ngữ nghĩa câu trả lời ngắn tự động.
 Đáp án đúng không có trong HTML/form/API đề của học viên.
@@ -222,7 +229,8 @@ toàn bộ file. Có thể dùng các điều khiển này khi nghe lại bản 
    đoán lời mẫu từ video. Nội dung `SpeakingTask` cũ cần được kiểm tra rồi sao
    chép vào trường lời mẫu khi thực sự là câu cần đọc.
 2. Giao bài cho lớp để chụp lại video/lời mẫu trong rubric. Học viên xem video,
-   tạm dừng video, bấm **Bắt đầu ghi âm → Dừng ghi âm**, nghe lại hoặc ghi lại,
+   tạm dừng video, bấm **Bắt đầu ghi âm**, có thể **Tạm dừng → Tiếp tục ghi âm**
+   nhiều lần rồi **Dừng ghi âm**, nghe lại hoặc ghi lại,
    rồi nộp. Lời mẫu được giữ ở backend để chấm và cho giáo viên đối chiếu,
    không hiển thị trên trang làm bài hoặc kết quả của học viên. Không có ô
    nhập transcript hay chọn file ghi âm có sẵn trong UI.
@@ -344,6 +352,15 @@ viết tại thời điểm cũ. Teacher đối chiếu dữ liệu gốc; lện
 cũ lên OpenAI. Chỉ nhập học viên đang ghi danh trong lớp chỉ định.
 
 ## Kiểm tra và triển khai
+
+Ảnh và ghi âm của bài nộp bị xóa sẽ được dọn sau khi giao dịch database thành công.
+File còn được bài nộp khác sử dụng được giữ lại. Để xử lý file mồ côi từ trước,
+chạy lệnh xem danh sách trước khi xóa; mặc định bỏ qua file mới trong 24 giờ:
+
+```powershell
+python manage.py cleanup_submission_files
+python manage.py cleanup_submission_files --delete
+```
 
 ```powershell
 python manage.py check
