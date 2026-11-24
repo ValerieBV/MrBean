@@ -78,6 +78,8 @@
 .listening-bank-guide,.listening-selected-kind{display:flex;align-items:flex-start;gap:1rem;padding:1rem 1.25rem;border:1px solid #e4c5a4;border-radius:12px;background:#FEF3E2;margin-bottom:1.5rem;color:#2A1A0E;font-size:.9rem;line-height:1.65}
 .listening-bank-guide .listening-type-icon,.listening-selected-kind .listening-type-icon{background:#F4AE52}
 .listening-selected-kind p{color:#6D5B4E;font-size:.85rem}
+.lesson-bank-table{min-width:760px}
+.lesson-bank-table th,.lesson-bank-table td:first-child,.lesson-bank-table td:nth-child(3),.lesson-bank-table td:nth-child(4),.lesson-bank-table td:nth-child(5){white-space:nowrap}
 .lesson-title-link{font-weight:600;text-underline-offset:4px}
 .lesson-title-link:hover{text-decoration:underline}
 .lesson-content-link{display:inline-flex;align-items:center;gap:.4rem;padding:.5rem .7rem;border:1px solid #e4c5a4;border-radius:8px;background:#FEF3E2;font-weight:600;margin-right:.6rem}
