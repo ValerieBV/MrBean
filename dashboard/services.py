@@ -14,8 +14,11 @@ from .cohort import Cohort, STAGES, SKILLS, AI, percent
 from .query import annotated_tasks, task_state  # also used by the practice and reporting views
 
 
-def paginate(rows, number, size=25):
-    page = Paginator(rows, size).get_page(number)
+DASHBOARD_PAGE_SIZE = 5
+
+
+def paginate(rows, number):
+    page = Paginator(rows, DASHBOARD_PAGE_SIZE).get_page(number)
     return list(page), {'page': page.number, 'pages': page.paginator.num_pages, 'total': page.paginator.count}
 
 
@@ -101,8 +104,8 @@ def metrics_for(user, now=None, filters=None, learner=None):
                    learner_url=reverse('dashboard:learner', args=[job.task.learner_id]) if staff else None)
         return row
 
-    def add_page(key, parameter, items, format_row=None, size=25):
-        page, meta = paginate(items, filters.get(parameter + '_page'), size)
+    def add_page(key, parameter, items, format_row=None):
+        page, meta = paginate(items, filters.get(parameter + '_page'))
         response[key] = [format_row(item) for item in page] if format_row else page
         response[parameter + '_pagination'] = meta
         return meta['total']
@@ -112,13 +115,13 @@ def metrics_for(user, now=None, filters=None, learner=None):
 
     ordered = sorted(facts, key=lambda f: (not f.actionable, not f.overdue, f.task.due_at, f.task.pk))
     response['next_tasks'] = [task_row(f) for f in islice((f for f in ordered if f.actionable), 3)]
-    add_page('tasks', 'tasks', ordered, task_row, 12)
-    add_page('learner_progress', 'progress', people, size=12)
-    add_page('at_risk_learners', 'risks', risks, size=8)
+    add_page('tasks', 'tasks', ordered, task_row)
+    add_page('learner_progress', 'progress', people)
+    add_page('at_risk_learners', 'risks', risks)
     response['graded_count'] = add_page('graded_report', 'grades', history.filter(status='graded'), job_row)
     add_page('history', 'history', history, job_row)
     response['review_queue_count'] = add_page('review_queue', 'queue', queue,
-        lambda job: dict(job_row(job), review_status_label=review_status_label(job)), 8)
+        lambda job: dict(job_row(job), review_status_label=review_status_label(job)))
 
     if staff:
         waiting = conversations_for(user).filter(kind='knowledge', status='waiting',
@@ -126,5 +129,5 @@ def metrics_for(user, now=None, filters=None, learner=None):
                 'job__task__title', 'job__task__learner_id', 'escalated_at').order_by('escalated_at', 'pk')
         response['support_count'] = add_page('support_queue', 'support', waiting, lambda c: dict(
             title=c.job.task.title, student_code=cohort.labels[c.job.task.learner_id],
-            learner_url=reverse('dashboard:learner', args=[c.job.task.learner_id]), detail_url=c.get_absolute_url(), since=c.escalated_at.isoformat() if c.escalated_at else None), 8)
+            learner_url=reverse('dashboard:learner', args=[c.job.task.learner_id]), detail_url=c.get_absolute_url(), since=c.escalated_at.isoformat() if c.escalated_at else None))
     return response

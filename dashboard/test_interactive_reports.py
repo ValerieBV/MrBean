@@ -148,7 +148,7 @@ class InteractiveReportTests(IntegratedFixture):
                                         teacher=self.teacher, due_at=self.now)
         self.client.force_login(self.teacher)
         data=self.data(tasks_page='2')
-        self.assertEqual((data['tasks_pagination']['total'],len(data['tasks'])),(20,8))
+        self.assertEqual((data['tasks_pagination']['total'], data['tasks_pagination']['pages'], len(data['tasks'])), (20,4,5))
         self.assertEqual(sum(x['total'] for x in data['charts']['skill']),20)
         self.assertEqual(len(self.get_export(tasks_page='2')),20)
         self.assertEqual(self.data(classroom='legacy')['task_count'],17)
