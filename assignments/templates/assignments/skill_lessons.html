@@ -9,8 +9,8 @@
 {% endblock %}
 
 {% block content %}
-<div class="mb-6 flex items-center justify-between">
-    <div>
+<div class="lesson-bank-heading mb-6 flex flex-wrap items-center justify-between gap-3">
+    <div class="min-w-0">
         <a
             href="{% url 'assignments:assignment_list' %}"
             class="text-amber-700 text-sm hover:underline"
@@ -48,14 +48,15 @@
 {% endif %}
 
 <div class="bg-white rounded-xl shadow-sm border border-amber-900/5 overflow-x-auto">
-    <table class="w-full text-sm">
+    <table class="lesson-bank-table w-full text-sm">
         <thead class="bg-amber-50 text-amber-900 text-xs uppercase">
             <tr>
-                <th class="text-left px-5 py-3">Buổi</th>
-                <th class="text-left px-5 py-3">Chương trình</th>
-                <th class="text-left px-5 py-3">Số nội dung</th>
-                <th class="text-center px-5 py-3">Trạng thái</th>
-                <th class="text-right px-5 py-3">Thao tác</th>
+                <th scope="col" class="text-left px-5 py-3">Buổi</th>
+                <th scope="col" class="text-left px-5 py-3">Tên buổi</th>
+                <th scope="col" class="text-left px-5 py-3">Chương trình</th>
+                <th scope="col" class="text-left px-5 py-3">Số nội dung</th>
+                <th scope="col" class="text-center px-5 py-3">Trạng thái</th>
+                <th scope="col" class="text-right px-5 py-3">Thao tác</th>
             </tr>
         </thead>
 
