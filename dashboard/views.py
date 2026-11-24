@@ -1,5 +1,6 @@
 import csv
 
+from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, render
@@ -50,6 +51,7 @@ def index(request, learner_id=None):
         'dashboard_title': title, 'overview': overview, 'learner_detail': bool(learner), 'student_code': code,
         'metrics_url': report_url('metrics', learner), 'export_url': report_url('export', learner),
         'classes': classes.order_by('class_code'), 'stage_options': STAGES, 'skill_options': SKILLS,
+        'risk_missed': settings.DROPOUT_MISSED_TASKS, 'risk_days': settings.DROPOUT_INACTIVE_DAYS,
         'focus_options': FOCUS, 'ai_options': AI, 'can_confirm': user.is_superuser or user.role in ('admin', 'teacher'),
     })
 

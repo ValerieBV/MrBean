@@ -79,7 +79,7 @@ class InteractiveReportTests(IntegratedFixture):
         selection=dict(classroom=self.classroom.pk, skill='speaking', stage='review', focus='submitted',
                        ai='manual', week=(week-timedelta(days=week.weekday())).isoformat(), q='A-01')
         data=self.data(**selection)
-        self.assertEqual((data['assigned_count'],data['review_queue_count'],data['support_count']), (1,1,1))
+        self.assertEqual((data['assigned_count'],data['review_queue_count'],data['support_count'],data['manual_review_count']), (1,1,1,1))
         self.assertEqual({r['task_id'] for r in data['history']}, {self.task.pk})
         for dimension in ('skill','stage','classroom','week'):
             self.assertEqual(sum(r['total'] for r in data['charts'][dimension]), 1)
@@ -102,11 +102,11 @@ class InteractiveReportTests(IntegratedFixture):
         older=GradingJob.objects.create(task=self.vocab_task, submission_key='superseded',kind='vocabulary',
                                          status='manual', submitted_at=self.now-timedelta(hours=2))
         GradingJob.objects.create(task=self.vocab_task, submission_key='finished',kind='vocabulary',status='graded',
-                                  completion_status='complete')
+                                  completion_status='complete',fallback_reason='ai_uncertain_evidence')
         GradingJob.objects.create(task=self.task, submission_key='waiting',kind='speaking',status='ai_reviewed')
         self.client.force_login(self.teacher)
         data=self.data()
-        self.assertEqual((data['review_queue_count'],data['action_count']), (1,1))
+        self.assertEqual((data['review_queue_count'],data['action_count'],data['manual_review_count']), (1,1,0))
         self.assertNotIn(older.pk,[r['id'] for r in data['review_queue']])
         self.assertIn(older.pk,[r['id'] for r in data['history']])
         self.assertEqual({x['key']:x['total'] for x in data['charts']['stage']}, {'complete':1,'review':1,'todo':1})

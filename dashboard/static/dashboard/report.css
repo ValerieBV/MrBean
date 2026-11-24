@@ -75,3 +75,9 @@
 
 .lr-highlight{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;border-left:4px solid var(--amber)}
 #learning-report .lr-highlight .lr-caption{margin-bottom:0}
+
+#learning-report .lr-drawer-summary{display:none}
+@media(max-width:600px){
+  #learning-report .lr-drawer-summary{display:list-item;min-height:38px;padding:8px 2px}
+  #filterDrawer[open] .lr-drawer-summary{margin-bottom:8px}
+}

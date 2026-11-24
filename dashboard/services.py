@@ -83,6 +83,7 @@ def metrics_for(user, now=None, filters=None, learner=None):
                             'week': series(facts, 'week', {}),
                             'stage': [dict(key=k, label=v, total=counts[k]) for k, v in STAGES.items() if counts[k]]})
     if staff:
+        response['manual_review_count'] = sum(f.stage == 'review' and f.ai == 'manual' for f in facts)
         response['ai_operations'] = dict(deadline_minutes=settings.AI_DEADLINE_SECONDS/60, total=sum(ai.values()),
             measured=measured, timely_rate=percent(ai['timely'], measured) if measured else None,
             groups=[dict(key=k, label=v, total=ai[k]) for k, v in AI.items() if ai[k]])

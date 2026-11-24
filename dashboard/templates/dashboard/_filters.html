@@ -1,4 +1,5 @@
 <section class="lr-filterbox" aria-label="Bộ lọc báo cáo">
+  <details id="filterDrawer" open><summary class="lr-drawer-summary">Bộ lọc báo cáo</summary>
   <form id="filters" method="get" role="search">
     <label>Lớp học<select name="classroom" id="filter-class"><option value="">Tất cả lớp</option>{% for c in classes %}<option value="{{ c.pk }}">{{ c.class_code }}</option>{% endfor %}<option value="legacy">Bài cũ không gắn lớp</option></select></label>
     <label>Kỹ năng<select name="skill" id="filter-skill"><option value="">Tất cả kỹ năng</option>{% for k,v in skill_options.items %}<option value="{{ k }}">{{ v }}</option>{% endfor %}</select></label>
@@ -14,5 +15,6 @@
     <button class="lr-button lr-primary" type="submit">Áp dụng</button>
     <button type="button" class="lr-button" id="resetFilters">Xóa bộ lọc</button>
   </form>
+  </details>
   <div id="filterChips" class="lr-chips" aria-label="Bộ lọc đang áp dụng"></div>
 </section>

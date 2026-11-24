@@ -5,6 +5,9 @@
   if (!root) return;
   const form = $('filters'), staff = root.dataset.staff === '1', overview = !!$('progress');
   const dimensions = ['classroom', 'skill', 'stage', 'focus', 'date_from', 'date_to', 'week', 'scope', 'q', ...(staff ? ['ai'] : [])];
+  const narrow=window.matchMedia('(max-width:600px)');
+  const sizeFilters=()=>{$('filterDrawer').open=!narrow.matches;};
+  sizeFilters();narrow.addEventListener('change',sizeFilters);
   const pages = {tasks:'tasksPager', history:'historyPager', progress:'progressPager', risks:'risksPager',
     queue:'queuePager', support:'supportPager'};
   const pageKeys = Object.keys(pages).map(k => k + '_page');
@@ -30,8 +33,9 @@
     return p;
   }
   function localUrl(path, p) { const query = p.toString(); return path+(query ? '?'+query : ''); }
-  function drill(path) {
+  function drill(path, focus) {
     const p = clean(params, dimensions);
+    if (focus) p.set('focus', focus);
     const back = clean(params, [...dimensions, ...pageKeys]).toString();
     if (back) p.set('back', back);
     return localUrl(path, p);
@@ -88,13 +92,15 @@
   form.addEventListener('change', e=>{if (e.target.name!=='q') {validateDates();applyForm();}});
   form.elements.q.addEventListener('input',()=>{clearTimeout(searchTimer);searchTimer=setTimeout(applyForm,350);});
   $('resetFilters').addEventListener('click',()=>{
-    form.elements.date_to.setCustomValidity('');
+    form.elements.date_to.setCustomValidity('');$('extraFilters').open=false;
     change(clean(params,['back']));
   });
   $('retry').addEventListener('click',()=>load(true));
   root.addEventListener('click',e=>{
     const b=e.target.closest('button'); if (!b || !root.contains(b)) return;
-    if (b.dataset.key) slice(b.dataset.key,b.dataset.value);
+    if (b.dataset.cross) {
+      const next=clean(params,[...dimensions,'back']);next.set('stage','review');next.set('ai','manual');change(next);
+    } else if (b.dataset.key) slice(b.dataset.key,b.dataset.value);
     else if (b.dataset.remove) slice(b.dataset.remove,'');
     else if (b.dataset.page) {
       const next = new URLSearchParams(params), key=b.dataset.page+'_page';
@@ -166,12 +172,12 @@
     if (!overview) return;
     let title, message, action;
     const filter=(key,val,caption)=>{const b=filterButton(key,val,caption);b.className='lr-button';b.textContent=caption;return b;};
-    const manual=d.ai_operations?.groups.find(x=>x.key==='manual')?.total || 0;
+    const manual=d.manual_review_count;
     const weakest=classes.find(c=>c.assigned && c.completed<c.assigned);
     if (root.dataset.role==='admin' && manual && !params.has('ai')) {
-      title=manual+' bài đã chuyển sang chấm thủ công';
-      message='Xem các lần nộp mà hệ thống không đưa ra được đề xuất.';
-      action=filter('ai','manual','Lọc bài chấm thủ công');
+      title=manual+' bài đang chờ chấm thủ công';
+      message='Các bài này đang cần giáo viên đánh giá từ bài làm gốc.';
+      action=node('button','Xem bài cần chấm','lr-button');action.type='button';action.dataset.cross='manual_review';
     } else if (root.dataset.role==='manager' && weakest && !params.has('classroom')) {
       title='Theo sát lớp '+weakest.label;
       message=weakest.completed+'/'+weakest.assigned+' lượt hoàn thành · '+weakest.overdue+' lượt quá hạn.';
@@ -214,8 +220,9 @@
       chart('aiChart',ai.groups,'ai',true);
     }
     list('risks',d.at_risk_learners,r=>row(person(r.student_code,r.detail_url),
-      r.missed_tasks+' bài quá hạn · '+(r.reason==='inactive'?'Ít hoạt động':'Nhiều bài chưa hoàn thành'),
-      link('Xem tiến độ',drill(r.detail_url))), 'Không có học viên chạm ngưỡng hỗ trợ trong phạm vi này.');
+      r.missed_tasks+' bài quá hạn · '+(r.reason==='inactive'?'Ít hoạt động':'Nhiều bài chưa hoàn thành')+
+        (r.last_submission_at?' · Nộp gần nhất: '+dateTime(r.last_submission_at):' · Chưa có lần nộp'),
+      link('Xem bài quá hạn',drill(r.detail_url,'overdue'))), 'Không có học viên chạm ngưỡng hỗ trợ trong phạm vi này.');
     list('progress',d.learner_progress,r=>{
       const el=row(person(r.student_code,r.detail_url),r.assigned ? r.completed+'/'+r.assigned+' hoàn thành · '+r.overdue+' quá hạn' : 'Chưa có lượt phải làm',
         r.detail_url ? link('Xem tiến độ',drill(r.detail_url)) : null);
@@ -269,7 +276,7 @@
     } finally {
       if(controller===mine) {
         body.setAttribute('aria-busy','false');
-        if(active && !document.hidden) refreshTimer=setTimeout(()=>load(),60000);
+        if(active && !document.hidden) refreshTimer=setTimeout(()=>load(),10000);
       }
     }
   }

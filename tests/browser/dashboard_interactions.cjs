@@ -51,6 +51,21 @@ async function filter(p,action) {
   const [response]=await Promise.all([p.waitForResponse(r=>new URL(r.url()).pathname.endsWith('/metrics/') && r.request().resourceType()==='fetch'),action()]);
   assert.equal(response.status(),200);await filled(p);
 }
+async function checkWorkspace(p) {
+  const {left,right,start,end,overflow}=await p.evaluate(()=>{
+    const shell=document.querySelector('.app-main').getBoundingClientRect();
+    const main=document.querySelector('#main-content').getBoundingClientRect();
+    return {left:main.left,right:main.right,start:shell.left,end:shell.right,overflow:document.documentElement.scrollWidth-innerWidth};
+  });
+  assert(Math.abs(left-start)<2 && Math.abs(right-end)<2,'Dashboard must use the full workspace without applying the sidebar margin twice');
+  assert(overflow<=1,'Horizontal page overflow');
+}
+async function settleSidebar(p,open){
+  await p.waitForFunction(open=>{
+    const panel=document.getElementById('sidebarMenu').getBoundingClientRect();
+    return open ? Math.abs(panel.left)<1 : panel.right<=1;
+  },open);
+}
 async function links(p) {
   const hrefs=await p.locator('#learning-report a:visible').evaluateAll(as=>[...new Set(as.map(a=>a.href))]);
   for(const href of hrefs){
@@ -78,7 +93,7 @@ async function links(p) {
     await Promise.all([p.waitForURL(role==='student'?'**/hoc-tap/':'**/dashboard/'),p.locator('button[type=submit]').click()]);
     await p.goto(base+'/dashboard/');await filled(p);
     assert(!((await p.locator('#learning-report').innerText()).includes('Identical test name')));
-    const availableLinks=await links(p);
+    await checkWorkspace(p);const availableLinks=await links(p);
     assert.equal(await p.locator('.lr-kpi').count(),4);
     if(role==='student'){
       assert.equal(await p.locator('#progress,#classChart,#aiChart').count(),0);
@@ -103,6 +118,10 @@ async function links(p) {
     await filter(p,()=>p.locator('#filters button[type=submit]').click());
     await filter(p,()=>p.locator('#resetFilters').click());
     if(role==='admin'){
+      await filter(p,()=>p.locator('#priorityAction [data-cross]').click());
+      assert.equal(new URL(p.url()).searchParams.get('stage'),'review');
+      assert.equal(new URL(p.url()).searchParams.get('ai'),'manual');
+      await filter(p,()=>p.locator('#resetFilters').click());
       expected503=true;
       await p.route('**/dashboard/metrics/**',route=>route.fulfill({status:503,body:'offline'}),{times:1});
       await p.locator('.lr-kpi[data-value=submitted]').click();
@@ -127,6 +146,9 @@ async function links(p) {
     if(role!=='student'){
       await filter(p,()=>p.locator('#classChart button').filter({hasText:'DEMO-01'}).click());
       const saved=p.url();
+      await p.locator('#risks').getByRole('link',{name:'Xem bài quá hạn',exact:true}).click();await filled(p);
+      assert.equal(new URL(p.url()).searchParams.get('focus'),'overdue');assert.equal(await p.locator('#tasks .lr-row').count(),2);
+      await p.locator('#backOverview').click();await filled(p);assert.equal(p.url(),saved);
       await p.locator('#risks').getByRole('link',{name:'DASH-02',exact:true}).click();await filled(p);
       assert.match(p.url(),/\/hoc-vien\/\d+\//);assert.match(await p.locator('h1').innerText(),/DASH-02/);
       assert.equal(await p.locator('#classChart,#learners').count(),0);
@@ -152,12 +174,24 @@ async function links(p) {
     await p.screenshot({path:path.join(out,role+'-desktop.png'),fullPage:true});
     for(const width of [1024,390]){
       await p.setViewportSize({width,height:860});
-      assert(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'overflow '+role+' '+width);
+      await checkWorkspace(p);
       const toggle=p.locator('[data-menu-toggle]');
-      await toggle.click();await p.waitForTimeout(300);
-      assert(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'sidebar overflow '+role+' '+width);
-      if(width===390 && await toggle.getAttribute('aria-expanded')==='true') await p.keyboard.press('Escape');
+      await toggle.click();
+      await settleSidebar(p,await toggle.getAttribute('aria-expanded')==='true');
+      await checkWorkspace(p);
+      if(width===390){
+        if(await toggle.getAttribute('aria-expanded')==='true')await p.keyboard.press('Escape');
+        await settleSidebar(p,false);
+        const drawer=p.locator('#filterDrawer');
+        assert.equal(await drawer.evaluate(el=>el.open),false,'Mobile filters start collapsed');
+        await drawer.locator('> summary').click();
+        await filter(p,()=>p.locator('[name=skill]').selectOption('listening'));
+        await drawer.locator('> summary').click();
+        await filter(p,()=>p.getByRole('button',{name:/^Bỏ bộ lọc Kỹ năng:/}).click());
+        assert.equal(await drawer.evaluate(el=>el.open),false,'Removing a chip keeps the mobile filters collapsed');
+      }
     }
+    await p.evaluate(()=>window.scrollTo({top:0,behavior:'instant'}));
     await p.screenshot({path:path.join(out,role+'-mobile.png'),fullPage:true});
     results.push({role,availableLinks});await ctx.close();
   }
