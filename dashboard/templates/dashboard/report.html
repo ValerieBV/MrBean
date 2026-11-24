@@ -2,7 +2,7 @@
 {% load static %}
 {% block title %}{{ dashboard_title }} · Mr Bean{% endblock %}
 {% block extra_css %}<link rel="stylesheet" href="{% static 'dashboard/report.css' %}">{% endblock %}
-{% block extra_js %}<script src="{% static 'dashboard/reports.js' %}" defer></script>{% endblock %}
+{% block extra_js %}<script src="{% static 'dashboard/progress-report.v2.js' %}" defer></script>{% endblock %}
 {% block content %}
 <div id="learning-report" data-metrics="{{ metrics_url }}" data-export="{{ export_url }}" data-overview="{% url 'dashboard:index' %}" data-staff="{{ is_reporting_staff|yesno:'1,0' }}" data-role="{% if user.is_superuser %}admin{% else %}{{ user.role }}{% endif %}" data-can-confirm="{{ can_confirm|yesno:'1,0' }}">
   <header class="lr-heading">
