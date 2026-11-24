@@ -41,6 +41,11 @@ jobs:
         working-directory: tests/browser
       - run: npx playwright install --with-deps chromium
         working-directory: tests/browser
+      - run: node dashboard_interactions.cjs
+        working-directory: tests/browser
+        env:
+          MRBEAN_PYTHON: python
+          MRBEAN_QA_OUTPUT: ${{ github.workspace }}/browser-output/dashboard
       - run: node lesson_bank_layout.cjs
         working-directory: tests/browser
         env:

@@ -53,6 +53,22 @@ class IndependentListeningSubmissionTests(IntegratedFixture):
             data['exercise_id'] = exercise.pk
         return self.client.post(reverse('ai_core:submit'), data, content_type='application/json')
 
+    def test_dashboard_separates_partial_listening_from_fully_submitted_work(self):
+        filters = {'q': self.quiz.title}
+        before = metrics_for(self.student, filters=filters)
+        self.assertEqual((before['tasks'][0]['submitted_exercise_count'], before['tasks'][0]['exercise_count']), (0, 4))
+        self.submit(1)
+        partial = metrics_for(self.student, filters=filters)
+        self.assertEqual((partial['submitted_count'], partial['full_count'], partial['completed_count']), (1, 0, 0))
+        row = partial['next_tasks'][0]
+        self.assertEqual((row['stage'], row['submitted_exercise_count'], row['exercise_count']), ('partial', 1, 4))
+        self.assertEqual(self.client.get(row['action_url']).status_code, 200)
+        for i in (3, 0, 2):
+            self.submit(i)
+        done = metrics_for(self.student, filters=filters)
+        self.assertEqual((done['full_count'], done['completed_count'], done['action_count']), (1, 1, 0))
+        self.assertEqual(done['tasks'][0]['stage'], 'complete')
+
     def test_any_exercise_can_be_submitted_first_and_only_its_answers_are_published(self):
         job = self.submit(1)
         self.assertEqual(job.result['total'], 25)

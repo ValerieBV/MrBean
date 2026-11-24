@@ -20,14 +20,14 @@ REPORT_STATUS_LABELS = {
 }
 
 
-def report_job(job):
+def report_job(job, *, include_name=True):
     """Use an allowlist so draft scores and model feedback stay internal."""
     published = job.status == 'graded'
     return {
         'id': job.pk,
         'task_id': job.task_id,
         'learner_id': job.task.learner_id,
-        'learner_name': job.task.learner.get_full_name() or job.task.learner.username,
+        **({'learner_name': job.task.learner.get_full_name() or job.task.learner.username} if include_name else {}),
         'title': job.task.title,
         'kind': job.kind,
         'status': job.status,

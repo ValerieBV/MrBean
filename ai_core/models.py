@@ -29,6 +29,8 @@ class GradingJob(models.Model):
     audio = models.FileField(upload_to='ai_submissions/%Y/%m/', blank=True)
     reference_text = models.TextField(blank=True)
     submitted_at = models.DateTimeField(default=timezone.now, db_index=True)
+    ai_assessed_at = models.DateTimeField(null=True, blank=True)
+    ai_assessment_method = models.CharField(max_length=20, blank=True)
     started_at = models.DateTimeField(null=True, blank=True)
     finished_at = models.DateTimeField(null=True, blank=True)
     status = models.CharField(max_length=16, choices=Status.choices, default=Status.QUEUED, db_index=True)

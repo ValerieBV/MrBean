@@ -326,7 +326,7 @@ class CompleteWorkflowTests(IntegratedFixture):
         self.assertTrue(self.admin.is_active);self.assertTrue(self.teacher.is_active)
 
     def test_csv_scoped_and_formula_values_escaped(self):
-        self.student.first_name='=DANGEROUS';self.student.save()
+        self.student.student_code='=DANGEROUS';self.student.save()
         self.login(self.student)
         response=self.client.get(reverse('dashboard:export'))
         self.assertEqual(response.status_code,200)

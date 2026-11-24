@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}{{ dashboard_title }} · Mr Bean{% endblock %}
+{% block page_class %}learning-workspace{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'dashboard/report.css' %}">{% endblock %}
+{% block extra_js %}<script src="{% static 'dashboard/reports.js' %}" defer></script>{% endblock %}
+{% block content %}
+<div id="learning-report" data-metrics="{{ metrics_url }}" data-export="{{ export_url }}" data-overview="{% url 'dashboard:index' %}" data-staff="{{ is_reporting_staff|yesno:'1,0' }}" data-role="{% if user.is_superuser %}admin{% else %}{{ user.role }}{% endif %}" data-can-confirm="{{ can_confirm|yesno:'1,0' }}">
+  <header class="lr-heading">
+    <div>
+      {% if learner_detail %}<a id="backOverview" class="lr-text-link" href="{% url 'dashboard:index' %}">← Về tổng quan</a>
+      {% else %}<p class="lr-kicker">{% if user.is_superuser or user.role == 'admin' %}Quản trị trung tâm{% elif user.role == 'manager' %}Điều hành đào tạo{% elif user.role == 'teacher' %}Không gian giáo viên{% else %}Mã học viên · {{ student_code }}{% endif %}</p>{% endif %}
+      <h1>{{ dashboard_title }}</h1>
+    </div>
+    <nav aria-label="Thao tác báo cáo" class="lr-tools">
+      {% if not is_reporting_staff %}<a href="{% url 'submissions:student_dashboard' %}" class="lr-button">Vào lớp học</a>{% endif %}
+      <a id="exportLink" class="lr-button lr-primary" href="{{ export_url }}">Xuất CSV</a>
+    </nav>
+  </header>
+
+  {% include 'dashboard/_filters.html' %}
+  <div id="reportMessage" role="status"><span id="reportStatus">Đang tải báo cáo…</span> <button id="retry" type="button" class="lr-text-link" hidden>Thử lại</button></div>
+  <noscript>Hãy bật JavaScript để sử dụng biểu đồ và bộ lọc tương tác. Bạn vẫn có thể xuất CSV.</noscript>
+
+  <div id="reportBody" aria-busy="true">
+    <section class="lr-kpis" aria-label="Chỉ số của phạm vi đang xem">
+      <button class="lr-kpi" type="button" data-key="focus" data-value="complete"><span>Tiến độ hoàn thành</span><strong id="rate">—</strong><small id="counts">Lượt giao đã xác nhận</small></button>
+      <button class="lr-kpi" type="button" data-key="focus" data-value="submitted"><span>Tỷ lệ có bài nộp</span><strong id="submissionRate">—</strong><small id="submissionCounts">Có ít nhất một lần nộp</small></button>
+      <button class="lr-kpi" type="button" data-key="focus" data-value="{% if is_reporting_staff and overview %}overdue{% else %}action{% endif %}"><span>{% if is_reporting_staff and overview %}Quá hạn chưa hoàn thành{% else %}Bài cần tiếp tục làm{% endif %}</span><strong id="workCount">—</strong><small>{% if overview %}Không tính bài đang chờ chấm{% else %}Có thể mở để làm hoặc bổ sung{% endif %}</small></button>
+      <button class="lr-kpi" type="button" data-key="focus" data-value="review"><span>{% if can_confirm %}Bài cần chấm hoặc xác nhận{% else %}Chờ giáo viên{% endif %}</span><strong id="reviewCount">—</strong><small>Lần nộp hiện tại của mỗi lượt giao</small></button>
+    </section>
+
+    {% block priority %}{% endblock %}
+    <section class="lr-grid" aria-label="Biểu đồ tiến độ">
+      <article class="lr-panel"><p class="lr-kicker">Kỹ năng</p><h2>Tiến độ theo kỹ năng</h2><p class="lr-caption">Tỷ lệ hoàn thành trên số lượt phải làm.</p><div id="skillChart" class="lr-chart"></div></article>
+      <article class="lr-panel"><p class="lr-kicker">Trạng thái hiện tại</p><h2>Bài đang ở bước nào?</h2><p class="lr-caption">Mỗi lượt giao chỉ thuộc một trạng thái.</p><div id="stageChart" class="lr-chart"></div></article>
+      <article class="lr-panel {% if not overview %}lr-wide{% endif %}"><p class="lr-kicker">Theo tuần giao bài</p><h2>Tiến độ từng tuần</h2><p class="lr-caption">So sánh số lượt phải làm và đã hoàn thành của từng tuần giao.</p><div class="lr-legend"><span>Lượt phải làm</span><span>Đã hoàn thành</span></div><div id="weekChart" class="lr-weeks"></div></article>
+      {% if overview %}<article class="lr-panel"><p class="lr-kicker">Theo lớp</p><h2>Lớp nào cần theo sát?</h2><p class="lr-caption">Xếp theo tỷ lệ hoàn thành, từ thấp đến cao.</p><div id="classChart" class="lr-chart"></div></article>{% endif %}
+    </section>
+
+    {% block operations %}{% endblock %}
+    <section class="lr-panel" id="assignments"><div class="lr-section-head"><h2>{% if overview %}Lượt giao trong phạm vi lọc{% else %}Bài tập được giao{% endif %}</h2><span id="taskSummary"></span></div>
+      <div id="tasks" class="lr-list"></div><nav class="lr-pages" id="tasksPager" aria-label="Phân trang lượt giao"></nav>
+    </section>
+    <section class="lr-panel"><h2>Lịch sử nộp và nhận xét</h2><div id="history" class="lr-list"></div><nav id="historyPager" class="lr-pages" aria-label="Phân trang lịch sử"></nav></section>
+  </div>
+</div>
+{% endblock %}

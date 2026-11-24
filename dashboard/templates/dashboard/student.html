@@ -1,20 +1,4 @@
-{% extends 'base.html' %}
-{% load static %}
-{% block title %}Bài tập và kết quả của tôi · MRBean{% endblock %}
-{% block page_class %}integration-content{% endblock %}
-{% block content %}
-<div class="page-header">
-    <div><div class="eyebrow">KHÔNG GIAN HỌC VIÊN</div><h1>Bài tập và kết quả của tôi</h1><p>Chào {{ user.get_full_name|default:user.username }}, cùng xem hôm nay bạn cần hoàn thành những gì.</p></div>
-    <div class="actions"><a id="exportLink" class="btn export" href="{% url 'dashboard:export' %}">↓ Tải kết quả CSV</a><a class="btn" href="{% url 'submissions:student_home' %}">Vào luyện tập →</a></div>
-</div>
-{% include 'dashboard/_filters.html' %}
-<section class="panel">
-    <div class="panel-head"><div><h2>Bài tập được giao</h2><p>Bài sau mở khi các bài trước cùng kỹ năng được xác nhận hoàn thành hoặc được miễn. Bài mới nộp hoặc đã chấm còn thiếu chưa được tính hoàn thành. Chọn “Cả lịch sử” để xem bài làm.</p></div><small id="exemptCount"></small></div>
-    <div class="table-wrap"><table><thead><tr><th>Bài tập</th><th>Lớp</th><th>Hạn nộp</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody id="tasks"><tr><td colspan="5" class="empty">Đang tải bài tập của bạn…</td></tr></tbody></table></div><div id="tasksPager" class="pager"></div>
-</section>
-<section class="panel">
-    <div class="panel-head"><div><h2>Lịch sử nộp và nhận xét</h2> </div><a href="{% url 'courses:exemption_list' %}" class="text-link">Đơn miễn bài của tôi →</a></div>
-    <div class="table-wrap"><table><thead><tr><th>Bài tập</th><th>Ngày nộp</th><th>Trạng thái</th><th>Kết quả</th></tr></thead><tbody id="history"><tr><td colspan="4" class="empty">Đang tải lịch sử…</td></tr></tbody></table></div><div id="historyPager" class="pager"></div>
-</section>
+{% extends 'dashboard/report.html' %}
+{% block priority %}
+<section class="lr-panel lr-priority"><div class="lr-section-head"><div><p class="lr-kicker">Ưu tiên theo hạn nộp</p><h2>Bài nên làm tiếp</h2></div><a class="lr-text-link" href="#assignments">Xem lượt giao ↓</a></div><div id="nextTasks" class="lr-list"></div></section>
 {% endblock %}
-{% block extra_js %}<script src="{% static 'dashboard/reports.js' %}" defer></script>{% endblock %}

@@ -172,9 +172,11 @@ def process_job(job_id, provider=None):
             raise TimeoutError()
         if job.kind == 'speaking':
             result['transcript_source'] = 'openai_transcription'
+        method = getattr(job, '_grading_method', 'openai')
         changed = GradingJob.objects.filter(pk=job_id, status='processing').update(
             status='ai_reviewed', result=result, suggested_score=None,
-            transcript=transcript, grading_method=getattr(job, '_grading_method', 'openai'), finished_at=finished)
+            transcript=transcript, grading_method=method, finished_at=finished,
+            ai_assessed_at=finished, ai_assessment_method=method)
         if changed:
             from accounts.notifications import notify
             from django.urls import reverse

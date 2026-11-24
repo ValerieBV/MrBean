@@ -23,7 +23,8 @@ class GradingDiagnosticTests(IntegratedFixture):
         self.assertEqual(self.client.get(reverse('dashboard:metrics')).json()['review_queue'], [])
 
     def test_success_and_manual_queue_labels_are_distinct_without_scores(self):
-        self.job('success', status='ai_reviewed', suggested_score=9.99)
+        GradingJob.objects.create(task=self.task, submission_key='success', kind='speaking',
+            status='ai_reviewed', suggested_score=9.99)
         self.job('manual', status='manual', fallback_reason='ai_authentication')
         self.client.force_login(self.teacher)
         rows = self.client.get(reverse('dashboard:metrics')).json()['review_queue']
