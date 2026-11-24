@@ -10,7 +10,7 @@ const out=path.resolve(process.env.MRBEAN_QA_OUTPUT || temp), python=process.env
 const env={...process.env, DJANGO_DEBUG:'true', OPENAI_API_KEY:'', AI_LOCAL_ENABLED:'false',
   DJANGO_DB_PATH:path.join(temp,'db.sqlite3'),DJANGO_MEDIA_ROOT:path.join(temp,'media')};
 const base='http://127.0.0.1:8782', password='DashboardLocal123!', errors=[], results=[];
-let server,browser;
+let server,browser,lastPage;
 function manage(...args){return execFileSync(python,['manage.py',...args],{cwd:root,env,encoding:'utf8'});}
 const seed=`
 from datetime import timedelta
@@ -29,7 +29,10 @@ for u,code in ((a,'DASH-01'),(b,'DASH-02')):
     u.first_name='Identical test name';u.student_code=code;u.save()
 cls=ClassRoom.objects.get(class_code='DEMO-01')
 quiz=a.learning_tasks.get(assignment__lesson__skill='listening')
-job,_=enqueue_submission(task=quiz,submission_key='dash-listening',answers={str(q['id']):'B' for q in quiz.assignment.rubric['questions']})
+job,_=enqueue_submission(task=quiz,submission_key='dash-listening',answers={str(q['id']):{'chosen':'B','short_answer':'My response'} for q in quiz.assignment.rubric['questions']})
+assert job.completion_status=='complete'
+for i in range(25):
+    GradingJob.objects.create(task=quiz,kind='listening',status='graded',completion_status='complete',submission_key='dash-archive-'+str(i),submitted_at=now-timedelta(hours=1,minutes=i),rubric_snapshot=job.rubric_snapshot,result=job.result)
 vocab=a.learning_tasks.get(assignment__lesson__skill='vocabulary')
 GradingJob.objects.create(task=vocab,kind='vocabulary',status='manual',fallback_reason='ai_uncertain_evidence',submission_key='dash-manual',rubric_snapshot=vocab.assignment.rubric)
 Conversation.objects.create(student=a,job=job,kind='knowledge',status='waiting',classroom=cls,recipient=teacher,recipient_role='teacher',escalated_at=now,subject='Test question')
@@ -45,8 +48,8 @@ async function filled(p) {
     !document.getElementById('reportBody').hidden && document.getElementById('reportStatus').textContent.startsWith('Cập nhật'));
 }
 async function filter(p,action) {
-  const response=p.waitForResponse(r=>new URL(r.url()).pathname.endsWith('/metrics/') && r.request().resourceType()==='fetch');
-  await action();assert.equal((await response).status(),200);await filled(p);
+  const [response]=await Promise.all([p.waitForResponse(r=>new URL(r.url()).pathname.endsWith('/metrics/') && r.request().resourceType()==='fetch'),action()]);
+  assert.equal(response.status(),200);await filled(p);
 }
 async function links(p) {
   const hrefs=await p.locator('#learning-report a:visible').evaluateAll(as=>[...new Set(as.map(a=>a.href))]);
@@ -68,8 +71,8 @@ async function links(p) {
   browser=await chromium.launch({headless:true,executablePath:process.env.MRBEAN_CHROMIUM_PATH,args:['--no-sandbox','--disable-dev-shm-usage']});
   for(const role of ['admin','manager','teacher','student']){
     const ctx=await browser.newContext({viewport:{width:1440,height:1000}});
-    const p=await ctx.newPage();p.on('pageerror',err=>errors.push(role+': '+err.message));
-    p.on('response',r=>{if(r.url().startsWith(base) && r.status()>=400)errors.push(role+': '+r.status()+' '+r.url());});
+    const p=await ctx.newPage();lastPage=p;let expected503=false;p.on('pageerror',err=>errors.push(role+': '+err.message));
+    p.on('response',r=>{if(r.url().startsWith(base) && r.status()>=400 && !(expected503 && r.status()===503))errors.push(role+': '+r.status()+' '+r.url());});
     await p.goto(base+'/accounts/login/');await p.locator('[name=username]').fill('demo_'+role);
     await p.locator('[name=password]').fill(password);
     await Promise.all([p.waitForURL(role==='student'?'**/hoc-tap/':'**/dashboard/'),p.locator('button[type=submit]').click()]);
@@ -90,6 +93,23 @@ async function links(p) {
       const review=await p.locator('#queue').getByRole('link',{name:caption,exact:true}).getAttribute('href');
       const html=await (await p.request.get(base+review)).text();
       assert.equal(html.includes('id="reviewForm"'),role!=='manager');
+    }
+    await filter(p,()=>p.locator('#historyPager').getByRole('button',{name:'Sau'}).click());
+    assert.match(await p.locator('#historyPager').innerText(),/2\/2/);
+    await filter(p,()=>p.locator('#historyPager').getByRole('button',{name:'Trước'}).click());
+    await p.locator('#extraFilters summary').click();
+    await filter(p,()=>p.locator('[name=scope]').selectOption('all'));
+    assert.equal(new URL(p.url()).searchParams.get('scope'),'all');
+    await filter(p,()=>p.locator('#filters button[type=submit]').click());
+    await filter(p,()=>p.locator('#resetFilters').click());
+    if(role==='admin'){
+      expected503=true;
+      await p.route('**/dashboard/metrics/**',route=>route.fulfill({status:503,body:'offline'}),{times:1});
+      await p.locator('.lr-kpi[data-value=submitted]').click();
+      await p.locator('#retry').waitFor({state:'visible'});
+      assert(await p.locator('#reportBody').isHidden());expected503=false;
+      await filter(p,()=>p.locator('#retry').click());
+      await filter(p,()=>p.locator('#resetFilters').click());
     }
     await filter(p,()=>p.locator('#skillChart [data-value=listening]').click());
     assert.equal(new URL(p.url()).searchParams.get('skill'),'listening');
@@ -143,7 +163,13 @@ async function links(p) {
   }
   assert.deepEqual(errors,[]);fs.writeFileSync(path.join(out,'results.json'),JSON.stringify(results,null,2));
   console.log('PASS: linked dashboard charts, four roles, drill-down, scoped actions and CSV, history, responsive layouts.',JSON.stringify(results));
-})().catch(error=>{console.error(error);process.exitCode=1;}).finally(async()=>{
+})().catch(async error=>{
+  console.error(error);process.exitCode=1;
+  if(lastPage && !lastPage.isClosed()){
+    console.error('Page:',lastPage.url(),'Report:',await lastPage.locator('#reportStatus').textContent({timeout:1000}).catch(()=>'unavailable'));
+    await lastPage.screenshot({path:path.join(out,'failure.png'),fullPage:true}).catch(()=>{});
+  }
+}).finally(async()=>{
   if(browser)await browser.close();server?.kill();
   if(out!==temp)fs.rmSync(temp,{recursive:true,force:true});
 });
