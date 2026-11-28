@@ -1,0 +1,42 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Quản lý{% endblock %} · MRBean English</title>
+    <link rel="stylesheet" href="{% static 'learning/tailwind.css' %}">
+    <link rel="stylesheet" href="{% static 'learning/fontawesome/css/all.min.css' %}">
+    <link rel="stylesheet" href="{% static 'learning/fonts.css' %}"><link rel="stylesheet" href="{% static 'learning/source.css' %}">
+    <style>
+        body { font-family: 'Roboto', sans-serif; }
+        h1,h2,h3,.font-title { font-family: 'Montserrat', sans-serif; }
+        .bg-sidebar { background-color: #2A1A0E; }
+        .bg-main { background-color: #FEF3E2; }
+        .btn-brand { background-color: #D4621A; }
+        .btn-brand:hover { background-color: #2A1A0E; }
+        .active-menu { background-color: #D4621A; color: #fff; }
+    </style>
+    {% include 'core/theme_head.html' %}
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="mrbean-theme learning-staff">
+    
+    <a class="source-skip" href="#main-content">Đi đến nội dung</a>
+    {% include 'core/sidebar.html' %}
+
+    <div class="learning-workspace flex-1 flex flex-col min-w-0">
+        {% include 'core/topbar.html' %}
+        <main id="main-content" class="p-6 md:p-10 flex-1">
+            {% if messages %}
+                {% for m in messages %}
+                <div class="mb-4 px-4 py-3 rounded-lg text-sm {% if m.tags == 'error' %}bg-red-100 text-red-700{% else %}bg-green-100 text-green-700{% endif %}">{{ m }}</div>
+                {% endfor %}
+            {% endif %}
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+    <script src="{% static 'learning/dialogs.js' %}" defer></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

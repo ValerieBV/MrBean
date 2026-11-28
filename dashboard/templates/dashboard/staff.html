@@ -1,0 +1,22 @@
+{% extends 'dashboard/report.html' %}
+{% block priority %}
+{% if overview %}<section class="lr-panel lr-highlight" aria-label="Ưu tiên theo vai trò"><div><p class="lr-kicker">{% if user.is_superuser or user.role == 'admin' %}Vận hành trung tâm{% elif user.role == 'manager' %}Theo dõi lớp học{% else %}Việc cần xử lý{% endif %}</p><h2 id="priorityTitle">Đang tổng hợp…</h2><p class="lr-caption" id="priorityText"></p></div><div id="priorityAction"></div></section>
+{% else %}<section class="lr-panel"><h2>Bài học viên cần làm tiếp</h2><div id="nextTasks" class="lr-list"></div></section>{% endif %}
+<nav class="lr-quick" aria-label="Đi tới việc cần xử lý">
+  {% if overview %}<a href="#learners">Tra cứu học viên</a><a href="#risk-list">Cần hỗ trợ <strong id="riskBadge">—</strong></a>{% endif %}
+  <a href="#grading-queue">{% if can_confirm %}Mở danh sách chấm{% else %}Theo dõi chờ chấm{% endif %}</a>
+  <a href="#questions">Câu hỏi chờ trả lời <strong id="supportBadge">—</strong></a>
+</nav>
+{% endblock %}
+{% block operations %}
+{% if overview %}
+<section class="lr-grid">
+  <article class="lr-panel" id="risk-list"><p class="lr-kicker">Ưu tiên hỗ trợ</p><h2>Học viên cần hỗ trợ</h2><p class="lr-caption">Từ {{ risk_missed }} bài quá hạn, hoặc còn bài quá hạn và ít nhất {{ risk_days }} ngày chưa nộp bài.</p><div id="risks" class="lr-list"></div><nav id="risksPager" class="lr-pages" aria-label="Phân trang học viên cần hỗ trợ"></nav></article>
+  <article class="lr-panel" id="learners"><p class="lr-kicker">Hồ sơ tiến độ</p><h2>Tra cứu theo mã học viên</h2><div id="progress" class="lr-list"></div><nav id="progressPager" class="lr-pages" aria-label="Phân trang học viên"></nav></article>
+</section>
+{% endif %}
+<section class="lr-grid">
+  <article class="lr-panel" id="grading-queue"><p class="lr-kicker">{% if can_confirm %}Công việc chấm bài{% else %}Theo dõi xử lý{% endif %}</p><h2>Bài chờ đánh giá</h2><div id="queue" class="lr-list"></div><nav id="queuePager" class="lr-pages" aria-label="Phân trang chờ chấm"></nav></article>
+  <article class="lr-panel" id="questions"><p class="lr-kicker">Hỏi đáp bài tập</p><h2>Câu hỏi đang chờ phản hồi</h2><div id="support" class="lr-list"></div><nav id="supportPager" class="lr-pages" aria-label="Phân trang hỏi đáp"></nav></article>
+</section>
+{% endblock %}

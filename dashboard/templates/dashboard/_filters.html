@@ -1,0 +1,20 @@
+<section class="lr-filterbox" aria-label="Bộ lọc báo cáo">
+  <details id="filterDrawer" open><summary class="lr-drawer-summary">Bộ lọc báo cáo</summary>
+  <form id="filters" method="get" role="search">
+    <label>Lớp học<select name="classroom" id="filter-class"><option value="">Tất cả lớp</option>{% for c in classes %}<option value="{{ c.pk }}">{{ c.class_code }}</option>{% endfor %}<option value="legacy">Bài cũ không gắn lớp</option></select></label>
+    <label>Kỹ năng<select name="skill" id="filter-skill"><option value="">Tất cả kỹ năng</option>{% for k,v in skill_options.items %}<option value="{{ k }}">{{ v }}</option>{% endfor %}</select></label>
+    <label>Trạng thái<select name="stage"><option value="">Tất cả trạng thái</option>{% for k,v in stage_options.items %}<option value="{{ k }}">{{ v }}</option>{% endfor %}</select></label>
+    <label>Giao từ ngày<input type="date" name="date_from"></label>
+    <label>Giao đến ngày<input type="date" name="date_to"></label>
+    <label>{% if overview %}Mã học viên hoặc tên bài{% else %}Tìm bài tập{% endif %}<input type="search" name="q" maxlength="100" placeholder="{% if overview %}Nhập mã hoặc tên bài{% else %}Nhập tên bài tập{% endif %}"></label>
+    <details id="extraFilters"><summary>Bộ lọc khác</summary><div class="lr-more-filters">
+      <label>Nhóm cần xem<select name="focus"><option value="">Tất cả lượt giao</option>{% for k,v in focus_options.items %}<option value="{{ k }}">{{ v }}</option>{% endfor %}</select></label>
+      <label>Phạm vi dữ liệu<select name="scope"><option value="">Đang hoạt động</option><option value="all">Cả lịch sử</option></select></label>
+      {% if is_reporting_staff %}<label>Xử lý AI<select name="ai"><option value="">Tất cả</option>{% for k,v in ai_options.items %}<option value="{{ k }}">{{ v }}</option>{% endfor %}</select></label>{% endif %}
+    </div></details>
+    <button class="lr-button lr-primary" type="submit">Áp dụng</button>
+    <button type="button" class="lr-button" id="resetFilters">Xóa bộ lọc</button>
+  </form>
+  </details>
+  <div id="filterChips" class="lr-chips" aria-label="Bộ lọc đang áp dụng"></div>
+</section>

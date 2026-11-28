@@ -1,0 +1,8 @@
+{% load ui %}
+{% if page.paginator.num_pages > 1 %}
+<nav class="source-pagination" aria-label="Chuyển trang">
+    {% if page.has_previous %}<a class="btn-action-edit" href="?{% page_query page_key|default:'page' page.previous_page_number %}">← Trước</a>{% endif %}
+    <span>Trang {{ page.number }}/{{ page.paginator.num_pages }} · {{ page.paginator.count }} kết quả</span>
+    {% if page.has_next %}<a class="btn-action-edit" href="?{% page_query page_key|default:'page' page.next_page_number %}">Sau →</a>{% endif %}
+</nav>
+{% endif %}

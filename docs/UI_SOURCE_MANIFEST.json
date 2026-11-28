@@ -1,0 +1,71 @@
+{
+  "repository": "ValerieBV/MrBean",
+  "source_branch": "feature/setup-web-admin",
+  "source_commit": "a2e0c37ed8e4e2a014679f0903738a450025b76c",
+  "destination_branch": "codex/mrbean-full-integration",
+  "templates": [
+    {
+      "path": "accounts/templates/accounts/login.html",
+      "source_blob_sha": "c3f4b9844a24e52e7dfb626e636e11d7d17e7e4c"
+    },
+    {
+      "path": "accounts/templates/accounts/notifications.html",
+      "source_blob_sha": "b54da33229ca90488737163b1d6074172a97e970"
+    },
+    {
+      "path": "accounts/templates/accounts/user_confirm_delete.html",
+      "source_blob_sha": "a911b06e2ec586586524f5b2161959aaa40313b8"
+    },
+    {
+      "path": "accounts/templates/accounts/user_form.html",
+      "source_blob_sha": "3c32a18bf7a1ef571aeb8a181ad20e4419d7b4fc"
+    },
+    {
+      "path": "accounts/templates/accounts/user_list.html",
+      "source_blob_sha": "a724447d96460abe60580e1082b148edc58f406a"
+    },
+    {
+      "path": "courses/templates/courses/assign_teacher.html",
+      "source_blob_sha": "2904b349fc7d2870355f7018c5e7af7ad0922e4b"
+    },
+    {
+      "path": "courses/templates/courses/class_detail.html",
+      "source_blob_sha": "74b86d100f0f34b254bc7060635b8585a13e510a"
+    },
+    {
+      "path": "courses/templates/courses/class_form.html",
+      "source_blob_sha": "9a6c9b32afba372637ba90c4f4646b8f1180aac5"
+    },
+    {
+      "path": "courses/templates/courses/class_list.html",
+      "source_blob_sha": "5a88d988585dee874495762c10c59836a8a84d47"
+    },
+    {
+      "path": "courses/templates/courses/enroll_student.html",
+      "source_blob_sha": "d68c0bb5a4a796bb790b1efb9e4646a722d83321"
+    },
+    {
+      "path": "courses/templates/courses/exemption_list.html",
+      "source_blob_sha": "82d0d66cd6cd8d822049f98544e30b11f423eaf9"
+    },
+    {
+      "path": "courses/templates/courses/exemption_review.html",
+      "source_blob_sha": "9516c175420aa425bbce838fe822fb6f31ebe819"
+    },
+    {
+      "path": "courses/templates/courses/request_exemption.html",
+      "source_blob_sha": "5df58299d4c348d277467ae1f9c59601334e9e2f"
+    },
+    {
+      "path": "courses/templates/courses/student_confirm_remove.html",
+      "source_blob_sha": "86a57a8f779f3eff4dc0924d3e2fc2ce62520550"
+    },
+    {
+      "path": "templates/base.html",
+      "source_blob_sha": "83ca529ee3c40f65f01389e57e4c4a72ea500428"
+    }
+  ],
+  "reference_stylesheet": "core/static/core/reference.css",
+  "bootstrap": "5.3.3",
+  "bootstrap_icons": "1.11.3"
+}

@@ -1,0 +1,12 @@
+{% extends 'base_student.html' %}
+{% block title %}Bài tập sắp mở{% endblock %}
+{% block content %}
+<section class="upcoming-task" aria-labelledby="upcoming-title">
+    <span class="badge">Bài tập sắp mở</span>
+    <h1 id="upcoming-title">{{ task.title }}</h1>
+    <p>Lớp {{ task.assignment.classroom.class_code }}</p>
+    <p>Bạn có thể bắt đầu làm bài từ <strong>{{ task.assigned_at|date:'H:i · d/m/Y' }}</strong>.</p>
+    <p>Hạn nộp: {{ task.due_at|date:'H:i · d/m/Y' }}.</p>
+    <a class="upcoming-task-back" href="{% url 'submissions:student_dashboard' %}">Về trang học tập</a>
+</section>
+{% endblock %}

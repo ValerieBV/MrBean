@@ -11,6 +11,9 @@ https://docs.djangoproject.com/en/6.1/ref/settings/
 """
 
 from pathlib import Path
+import os
+from dotenv import load_dotenv
+load_dotenv(Path(__file__).resolve().parent.parent / ".env", override=False)
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -20,12 +23,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-i7*4(x(&!x(0kqzlzx-jp*gp^w+k(!udxi-oyd99xtv-v1k*i1'
+SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'django-insecure-local-mrbean-development-only')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv('DJANGO_DEBUG', 'true').lower() in ('true', '1', 'yes')
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [v.strip() for v in os.getenv('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1,testserver').split(',') if v.strip()]
 
 
 # Application definition
@@ -37,12 +40,14 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'core',
     'accounts',
     'courses',
     'assignments',
     'submissions',
     'ai_core',
-    'dashboard'
+    'dashboard',
+    'support.apps.SupportConfig',
 ]
 
 MIDDLEWARE = [
@@ -60,7 +65,7 @@ ROOT_URLCONF = 'core.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -81,7 +86,7 @@ WSGI_APPLICATION = 'core.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'NAME': os.getenv('DJANGO_DB_PATH', str(BASE_DIR / 'db.sqlite3')),
     }
 }
 
@@ -108,9 +113,9 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/6.1/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'vi'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Ho_Chi_Minh'
 
 USE_I18N = True
 
@@ -125,11 +130,11 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 STATIC_URL = 'static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
-STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
+STATICFILES_DIRS = []
 
 # Cấu hình lưu trữ file tải lên (Media - File audio, bài tập)
 MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+MEDIA_ROOT = os.getenv('DJANGO_MEDIA_ROOT', os.path.join(BASE_DIR, 'media'))
 
 # Email
 # https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
@@ -140,3 +145,38 @@ MAILERS = {
     },
 }
 AUTH_USER_MODEL = 'accounts.CustomUser'
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# AI keys are environment-only. Never commit production credentials.
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY', '')
+OPENAI_TEXT_MODEL = os.getenv('OPENAI_TEXT_MODEL', 'gpt-6-luna')
+OPENAI_TRANSCRIBE_MODEL = os.getenv('OPENAI_TRANSCRIBE_MODEL', 'gpt-transcribe')
+OPENAI_TUTOR_MODEL = os.getenv('OPENAI_TUTOR_MODEL', OPENAI_TEXT_MODEL)
+# Local Colab checkpoints are optional supplements. OpenAI still receives the
+# original images/audio transcription and makes the completion proposal.
+AI_LOCAL_ENABLED = os.getenv('AI_LOCAL_ENABLED', 'true').lower() in ('true', '1', 'yes')
+AI_LOCAL_VOCAB_MODEL_DIR = os.getenv('AI_LOCAL_VOCAB_MODEL_DIR', 'ai_models/vocabulary/best_model')
+AI_LOCAL_SPEAKING_MODEL_DIR = os.getenv('AI_LOCAL_SPEAKING_MODEL_DIR', 'ai_models/speaking/best_model')
+AI_LOCAL_DEVICE = os.getenv('AI_LOCAL_DEVICE', 'auto').strip().lower()
+AI_LOCAL_TIMEOUT_SECONDS = 30
+AI_LOCAL_MAX_CROPS = 80
+AI_LOCAL_MAX_TOKENS = 128
+AI_LOCAL_MAX_AUDIO_SECONDS = 600
+AI_FFMPEG_BINARY = os.getenv('AI_FFMPEG_BINARY', 'ffmpeg')
+AI_TUTOR_TIMEOUT_SECONDS = 20
+AI_TUTOR_DAILY_LIMIT = 30
+AI_DEADLINE_SECONDS = 300
+AI_REQUEST_TIMEOUT_SECONDS = 120
+AI_MAX_AUDIO_BYTES = 20 * 1024 * 1024
+SLA_WARNING_HOURS = 6
+DROPOUT_MISSED_TASKS = 3
+DROPOUT_INACTIVE_DAYS = 7
+LOGIN_REDIRECT_URL = '/dashboard/'
+
+LOGIN_URL = '/accounts/login/'
+LOGOUT_REDIRECT_URL = '/accounts/login/'
+AI_MAX_IMAGE_BYTES = 8 * 1024 * 1024
+DATA_UPLOAD_MAX_MEMORY_SIZE = 50 * 1024 * 1024
+FILE_UPLOAD_MAX_MEMORY_SIZE = 2 * 1024 * 1024
+TEMPLATES[0]['OPTIONS']['context_processors'].append('dashboard.context.navigation')
+TEMPLATES[0]['OPTIONS']['context_processors'].append('submissions.context.student_info')

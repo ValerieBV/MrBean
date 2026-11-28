@@ -5,3 +5,10 @@ db.sqlite3
 media/
 .idea/
 .env
+.env.*
+!.env.example
+node_modules/
+staticfiles/
+browser-output/
+playwright-report/
+test-results/

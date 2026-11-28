@@ -1,3 +1,70 @@
+from datetime import timedelta
+from django.conf import settings
 from django.db import models
+from django.utils import timezone
 
-# Create your models here.
+
+class GradingJob(models.Model):
+    class Completion(models.TextChoices):
+        PENDING = 'pending', 'Chưa xác nhận hoàn thành'
+        COMPLETE = 'complete', 'Hoàn thành'
+        INCOMPLETE = 'incomplete', 'Bài làm bị thiếu'
+
+    class Status(models.TextChoices):
+        QUEUED = 'queued', 'Chờ AI'
+        PROCESSING = 'processing', 'AI đang chấm'
+        AI_REVIEWED = 'ai_reviewed', 'AI đã nhận xét'
+        MANUAL = 'manual', 'Chờ giáo viên'
+        GRADED = 'graded', 'Đã có điểm chính thức'
+
+    task = models.ForeignKey('dashboard.LearningTask', on_delete=models.PROTECT, related_name='jobs')
+    submission_key = models.CharField(max_length=128, unique=True)
+    kind = models.CharField(max_length=16, choices=[('speaking', 'Bài nói'), ('vocabulary', 'Từ vựng'), ('listening', 'Nghe')])
+    rubric_snapshot = models.JSONField(default=dict, blank=True)
+    answers = models.JSONField(default=dict, blank=True)
+    transcript = models.TextField(blank=True)
+    grading_method = models.CharField(max_length=20, blank=True)
+    progress = models.ForeignKey('submissions.LessonProgress', on_delete=models.SET_NULL, null=True, blank=True, related_name='grading_jobs')
+    text = models.TextField(blank=True)
+    audio = models.FileField(upload_to='ai_submissions/%Y/%m/', blank=True)
+    reference_text = models.TextField(blank=True)
+    submitted_at = models.DateTimeField(default=timezone.now, db_index=True)
+    ai_assessed_at = models.DateTimeField(null=True, blank=True)
+    ai_assessment_method = models.CharField(max_length=20, blank=True)
+    started_at = models.DateTimeField(null=True, blank=True)
+    finished_at = models.DateTimeField(null=True, blank=True)
+    status = models.CharField(max_length=16, choices=Status.choices, default=Status.QUEUED, db_index=True)
+    result = models.JSONField(default=dict, blank=True)
+    # Legacy numeric grades are retained for history; current assessments do not write them.
+    suggested_score = models.FloatField(null=True, blank=True)
+    final_score = models.FloatField(null=True, blank=True)
+    completion_status = models.CharField(max_length=12, choices=Completion.choices, default=Completion.PENDING, db_index=True)
+    completion_confirmed_at = models.DateTimeField(null=True, blank=True)
+    completion_confirmed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='confirmed_completions')
+    teacher_feedback = models.TextField(blank=True)
+    reviewed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    fallback_reason = models.CharField(max_length=64, blank=True)
+
+    @property
+    def public_status_label(self):
+        if self.status == self.Status.GRADED:
+            return {'complete':'Hoàn thành','incomplete':'Chưa hoàn thành'}.get(self.completion_status, 'Đã chấm · cần xác nhận hoàn thành')
+        from .reporting import REPORT_STATUS_LABELS
+        return REPORT_STATUS_LABELS.get(self.status, self.get_status_display())
+
+    @property
+    def ai_deadline(self):
+        return self.submitted_at + timedelta(seconds=settings.AI_DEADLINE_SECONDS)
+
+    @property
+    def sla_deadline(self):
+        return self.submitted_at + timedelta(hours=48)
+
+    class Meta:
+        ordering = ['submitted_at', 'pk']
+
+
+class VocabularyPage(models.Model):
+    job = models.ForeignKey(GradingJob, on_delete=models.CASCADE, related_name='pages')
+    image = models.FileField(upload_to='ai_submissions/vocabulary/%Y/%m/')

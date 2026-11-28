@@ -1,0 +1,32 @@
+{% extends 'base_student.html' %}{% load static %}{% block title %}{{ task.title }}{% endblock %}{% block tab_vocabulary %}tab-active{% endblock %}{% block content %}<div class="mb-4"><a href="{% url 'submissions:student_skill' rubric.skill %}" class="text-amber-700 text-sm hover:underline"><i class="fa-solid fa-angle-left" aria-hidden="true"></i> {{ lesson.get_skill_display }}</a><h2 class="text-xl font-bold text-gray-800 mt-1 font-title">Buổi {{ lesson.order }}: {{ task.title }}</h2><p class="text-gray-500 text-sm">Hạn nộp {{ task.due_at|date:'d/m/Y H:i' }}</p></div>
+{% include 'submissions/_task_context.html' %}{% if not blocked_reason %}<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    {% for w in word_details %}
+    <div class="bg-white rounded-xl shadow-sm border p-5 min-w-0">
+        <div class="flex flex-wrap gap-3 items-baseline justify-between">
+            <h3 class="text-lg font-bold vocabulary-copy" style="color:#D4621A">{{ forloop.counter }}. {{ w.word }}</h3>
+            <span class="text-xs text-gray-400">{{ w.word_type }}</span>
+        </div>
+        <p class="text-gray-700 mt-1 vocabulary-copy">{{ w.meaning|linebreaksbr }}</p>
+        {% if w.example %}<p class="text-gray-500 italic text-sm mt-2 vocabulary-copy"><i class="fa-solid fa-quote-left text-xs"></i> {{ w.example|linebreaksbr }}</p>{% endif %}
+    </div>
+    {% empty %}
+    <p class="text-gray-400">Buổi này chưa có từ vựng.</p>
+    {% endfor %}
+</div>
+
+<form id="submissionForm" method="post" action="{% url 'ai_core:submit' %}" enctype="multipart/form-data" data-kind="{{ rubric.skill }}" data-submit-url="{% url 'ai_core:submit' %}">
+    {% csrf_token %}
+    <input type="hidden" name="task_id" value="{{ task.pk }}">
+    <input type="hidden" name="submission_key" value="{{ submission_key }}">
+    <input type="hidden" name="reference_version" value="{{ task.assignment.reference_version }}">
+    <section class="bg-white rounded-xl shadow-sm border p-5 mt-6" aria-labelledby="vocabularySubmitTitle">
+        <h3 id="vocabularySubmitTitle" class="font-semibold text-gray-800 mb-3">Nộp bài từ vựng bằng ảnh</h3>
+        <p class="text-sm text-gray-600 mb-4">Bài có {{ rubric.words|length }} từ / cụm từ. Mỗi từ viết {{ rubric.repetitions }} lượt.</p>
+        {% include 'submissions/_vocabulary_images.html' %}
+    </section>
+    {% include 'submissions/_submit_controls.html' %}
+</form>
+{% endif %}
+{% include 'submissions/_submission_history.html' %}
+{% endblock %}
+{% block scripts %}{% if not blocked_reason %}<script src="{% static 'submissions/submit.js' %}?v=20261110-upload2" defer></script>{% endif %}{% endblock %}
